@@ -884,6 +884,33 @@ function AppContent() {
     }
   };
 
+  const notifySupervisors = async (type: keyof typeof notifSettings, title: string, message: string, postId: string) => {
+    if (!notifSettings[type]) return;
+    try {
+      const sQuery = query(
+        collection(db, 'users'), 
+        where('role', '==', 'marketing_supervisor'), 
+        where('status', '==', 'active')
+      );
+      const sDocs = await getDocs(sQuery);
+      const sPromises = sDocs.docs.map(sDoc => {
+        if (sDoc.id === user?.uid) return Promise.resolve();
+        return addDoc(collection(db, 'notifications'), {
+          title,
+          message: `${message} (Update by ${profile?.displayName || user?.email || 'User'})`,
+          createdAt: serverTimestamp(),
+          read: false,
+          postId: postId || null,
+          userId: sDoc.id,
+          type
+        });
+      });
+      await Promise.all(sPromises);
+    } catch (err) {
+      console.error("Error notifying supervisors:", err);
+    }
+  };
+
   const handleNotificationClick = async (notif: any) => {
     // Mark as read in Firestore
     if (!notif.read) {
@@ -1185,8 +1212,10 @@ function AppContent() {
       if (field === 'status') {
         if (value === 'Scheduled') {
           addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Scheduled.', id);
+          notifySupervisors('onStatusScheduled', 'Task Scheduled', 'A task has been marked as Scheduled.', id);
         } else if (value === 'Ready for Review') {
           addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+          notifySupervisors('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
         }
       }
     } catch (err) {
@@ -1312,6 +1341,9 @@ function AppContent() {
     if (!formData.contentTitle || !formData.date) return;
 
     const id = editingPost ? editingPost.id : Math.random().toString(36).substr(2, 9);
+    const oldStatus = editingPost?.status;
+    const newStatus = formData.status;
+
     const postData = {
       ...formData,
       id,
@@ -1320,9 +1352,22 @@ function AppContent() {
 
     try {
       await setDoc(doc(db, 'posts', id), postData);
+      
       if (!editingPost) {
         addNotification('onNewTask', 'New Task Created', `"${formData.topicTheme || 'Untitled'}" has been added to the plan.`, id);
+      } else {
+        // If it's an update, check for status changes
+        if (newStatus !== oldStatus) {
+          if (newStatus === 'Scheduled') {
+            addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Scheduled.', id);
+            notifySupervisors('onStatusScheduled', 'Task Scheduled', 'A task has been marked as Scheduled.', id);
+          } else if (newStatus === 'Ready for Review') {
+            addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+            notifySupervisors('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+          }
+        }
       }
+      
       setIsModalOpen(false);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `posts/${id}`);
