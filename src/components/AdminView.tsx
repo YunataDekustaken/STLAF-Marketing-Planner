@@ -53,6 +53,10 @@ export const AdminView = ({
   const [localQuickLinks, setLocalQuickLinks] = useState(quickLinks || []);
   const [localSocialLinks, setLocalSocialLinks] = useState(socialLinks);
 
+  const [isUpdatingLinks, setIsUpdatingLinks] = useState(false);
+  const [showLinksConfirm, setShowLinksConfirm] = useState(false);
+  const [linksUpdateSuccess, setLinksUpdateSuccess] = useState(false);
+
   useEffect(() => {
     setLocalSettings(notificationSettings);
   }, [notificationSettings]);
@@ -64,6 +68,21 @@ export const AdminView = ({
   useEffect(() => {
     setLocalSocialLinks(socialLinks);
   }, [socialLinks]);
+
+  const handleUpdateQuickLinks = async () => {
+    setIsUpdatingLinks(true);
+    try {
+      await onUpdateQuickLinks(localQuickLinks);
+      setLinksUpdateSuccess(true);
+      addNotification('Links Updated', 'Quick links have been updated successfully.', 'success');
+      setTimeout(() => setLinksUpdateSuccess(false), 3000);
+      setShowLinksConfirm(false);
+    } catch (error) {
+      addNotification('Update Failed', 'There was an error updating the quick links.', 'warning');
+    } finally {
+      setIsUpdatingLinks(false);
+    }
+  };
 
   const handleSaveSettings = () => {
     onUpdateNotificationSettings(localSettings);
@@ -373,12 +392,59 @@ export const AdminView = ({
                 </button>
               </div>
               
-              <button 
-                onClick={() => onUpdateQuickLinks(localQuickLinks)}
-                className="mt-8 px-8 py-3 bg-amber-500 hover:bg-amber-600 text-primary-dark rounded-xl text-sm font-bold transition-all shadow-sm"
-              >
-                Update Quick Links
-              </button>
+              <div className="mt-8 flex flex-col md:flex-row items-center gap-4">
+                {!showLinksConfirm ? (
+                  <button 
+                    onClick={() => setShowLinksConfirm(true)}
+                    className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-primary-dark rounded-xl text-sm font-bold transition-all shadow-sm flex items-center gap-2"
+                  >
+                    {linksUpdateSuccess ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Links Updated
+                      </>
+                    ) : (
+                      'Update Quick Links'
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-3 p-1 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
+                    <span className="text-xs font-bold text-slate-500 px-4">Confirm changes?</span>
+                    <button 
+                      onClick={handleUpdateQuickLinks}
+                      disabled={isUpdatingLinks}
+                      className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isUpdatingLinks ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
+                      Yes, Save
+                    </button>
+                    <button 
+                      onClick={() => setShowLinksConfirm(false)}
+                      className="px-6 py-2 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                
+                {linksUpdateSuccess && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 text-emerald-600 font-bold text-sm"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    Successfully updated!
+                  </motion.div>
+                )}
+              </div>
             </div>
           )}
         </motion.div>

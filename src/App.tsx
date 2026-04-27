@@ -1738,8 +1738,11 @@ function AppContent() {
           </button>
         </div>
 
-        <div className={`p-6 pt-2 flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
-          <div className="relative shrink-0">
+        <div 
+          onClick={() => setViewMode('list')}
+          className={`p-6 pt-2 flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}
+        >
+          <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-tighter">
               STLAF
             </div>
@@ -1753,8 +1756,8 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               className="overflow-hidden whitespace-nowrap"
             >
-              <h2 className="text-sm font-bold text-white leading-tight">Marketing Portal</h2>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Marketing Department</p>
+              <h2 className="text-sm font-bold text-white leading-tight group-hover:text-amber-500 transition-colors">Marketing Portal</h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">MARKETING DEPT</p>
             </motion.div>
           )}
         </div>
@@ -1808,6 +1811,27 @@ function AppContent() {
               {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">My Profile</span>}
             </button>
           </div>
+
+          {/* Quick Links Section */}
+          {(!isSidebarCollapsed || isSidebarHovered) && quickLinks.length > 0 && (
+            <div className="px-4 pt-8 pb-4">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Quick Links</p>
+              <div className="space-y-3">
+                {quickLinks.map((link) => (
+                  <a 
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
+                  >
+                    <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors" />
+                    <span className="text-sm font-medium truncate">{link.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="mt-auto p-4 pt-2 border-t border-slate-700/50 flex flex-col gap-3">
