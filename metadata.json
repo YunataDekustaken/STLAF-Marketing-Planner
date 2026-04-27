@@ -1,5 +1,6 @@
 {
-  "name": "Marketing Portal",
+  "name": "Marketing Content Planner",
   "description": "A comprehensive social media content tracker with AI-powered caption generation and deliverable management.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
