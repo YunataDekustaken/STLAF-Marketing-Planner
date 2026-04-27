@@ -48,7 +48,7 @@ export default function AuthScreen() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-slate-900 text-center mb-3 tracking-tight">Assets Portal</h1>
+        <h1 className="text-3xl font-black text-slate-900 text-center mb-3 tracking-tight">Marketing Portal</h1>
         <p className="text-slate-500/80 text-center mb-10 font-medium leading-relaxed">
           Sign in with your corporate Google account to access marketing library resources.
         </p>
