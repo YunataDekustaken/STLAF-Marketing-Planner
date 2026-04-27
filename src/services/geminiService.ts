@@ -5,7 +5,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 export async function generateCaption(params: {
   contentTitle: string;
@@ -16,7 +16,7 @@ export async function generateCaption(params: {
   customPrompt?: string;
 }) {
   if (!apiKey) {
-    throw new Error("Gemini API key is missing. Please ensure it is configured in your environment.");
+    throw new Error("Gemini API key is missing. Please configure VITE_GEMINI_API_KEY in your environment settings.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
