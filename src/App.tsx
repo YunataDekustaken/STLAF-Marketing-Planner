@@ -1856,7 +1856,7 @@ function AppContent() {
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
           <h1 className="text-lg font-bold text-slate-800">
-            {viewMode === 'list' ? 'Marketing Portal' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
+            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
           </h1>
           <div className="flex items-center gap-6">
             <div className="relative" ref={notificationRef}>
@@ -1948,7 +1948,7 @@ function AppContent() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  {viewMode === 'admin' ? 'Admin Center' : viewMode === 'profile' ? 'Profile Management' : 'Marketing Portal'}
+                  {viewMode === 'admin' ? 'Admin Center' : viewMode === 'profile' ? 'Profile Management' : 'Content Planner'}
                 </h2>
                 <p className="text-sm text-slate-500">
                   {viewMode === 'admin' ? 'Manage system settings and data restoration.' : viewMode === 'profile' ? 'View and update your personal information and account settings.' : 'Plan and manage your marketing content across all channels.'}
