@@ -81,6 +81,7 @@ import { auth, db, storage } from './firebase';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
+import { ProfileView } from './components/ProfileView';
 import { 
   collection, 
   onSnapshot, 
@@ -784,7 +785,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const { user, profile, loading: authLoading, login, logout } = useAuth();
+  const { user, profile, loading: authLoading, login, logout, updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const isAuthReady = !authLoading;
   const [showSplash, setShowSplash] = useState(true);
@@ -1796,13 +1797,29 @@ function AppContent() {
               </button>
             </div>
           )}
+
+          <div className={`${profile?.role !== 'marketing_supervisor' ? 'pt-4 mt-4 border-t border-slate-700/50' : 'mt-1'}`}>
+            <button 
+              onClick={() => setViewMode('profile')}
+              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'profile' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+              title={isSidebarCollapsed && !isSidebarHovered ? "My Profile" : ""}
+            >
+              <UserIcon className="w-5 h-5 shrink-0" />
+              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">My Profile</span>}
+            </button>
+          </div>
         </nav>
 
-        <div className="p-4 border-t border-slate-700/50 flex flex-col gap-4">
+        <div className="mt-auto p-4 pt-2 border-t border-slate-700/50 flex flex-col gap-3">
           {user ? (
             <div className={`flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
               {user.photoURL && (
-                <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
+                <button 
+                  onClick={() => setViewMode('profile')}
+                  className="hover:scale-105 transition-transform"
+                >
+                  <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
+                </button>
               )}
               {(!isSidebarCollapsed || isSidebarHovered) && (
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -1826,13 +1843,10 @@ function AppContent() {
               {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Sign In</span>}
             </button>
           )}
-        </div>
-
-        {/* Branding Footer */}
-        <div className={`px-4 pb-6 mt-auto flex flex-col items-center ${isSidebarCollapsed && !isSidebarHovered ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-            <Sparkles className="w-2.5 h-2.5 text-amber-500/60" />
-            <span>Powered by Gemini AI</span>
+          
+          <div className={`mt-1 flex items-center gap-1.5 text-[8px] font-bold text-slate-600 uppercase tracking-widest ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-start'}`}>
+            <Sparkles className="w-2 h-2 text-amber-500/40" />
+            {(!isSidebarCollapsed || isSidebarHovered) && <span>Powered by Gemini AI</span>}
           </div>
         </div>
       </aside>
@@ -1842,7 +1856,7 @@ function AppContent() {
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
           <h1 className="text-lg font-bold text-slate-800">
-            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : 'Admin Center'}
+            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
           </h1>
           <div className="flex items-center gap-6">
             <div className="relative" ref={notificationRef}>
@@ -1934,13 +1948,13 @@ function AppContent() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  {viewMode === 'admin' ? 'Admin Center' : 'Content Strategy Planner'}
+                  {viewMode === 'admin' ? 'Admin Center' : viewMode === 'profile' ? 'Profile Management' : 'Content Strategy Planner'}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  {viewMode === 'admin' ? 'Manage system settings and data restoration.' : 'Plan and manage your content across all channels.'}
+                  {viewMode === 'admin' ? 'Manage system settings and data restoration.' : viewMode === 'profile' ? 'View and update your personal information and account settings.' : 'Plan and manage your content across all channels.'}
                 </p>
               </div>
-              {viewMode !== 'admin' && (
+              {viewMode !== 'admin' && viewMode !== 'profile' && (
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={handleExportCSV}
@@ -1994,6 +2008,12 @@ function AppContent() {
                 onUpdateSocialLinks={handleUpdateSocialLinks}
                 onRestore={handleRestoreOldData}
                 isSeeding={isSeeding}
+              />
+            ) : viewMode === 'profile' ? (
+              <ProfileView 
+                profile={profile}
+                onLogout={logout}
+                onUpdateProfile={updateProfile}
               />
             ) : (
               <>

@@ -76,7 +76,7 @@ export const INITIAL_POSTS: Post[] = [
   }
 ];
 
-export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar';
+export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar' | 'profile';
 
 export type UserRole = 'marketing_supervisor' | 'marketing_member' | 'department';
 
