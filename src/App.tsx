@@ -53,6 +53,7 @@ import {
   Music2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Papa from 'papaparse';
 import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import {
   DndContext,
@@ -73,16 +74,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Post, PostStatus, ViewMode, INITIAL_POSTS } from './types';
+import { Post, PostStatus, ViewMode, INITIAL_POSTS, UserProfile } from './types';
 import { generateCaption } from './services/geminiService';
 import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES } from './constants';
-import { auth, db, googleProvider } from './firebase';
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  signOut, 
-  User 
-} from 'firebase/auth';
+import { auth, db, storage } from './firebase';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+import AuthScreen from './components/AuthScreen';
+import { AdminView } from './components/AdminView';
 import { 
   collection, 
   onSnapshot, 
@@ -90,13 +88,15 @@ import {
   where, 
   doc, 
   setDoc, 
+  getDoc,
   deleteDoc, 
   updateDoc,
   getDocFromServer,
-  orderBy,
   limit,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 
 enum OperationType {
@@ -164,6 +164,7 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   'In Progress': 'bg-blue-50 text-blue-600 border-blue-100',
   'Ready for Review': 'bg-amber-50 text-amber-600 border-amber-100',
   'Scheduled': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  'Published': 'bg-indigo-50 text-indigo-600 border-indigo-100',
 };
 
 const STATUS_ICONS: Record<PostStatus, any> = {
@@ -171,6 +172,7 @@ const STATUS_ICONS: Record<PostStatus, any> = {
   'In Progress': Clock,
   'Ready for Review': Edit2,
   'Scheduled': CheckCircle2,
+  'Published': Check,
 };
 
 interface KanbanViewProps {
@@ -181,7 +183,7 @@ interface KanbanViewProps {
 }
 
 const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal, handleOpenShareModal }) => {
-  const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled'];
+  const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled', 'Published'];
   
   return (
     <div className="flex gap-6 overflow-x-auto pb-6 min-h-[600px]">
@@ -757,301 +759,6 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   );
 };
 
-const AdminView = ({ 
-  onRestore, 
-  isSeeding, 
-  settings, 
-  onToggleSetting,
-  socialLinks,
-  onUpdateSocialLinks
-}: { 
-  onRestore: () => void, 
-  isSeeding: boolean,
-  settings: any,
-  onToggleSetting: (key: string) => void,
-  socialLinks: { facebook: string, instagram: string, linkedin: string, tiktok: string },
-  onUpdateSocialLinks: (links: any) => void
-}) => {
-  const [localLinks, setLocalLinks] = useState(socialLinks);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  useEffect(() => {
-    setLocalLinks(socialLinks);
-  }, [socialLinks]);
-
-  const handleSaveLinks = () => {
-    setShowConfirm(true);
-  };
-
-  const confirmSave = () => {
-    onUpdateSocialLinks(localLinks);
-    setShowConfirm(false);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-amber-50 rounded-xl">
-            <Bell className="w-6 h-6 text-amber-500" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Notification Settings</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Events</h4>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Export CSV</span>
-                  <span className="text-[10px] text-slate-400">Notify when CSV export is completed</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onExportCSV')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onExportCSV ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onExportCSV ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">New Task Created</span>
-                  <span className="text-[10px] text-slate-400">Notify when a new content task is added</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onNewTask')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onNewTask ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onNewTask ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Task Deleted</span>
-                  <span className="text-[10px] text-slate-400">Notify when a task is permanently removed</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onTaskDeleted')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onTaskDeleted ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onTaskDeleted ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status Updates</h4>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Scheduled</span>
-                  <span className="text-[10px] text-slate-400">Notify when content is marked as Scheduled</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onStatusScheduled')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onStatusScheduled ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onStatusScheduled ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">Ready for Review</span>
-                  <span className="text-[10px] text-slate-400">Notify when content is ready for approval</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onStatusReadyForReview')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onStatusReadyForReview ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onStatusReadyForReview ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer group">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors">AI Generation</span>
-                  <span className="text-[10px] text-slate-400">Notify when AI caption generation is finished</span>
-                </div>
-                <div 
-                  onClick={() => onToggleSetting('onAICaption')}
-                  className={`w-10 h-5 rounded-full relative transition-all ${settings.onAICaption ? 'bg-amber-500' : 'bg-slate-200'}`}
-                >
-                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.onAICaption ? 'right-1' : 'left-1'}`} />
-                </div>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-indigo-50 rounded-xl">
-            <ExternalLink className="w-6 h-6 text-indigo-500" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Social Media Redirection Links</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Facebook className="w-3 h-3 text-[#1877F2]" />
-              Facebook URL
-            </label>
-            <input 
-              type="url" 
-              placeholder="https://facebook.com/yourpage"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
-              value={localLinks.facebook}
-              onChange={(e) => setLocalLinks(prev => ({ ...prev, facebook: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Instagram className="w-3 h-3 text-[#E4405F]" />
-              Instagram URL
-            </label>
-            <input 
-              type="url" 
-              placeholder="https://instagram.com/yourprofile"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
-              value={localLinks.instagram}
-              onChange={(e) => setLocalLinks(prev => ({ ...prev, instagram: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Linkedin className="w-3 h-3 text-[#0A66C2]" />
-              LinkedIn URL
-            </label>
-            <input 
-              type="url" 
-              placeholder="https://linkedin.com/company/yourcompany"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
-              value={localLinks.linkedin}
-              onChange={(e) => setLocalLinks(prev => ({ ...prev, linkedin: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Music2 className="w-3 h-3 text-[#000000]" />
-              TikTok URL
-            </label>
-            <input 
-              type="url" 
-              placeholder="https://tiktok.com/@yourprofile"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
-              value={localLinks.tiktok}
-              onChange={(e) => setLocalLinks(prev => ({ ...prev, tiktok: e.target.value }))}
-            />
-          </div>
-        </div>
-
-        <button 
-          onClick={handleSaveLinks}
-          className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
-        >
-          Save Social Links
-        </button>
-      </div>
-
-      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-rose-50 rounded-xl">
-            <AlertCircle className="w-6 h-6 text-rose-500" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Restore Old Database</h3>
-        </div>
-        
-        <p className="text-slate-600 mb-8 leading-relaxed">
-          Permanently deletes all marketing requests, comments, activity logs, and notifications. 
-          User accounts and login credentials are not affected. Uploaded files are hosted in Cloudinary, not Firestore.
-        </p>
-
-        <button 
-          onClick={onRestore}
-          disabled={isSeeding}
-          className="px-8 py-3 bg-white border border-rose-200 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50"
-        >
-          {isSeeding ? 'Restoring...' : 'Restore Data'}
-        </button>
-      </div>
-
-      <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-slate-50 rounded-xl">
-            <Info className="w-6 h-6 text-slate-500" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">App Info</h3>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Application Name</p>
-            <p className="text-sm font-bold text-slate-900">Marketing Operations Portal</p>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Firebase Project ID</p>
-            <p className="text-sm font-mono text-slate-600">gen-lang-client-0116256991</p>
-          </div>
-
-          <div className="pt-6 border-t border-slate-100">
-            <p className="text-xs italic text-slate-400">Admin Center is only accessible to Marketing Supervisors.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Confirmation Modal */}
-      <AnimatePresence>
-        {showConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-amber-50 rounded-xl">
-                    <AlertCircle className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">Confirm Changes</h3>
-                    <p className="text-sm text-slate-500">Are you sure you want to update the social media redirection links?</p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  These links will be updated immediately for all users across the platform.
-                </p>
-              </div>
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                <button 
-                  onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={confirmSave}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm"
-                >
-                  Confirm & Save
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 const DetailItem = ({ label, value, fullWidth = false, isLink = false }: { label: string, value?: string, fullWidth?: boolean, isLink?: boolean }) => (
   <div className={`space-y-1 ${fullWidth ? 'col-span-2' : ''}`}>
@@ -1069,9 +776,17 @@ const DetailItem = ({ label, value, fullWidth = false, isLink = false }: { label
 );
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { user, profile, loading: authLoading, login, logout } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  const isAuthReady = !authLoading;
   const [showSplash, setShowSplash] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Initializing Workspace');
@@ -1125,7 +840,6 @@ export default function App() {
   // Undo/Redo state for caption
   const [captionHistory, setCaptionHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [error, setError] = useState<string | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
@@ -1140,12 +854,13 @@ export default function App() {
 
   const [notifSettings, setNotifSettings] = useState({
     onExportCSV: true,
-    onStatusScheduled: true,
-    onStatusReadyForReview: true,
     onNewTask: true,
     onTaskDeleted: true,
+    onStatusScheduled: true,
+    onStatusReadyForReview: true,
     onAICaption: true,
   });
+  const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
 
   const addNotification = async (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
     if (!notifSettings[type]) return;
@@ -1288,13 +1003,8 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auth Listener
+  // Auth Listener removal
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAuthReady(true);
-    });
-    
     // Simulated loading progress
     const messages = [
       'Initializing Workspace',
@@ -1329,7 +1039,6 @@ export default function App() {
     }, 2500);
 
     return () => {
-      unsubscribe();
       clearTimeout(timer);
       clearInterval(progressInterval);
     };
@@ -1337,14 +1046,12 @@ export default function App() {
 
   // Notifications Listener
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !user) return;
     
-    const targetUserId = user?.uid || 'guest_user';
+    const targetUserId = user.uid;
     const q = query(
       collection(db, 'notifications'),
-      where('userId', '==', targetUserId),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+      where('userId', '==', targetUserId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -1355,7 +1062,13 @@ export default function App() {
           ...data,
           time: data.createdAt?.toDate ? formatDistanceToNow(data.createdAt.toDate(), { addSuffix: true }) : 'Just now'
         };
-      });
+      })
+      .sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      })
+      .slice(0, 50);
       setNotifications(notifs);
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'notifications');
@@ -1364,9 +1077,10 @@ export default function App() {
     return () => unsubscribe();
   }, [isAuthReady, user]);
 
+
   // Social Links Listener
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !user) return;
     
     const unsubscribe = onSnapshot(doc(db, 'settings', 'social_links'), (snapshot) => {
       if (snapshot.exists()) {
@@ -1390,7 +1104,7 @@ export default function App() {
 
   // Firestore Data Fetching
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !user) return;
 
     // Test connection
     const testConnection = async () => {
@@ -1405,11 +1119,10 @@ export default function App() {
     testConnection();
 
     // If no user, we show all posts or guest posts. 
-    // For "disable login", we'll just fetch all posts for now or use a 'guest' filter.
     const postsRef = collection(db, 'posts');
-    const q = user 
-      ? query(postsRef, where('userId', '==', user.uid))
-      : query(postsRef, where('userId', '==', 'guest_user'));
+    const q = (profile?.role === 'marketing_supervisor')
+      ? query(postsRef) 
+      : query(postsRef, where('userId', '==', user.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
@@ -1422,7 +1135,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, user]);
+  }, [isAuthReady, user, profile?.role]);
 
   const filteredPosts = posts.filter(post => {
     const postDate = new Date(post.date);
@@ -1696,29 +1409,6 @@ export default function App() {
     }
   };
 
-  const handleLogin = async () => {
-    setError(null);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
-        // User closed the popup, usually not an error we need to scream about
-        console.log("Login popup closed by user");
-        return;
-      }
-      setError(err.message || "Login failed. Please try again.");
-      console.error("Login failed", err);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
-
   const handleExportCSV = () => {
     if (posts.length === 0) {
       alert('No data to export');
@@ -1780,25 +1470,110 @@ export default function App() {
     addNotification('onExportCSV', 'Export Successful', `Your CSV export for ${format(currentMonth, 'MMMM yyyy')} is ready.`);
   };
 
+  const handleImportCSV = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async ({ target }) => {
+      const csv = target?.result as string;
+      Papa.parse(csv, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          const { data } = results;
+          if (data.length === 0) {
+            alert('CSV is empty');
+            return;
+          }
+
+          setIsSeeding(true);
+          try {
+            const batch = writeBatch(db);
+            const targetUserId = user?.uid || 'guest_user';
+
+            data.forEach((row: any) => {
+              const id = Math.random().toString(36).substr(2, 9);
+              // Normalize data from CSV row
+              const postData: Post = {
+                id,
+                date: row.Date || row.date || new Date().toISOString().split('T')[0],
+                contentTitle: row.Title || row.contentTitle || CONTENT_TITLES[0],
+                contentType: row.Type || row.contentType || CONTENT_TYPES[0],
+                topicTheme: row.Theme || row.topicTheme || '',
+                subtopic: row.Subtopic || row.subtopic || '',
+                caption: row.Caption || row.caption || '',
+                format: row.Format || row.format || FORMATS[0],
+                status: (row.Status || row.status || 'Not Started') as PostStatus,
+                funnelStatus: row.Funnel || row.funnelStatus || FUNNEL_STATUSES[0],
+                visualIdeas: row['Visual Ideas'] || row.visualIdeas || '',
+                notes: row.Notes || row.notes || '',
+                userId: targetUserId,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              };
+              batch.set(doc(db, 'posts', id), postData);
+            });
+
+            await batch.commit();
+            addNotification('onNewTask', 'Import Successful', `${data.length} tasks have been imported.`);
+            alert(`Successfully imported ${data.length} tasks.`);
+          } catch (err) {
+            console.error('Import Error:', err);
+            alert('Error during import. Check if your CSV format is correct.');
+          } finally {
+            setIsSeeding(false);
+            if (e.target) e.target.value = '';
+          }
+        }
+      });
+    };
+    reader.readAsText(file);
+  };
+
   const handleRestoreOldData = async () => {
     if (isSeeding) return;
+    
     setIsSeeding(true);
     try {
       const targetUserId = user?.uid || 'guest_user';
-      const batchPromises = INITIAL_POSTS.map(post => {
-        const postData = { ...post, userId: targetUserId };
-        return setDoc(doc(db, 'posts', post.id), postData);
+      
+      const collectionsToClear = ['posts', 'notifications', 'comments', 'activityLogs'];
+      
+      for (const colName of collectionsToClear) {
+        const snapshot = await getDocs(collection(db, colName));
+        const batch = writeBatch(db);
+        snapshot.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
+
+      // 3. Seed initial posts
+      const seedBatch = writeBatch(db);
+      INITIAL_POSTS.forEach((post) => {
+        const postData = { 
+          ...post, 
+          userId: targetUserId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        seedBatch.set(doc(db, 'posts', post.id), postData);
       });
-      await Promise.all(batchPromises);
-      addNotification('onNewTask', 'Data Restored', 'Initial dataset has been successfully restored.');
+      await seedBatch.commit();
+
+      addNotification('onNewTask', 'Data Restored', 'The portal has been reset to its initial state.');
+      alert('Data restoration successful. The portal has been reset.');
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'posts/batch');
+      handleFirestoreError(err, OperationType.WRITE, 'data/restore');
+      alert('Error restoring data. Please check logs.');
     } finally {
       setIsSeeding(false);
     }
   };
 
   if (!isAuthReady || showSplash) {
+    // ... rest of splash code remains same ...
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden">
         {/* Decorative Background Elements */}
@@ -1888,6 +1663,36 @@ export default function App() {
     );
   }
 
+  if (!user && isAuthReady) {
+    return <AuthScreen />;
+  }
+
+  if (profile?.status === 'pending') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+          <Clock className="w-10 h-10 text-amber-500" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Registration Pending</h2>
+        <p className="text-slate-500 max-w-md">Your account is awaiting supervisor approval. Please check back later or contact your department lead.</p>
+        <button onClick={logout} className="mt-8 text-sm font-bold text-amber-600 hover:text-amber-700">Sign Out</button>
+      </div>
+    );
+  }
+
+  if (profile?.status === 'blocked') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-10 h-10 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 mb-2">Access Revoked</h2>
+        <p className="text-slate-500 max-w-md">Your account has been deactivated. If you believe this is an error, please contact IT support.</p>
+        <button onClick={logout} className="mt-8 text-sm font-bold text-amber-600 hover:text-amber-700">Sign Out</button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Sidebar */}
@@ -1953,23 +1758,18 @@ export default function App() {
             {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Calendar View</span>}
           </button>
           
-          <div className="pt-4 mt-4 border-t border-slate-700/50">
-            <button 
-              onClick={() => setViewMode('admin')}
-              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-              title={isSidebarCollapsed && !isSidebarHovered ? "Admin Center" : ""}
-            >
-              <ShieldCheck className="w-5 h-5 shrink-0" />
-              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Admin Center</span>}
-            </button>
-            <button 
-              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 hover:bg-white hover:text-primary-dark rounded-xl transition-all text-slate-400`}
-              title={isSidebarCollapsed && !isSidebarHovered ? "My Account" : ""}
-            >
-              <UserIcon className="w-5 h-5 shrink-0" />
-              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">My Account</span>}
-            </button>
-          </div>
+          {profile?.role === 'marketing_supervisor' && (
+            <div className="pt-4 mt-4 border-t border-slate-700/50">
+              <button 
+                onClick={() => setViewMode('admin')}
+                className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+                title={isSidebarCollapsed && !isSidebarHovered ? "Admin Center" : ""}
+              >
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Admin Center</span>}
+              </button>
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-slate-700/50 flex flex-col gap-4">
@@ -1986,7 +1786,7 @@ export default function App() {
               )}
               {(!isSidebarCollapsed || isSidebarHovered) && (
                 <button 
-                  onClick={handleLogout}
+                  onClick={logout}
                   className="p-1.5 text-slate-500 hover:text-rose-400 transition-all shrink-0"
                   title="Sign Out"
                 >
@@ -1996,7 +1796,7 @@ export default function App() {
             </div>
           ) : (
             <button 
-              onClick={handleLogin}
+              onClick={login}
               className={`w-full flex items-center justify-center ${isSidebarCollapsed && !isSidebarHovered ? 'p-2' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
               title={isSidebarCollapsed && !isSidebarHovered ? "Sign In" : ""}
             >
@@ -2127,6 +1927,27 @@ export default function App() {
                     <Download className="w-4 h-4" />
                     Export CSV
                   </button>
+
+                  {profile?.role === 'marketing_supervisor' && (
+                    <>
+                      <input 
+                        type="file" 
+                        id="csv-import" 
+                        accept=".csv" 
+                        className="hidden" 
+                        onChange={handleImportCSV}
+                      />
+                      <button 
+                        onClick={() => document.getElementById('csv-import')?.click()}
+                        disabled={isSeeding}
+                        className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {isSeeding ? 'Importing...' : 'Import CSV'}
+                      </button>
+                    </>
+                  )}
+
                   <button 
                     onClick={() => handleOpenModal()}
                     className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
@@ -2140,12 +1961,17 @@ export default function App() {
 
             {viewMode === 'admin' ? (
               <AdminView 
-                onRestore={handleRestoreOldData} 
-                isSeeding={isSeeding} 
-                settings={notifSettings}
-                onToggleSetting={(key) => setNotifSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof notifSettings] }))}
+                notificationSettings={notifSettings}
+                onUpdateNotificationSettings={setNotifSettings}
+                addNotification={(title, message) => {
+                  addNotification('onNewTask', title, message);
+                }}
+                quickLinks={quickLinks}
+                onUpdateQuickLinks={setQuickLinks}
                 socialLinks={socialLinks}
                 onUpdateSocialLinks={handleUpdateSocialLinks}
+                onRestore={handleRestoreOldData}
+                isSeeding={isSeeding}
               />
             ) : (
               <>

@@ -54,8 +54,26 @@
       "properties": {
         "facebook": { "type": "string" },
         "instagram": { "type": "string" },
-        "linkedin": { "type": "string" }
+        "linkedin": { "type": "string" },
+        "tiktok": { "type": "string" }
       }
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account management and role storage",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { 
+          "type": "string", 
+          "enum": ["admin", "marketing_member"] 
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
@@ -70,6 +88,10 @@
     "/settings/{settingId}": {
       "schema": "object",
       "description": "System settings"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account management and role storage"
     }
   }
 }
