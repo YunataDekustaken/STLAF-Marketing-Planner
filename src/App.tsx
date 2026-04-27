@@ -1093,12 +1093,39 @@ function AppContent() {
     return () => unsubscribe();
   }, [isAuthReady]);
 
+  // Quick Links Listener
+  useEffect(() => {
+    if (!isAuthReady || !user) return;
+    
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'quick_links'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data && data.links) {
+          setQuickLinks(data.links);
+        }
+      }
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, 'settings/quick_links');
+    });
+
+    return () => unsubscribe();
+  }, [isAuthReady]);
+
   const handleUpdateSocialLinks = async (links: typeof socialLinks) => {
     try {
       await setDoc(doc(db, 'settings', 'social_links'), links);
       addNotification('onNewTask', 'Settings Updated', 'Social media redirection links have been updated.');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'settings/social_links');
+    }
+  };
+
+  const handleUpdateQuickLinks = async (links: typeof quickLinks) => {
+    try {
+      await setDoc(doc(db, 'settings', 'quick_links'), { links });
+      addNotification('onNewTask', 'Links Updated', 'Quick links have been updated for all users.');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/quick_links');
     }
   };
 
@@ -1558,6 +1585,7 @@ function AppContent() {
         };
         seedBatch.set(doc(db, 'posts', post.id), postData);
       });
+
       await seedBatch.commit();
 
       addNotification('onNewTask', 'Data Restored', 'The portal has been reset to its initial state.');
@@ -1774,22 +1802,18 @@ function AppContent() {
           {user ? (
             <div className={`flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
               {user.photoURL && (
-                <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
+                <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
               )}
               {(!isSidebarCollapsed || isSidebarHovered) && (
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-xs font-bold text-white truncate">{user.displayName}</p>
-                  <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                  <p className="text-sm font-bold text-white truncate leading-tight">{user.displayName}</p>
+                  <button 
+                    onClick={logout}
+                    className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors block mt-0.5 font-medium"
+                  >
+                    Sign Out
+                  </button>
                 </div>
-              )}
-              {(!isSidebarCollapsed || isSidebarHovered) && (
-                <button 
-                  onClick={logout}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 transition-all shrink-0"
-                  title="Sign Out"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               )}
             </div>
           ) : (
@@ -1965,7 +1989,7 @@ function AppContent() {
                   addNotification('onNewTask', title, message);
                 }}
                 quickLinks={quickLinks}
-                onUpdateQuickLinks={setQuickLinks}
+                onUpdateQuickLinks={handleUpdateQuickLinks}
                 socialLinks={socialLinks}
                 onUpdateSocialLinks={handleUpdateSocialLinks}
                 onRestore={handleRestoreOldData}

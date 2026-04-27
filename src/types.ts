@@ -76,7 +76,7 @@ export const INITIAL_POSTS: Post[] = [
   }
 ];
 
-export type ViewMode = 'assets' | 'admin' | 'list' | 'kanban' | 'calendar';
+export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar';
 
 export type UserRole = 'marketing_supervisor' | 'marketing_member' | 'department';
 
@@ -93,70 +93,3 @@ export interface UserProfile {
   photoURL?: string;
   status: UserStatus;
 }
-
-export interface Asset {
-  id: string;
-  title: string;
-  category: string;
-  link: string;
-  userId?: string;
-}
-
-export const ASSET_CATEGORIES = [
-  'Brand Assets',
-  'Templates',
-  'Guidelines',
-  'Campaign Materials',
-  'Other Resources'
-];
-
-export const INITIAL_ASSETS: Asset[] = [
-  {
-    id: 'a1',
-    title: "Primary Logo Kit (PNG/SVG)",
-    category: "Brand Assets",
-    link: "https://drive.google.com/file/d/1ABC123xyz/view?usp=sharing"
-  },
-  {
-    id: 'a2',
-    title: "Full Brand Guidelines 2024",
-    category: "Guidelines",
-    link: "https://drive.google.com/file/d/1DEF456uvw/view?usp=sharing"
-  },
-  {
-    id: 'a3',
-    title: "Email Template Pack",
-    category: "Templates",
-    link: "https://drive.google.com/drive/folders/1GHI789rst?usp=sharing"
-  },
-  {
-    id: 'a4',
-    title: "Social Media Templates",
-    category: "Templates",
-    link: "https://drive.google.com/drive/folders/1JKL012mno?usp=sharing"
-  },
-  {
-    id: 'a5',
-    title: "Q4 Campaign Assets",
-    category: "Campaign Materials",
-    link: "https://drive.google.com/drive/folders/1PQRS345tuv?usp=sharing"
-  },
-  {
-    id: 'a6',
-    title: "Certificate Templates",
-    category: "Templates",
-    link: "https://drive.google.com/drive/folders/1WXYZ678abc?usp=sharing"
-  },
-  {
-    id: 'a7',
-    title: "Color Palette & Fonts",
-    category: "Brand Assets",
-    link: "https://drive.google.com/file/d/1MNO987def/view?usp=sharing"
-  },
-  {
-    id: 'a8',
-    title: "Icon Library",
-    category: "Brand Assets",
-    link: "https://drive.google.com/drive/folders/1TUV456ghi?usp=sharing"
-  }
-];
