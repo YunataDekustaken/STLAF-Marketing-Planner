@@ -1120,9 +1120,7 @@ function AppContent() {
 
     // If no user, we show all posts or guest posts. 
     const postsRef = collection(db, 'posts');
-    const q = (profile?.role === 'marketing_supervisor')
-      ? query(postsRef) 
-      : query(postsRef, where('userId', '==', user.uid));
+    const q = query(postsRef);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
