@@ -37,7 +37,8 @@ export function FacebookPostModal({ isOpen, onClose, initialCaption, initialMedi
   useEffect(() => {
     if (isOpen) {
       setCaption(initialCaption);
-      setCreatives(initialCreatives || (initialMediaUrl ? [initialMediaUrl] : []));
+      const initialList = initialCreatives && initialCreatives.length > 0 ? initialCreatives : (initialMediaUrl ? [initialMediaUrl] : []);
+      setCreatives(initialList);
       resetStatus();
       setValidationError(null);
       setShowScheduler(false);

@@ -529,9 +529,12 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               </div>
             ))}
             {post.creatives!.length > 3 && (
-              <div className="flex items-center justify-center h-10 w-10 rounded border-2 border-white bg-slate-200 text-[10px] font-bold text-slate-600 z-0">
+              <button 
+                onClick={() => setPreviewImageIndex({ post, index: 3 })}
+                className="flex items-center justify-center h-10 w-10 rounded border-2 border-white bg-slate-200 text-[10px] font-bold text-slate-600 z-0 hover:bg-slate-300 transition-colors"
+              >
                 +{post.creatives!.length - 3}
-              </div>
+              </button>
             )}
             <button 
               onClick={() => handleOpenModal(post)}
@@ -1449,10 +1452,10 @@ function AppContent() {
     }
   };
 
-  const compressImage = (base64Str: string, maxWidth = 4096, maxHeight = 4096, quality = 0.92): Promise<string> => {
+  const compressImage = (base64Str: string, maxWidth = 8192, maxHeight = 8192, quality = 0.95): Promise<string> => {
     return new Promise((resolve) => {
-      // Don't compress small images
-      if (base64Str.length < 200000) {
+      // Don't compress small images (under 500KB)
+      if (base64Str.length < 500000) {
         resolve(base64Str);
         return;
       }
@@ -2822,7 +2825,7 @@ function AppContent() {
                 />
 
                 {previewImageIndex.post.creatives && previewImageIndex.post.creatives.length > 1 && (
-                  <>
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-12 pointer-events-none">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2832,7 +2835,7 @@ function AppContent() {
                           return { ...prev, index: nextIdx };
                         });
                       }}
-                      className="absolute left-0 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md border border-white/10 -ml-4"
+                      className="p-4 bg-white/20 hover:bg-white/40 text-white rounded-full transition-all backdrop-blur-md border border-white/20 pointer-events-auto"
                     >
                       <ChevronLeft className="w-8 h-8" />
                     </button>
@@ -2845,11 +2848,11 @@ function AppContent() {
                           return { ...prev, index: nextIdx };
                         });
                       }}
-                      className="absolute right-0 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md border border-white/10 -mr-4"
+                      className="p-4 bg-white/20 hover:bg-white/40 text-white rounded-full transition-all backdrop-blur-md border border-white/20 pointer-events-auto"
                     >
                       <ChevronRight className="w-8 h-8" />
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
 
