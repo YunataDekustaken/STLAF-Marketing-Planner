@@ -13,6 +13,7 @@ import {
   Clock, 
   AlertCircle, 
   Sparkles, 
+  Send,
   Edit2, 
   Trash2, 
   ExternalLink,
@@ -82,6 +83,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
 import { ProfileView } from './components/ProfileView';
+import { FacebookPostModal } from './components/FacebookPostModal';
 import { 
   collection, 
   onSnapshot, 
@@ -181,9 +183,10 @@ interface KanbanViewProps {
   setFormData: Dispatch<SetStateAction<Partial<Post>>>;
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
+  handleOpenFBModal: (post: Post) => void;
 }
 
-const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal, handleOpenShareModal }) => {
+const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, handleOpenModal, handleOpenShareModal, handleOpenFBModal }) => {
   const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled', 'Published'];
   
   return (
@@ -227,8 +230,20 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                     <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded">
                       {post.contentTitle}
                     </span>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      {format(new Date(post.date), 'MMM d')}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenFBModal(post);
+                        }}
+                        className="p-1 text-[#1877F2] hover:bg-blue-50 rounded"
+                        title="Post to Facebook"
+                      >
+                        <Facebook className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="text-[10px] text-slate-400 font-medium">
+                        {format(new Date(post.date), 'MMM d')}
+                      </div>
                     </div>
                   </div>
                   <h4 className="text-sm font-semibold text-slate-800 mb-2 line-clamp-2">
@@ -267,9 +282,10 @@ interface CalendarViewProps {
   handleCreateForDate: (dateStr: string) => Promise<Post | null>;
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
+  handleOpenFBModal: (post: Post) => void;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal, handleOpenFBModal }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -319,10 +335,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   <div 
                     key={post.id}
                     onClick={() => handleOpenModal(post)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex items-center justify-between group/p`}
                     title={post.topicTheme}
                   >
-                    {post.contentTitle}: {post.topicTheme || "Untitled"}
+                    <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenFBModal(post);
+                      }}
+                      className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 transition-all p-0.5"
+                    >
+                      <Facebook className="w-2.5 h-2.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -351,9 +376,10 @@ interface MonthlyTableViewProps {
   setIsColumnsLocked: (locked: boolean) => void;
   handleCopy: (text: string, id: string) => void;
   copiedId: string | null;
-  setPreviewImage: (url: string | null) => void;
+  setPreviewImageIndex: Dispatch<SetStateAction<{ post: Post, index: number } | null>>;
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
+  handleOpenFBModal: (post: Post) => void;
   handleDeletePost: (id: string) => void;
   searchQuery?: string;
   columnSettingsRef: React.RefObject<HTMLDivElement>;
@@ -377,9 +403,10 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   setIsColumnsLocked,
   handleCopy,
   copiedId,
-  setPreviewImage,
+  setPreviewImageIndex,
   handleOpenModal,
   handleOpenShareModal,
+  handleOpenFBModal,
   handleDeletePost,
   searchQuery = '',
   columnSettingsRef,
@@ -467,6 +494,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                 </button>
               )}
               <button 
+                onClick={() => handleOpenFBModal(post)}
+                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:text-[#1877F2] transition-colors"
+                title="Post to Facebook"
+              >
+                <Facebook className="w-3 h-3" />
+              </button>
+              <button 
                 onClick={() => handleOpenModal(post)}
                 className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-amber-50 hover:text-amber-600 transition-colors"
                 title="AI Generation"
@@ -477,35 +511,41 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           </div>
         );
       case 'creatives':
-        return post.creatives?.[0] ? (
-          <div className="relative group/creative w-12 h-12 rounded border border-slate-200 overflow-hidden bg-slate-50">
-            <img 
-              src={post.creatives[0]} 
-              alt="Creative" 
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/creative:opacity-100 transition-opacity flex items-center justify-center gap-1">
-              <button 
-                onClick={() => setPreviewImage(post.creatives![0])}
-                className="p-1 text-white hover:text-indigo-300 transition-colors"
+        const hasCreatives = post.creatives && post.creatives.length > 0;
+        return hasCreatives ? (
+          <div className="flex -space-x-3 overflow-hidden items-center group/images">
+            {post.creatives!.slice(0, 3).map((img, idx) => (
+              <div 
+                key={idx}
+                className="relative inline-block h-10 w-10 rounded border-2 border-white overflow-hidden bg-slate-100 cursor-pointer hover:scale-110 hover:z-10 transition-all shadow-sm"
+                onClick={() => setPreviewImageIndex({ post, index: idx })}
               >
-                <Eye className="w-3 h-3" />
-              </button>
-              <button 
-                onClick={() => handleOpenModal(post)}
-                className="p-1 text-white hover:text-indigo-300 transition-colors"
-              >
-                <Upload className="w-3 h-3" />
-              </button>
-            </div>
+                <img 
+                  src={img} 
+                  alt="Creative" 
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ))}
+            {post.creatives!.length > 3 && (
+              <div className="flex items-center justify-center h-10 w-10 rounded border-2 border-white bg-slate-200 text-[10px] font-bold text-slate-600 z-0">
+                +{post.creatives!.length - 3}
+              </div>
+            )}
+            <button 
+              onClick={() => handleOpenModal(post)}
+              className="ml-2 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg opacity-0 group-hover/images:opacity-100 transition-all"
+            >
+              <Upload className="w-4 h-4" />
+            </button>
           </div>
         ) : (
           <button 
             onClick={() => handleOpenModal(post)}
-            className="w-12 h-12 rounded border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+            className="w-10 h-10 rounded border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all font-bold"
           >
-            <Upload className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
           </button>
         );
       case 'format':
@@ -569,7 +609,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+      <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <LayoutList className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-semibold text-slate-700">Monthly Table</span>
@@ -727,6 +767,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                       <td className="px-4 py-3 align-top sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors border-l border-slate-100">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
+                            onClick={() => handleOpenFBModal(post)}
+                            className="p-1.5 hover:bg-blue-50 rounded-lg text-[#1877F2] hover:text-blue-600 transition-colors"
+                            title="Post to Facebook"
+                          >
+                            <Facebook className="w-4 h-4" />
+                          </button>
+                          <button 
                             onClick={() => handleOpenModal(post)}
                             className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
                             title="Edit Post"
@@ -801,9 +848,13 @@ function AppContent() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [sharingPost, setSharingPost] = useState<Post | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImageIndex, setPreviewImageIndex] = useState<{ post: Post, index: number } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
+  
+  // Facebook Post State
+  const [isFBModalOpen, setIsFBModalOpen] = useState(false);
+  const [selectedFBPost, setSelectedFBPost] = useState<Post | null>(null);
   const [isColumnsLocked, setIsColumnsLocked] = useState(true);
   const [tableColumns, setTableColumns] = useState<TableColumn[]>([
     { id: 'date', label: 'Date', width: 'w-32', visible: true },
@@ -1304,6 +1355,11 @@ function AppContent() {
     ]);
   };
 
+  const handleOpenFBModal = (post: Post) => {
+    setSelectedFBPost(post);
+    setIsFBModalOpen(true);
+  };
+
   const handleOpenModal = (post?: Post) => {
     if (post) {
       setEditingPost(post);
@@ -1350,6 +1406,13 @@ function AppContent() {
       userId: user?.uid || 'guest_user',
     } as Post;
 
+    // Check document size (approximate)
+    const estimatedSize = JSON.stringify(postData).length;
+    if (estimatedSize > 1000000) {
+      alert("The post content is too large to save (exceeds 1MB limit). Please remove some images or reduce the amount of text.");
+      return;
+    }
+
     try {
       await setDoc(doc(db, 'posts', id), postData);
       
@@ -1386,18 +1449,69 @@ function AppContent() {
     }
   };
 
-  const processFiles = (files: FileList | File[]) => {
-    Array.from(files).forEach((file: File) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          creatives: [...(prev.creatives || []), reader.result as string]
-        }));
+  const compressImage = (base64Str: string, maxWidth = 4096, maxHeight = 4096, quality = 0.92): Promise<string> => {
+    return new Promise((resolve) => {
+      // Don't compress small images
+      if (base64Str.length < 200000) {
+        resolve(base64Str);
+        return;
+      }
+
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+        
+        resolve(canvas.toDataURL('image/jpeg', quality));
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        resolve(base64Str);
+      };
     });
+  };
+
+  const processFiles = async (files: FileList | File[]) => {
+    const images = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (images.length === 0) return;
+
+    const processedImages = await Promise.all(images.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const compressed = await compressImage(reader.result as string);
+          resolve(compressed);
+        };
+        reader.readAsDataURL(file);
+      });
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      creatives: [...(prev.creatives || []), ...processedImages]
+    }));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1773,19 +1887,9 @@ function AppContent() {
         onMouseLeave={() => setIsSidebarHovered(false)}
         className={`${isSidebarCollapsed && !isSidebarHovered ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] relative z-30 shadow-2xl`}
       >
-        <div className={`px-4 pt-4 flex ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-start'}`}>
-          <button 
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 hover:bg-slate-700/50 rounded-lg text-slate-400 hover:text-white transition-all duration-300 ease-out"
-            title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
-          </button>
-        </div>
-
         <div 
           onClick={() => setViewMode('list')}
-          className={`p-6 pt-2 flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}
+          className={`pt-[32px] pl-[24px] pr-[24px] pb-[19px] flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}
         >
           <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-tighter">
@@ -1923,10 +2027,19 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
-          <h1 className="text-lg font-bold text-slate-800">
-            {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
-          </h1>
+        <header className="h-16 bg-white border-b border-slate-200 pl-[15px] pr-[32px] flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 pt-[8px] hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all duration-300 ease-out group"
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <PanelLeftClose className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+            </button>
+            <h1 className="text-lg font-bold text-slate-800 pt-0 pl-0">
+              {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
+            </h1>
+          </div>
           <div className="flex items-center gap-6">
             <div className="relative" ref={notificationRef}>
               <button 
@@ -2014,23 +2127,27 @@ function AppContent() {
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {/* Page Title & Actions */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
+              <div className="max-w-xl">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
                   {viewMode === 'admin' ? 'Admin Center' : viewMode === 'profile' ? 'Profile Management' : 'Content Planner'}
                 </h2>
-                <p className="text-sm text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
                   {viewMode === 'admin' ? 'Manage system settings and data restoration.' : viewMode === 'profile' ? 'View and update your personal information and account settings.' : 'Plan and manage your marketing content across all channels.'}
                 </p>
               </div>
               {viewMode !== 'admin' && viewMode !== 'profile' && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
                   <button 
                     onClick={handleExportCSV}
-                    className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                    className="group relative flex items-center gap-1.5 sm:gap-2 bg-white border border-slate-200 p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm shrink-0"
+                    title="Export CSV"
                   >
-                    <Download className="w-4 h-4" />
-                    Export CSV
+                    <Download className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Export</span>
+                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      Export CSV
+                    </span>
                   </button>
 
                   {profile?.role === 'marketing_supervisor' && (
@@ -2045,20 +2162,28 @@ function AppContent() {
                       <button 
                         onClick={() => document.getElementById('csv-import')?.click()}
                         disabled={isSeeding}
-                        className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="group relative flex items-center gap-1.5 sm:gap-2 bg-slate-900 text-white p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        title="Import CSV"
                       >
-                        <Upload className="w-4 h-4" />
-                        {isSeeding ? 'Importing...' : 'Import CSV'}
+                        <Upload className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
+                        <span className="hidden sm:inline">{isSeeding ? 'Importing...' : 'Import'}</span>
+                        <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                          {isSeeding ? 'Importing...' : 'Import CSV'}
+                        </span>
                       </button>
                     </>
                   )}
 
                   <button 
                     onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+                    className="group relative flex items-center gap-1.5 sm:gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0"
+                    title="Create New Task"
                   >
-                    <Plus className="w-4 h-4" />
-                    Create New Task
+                    <Plus className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Create Task</span>
+                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-amber-600 text-slate-900 text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      Create New Task
+                    </span>
                   </button>
                 </div>
               )}
@@ -2087,64 +2212,65 @@ function AppContent() {
             ) : (
               <>
                 {/* Month Navigation & Filters */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-                      <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <div className="px-4 font-bold text-slate-800 min-w-[160px] text-center">
-                        {format(currentMonth, 'MMMM yyyy')}
-                      </div>
-                      <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
+                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
+                    <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                      <ChevronLeft className="w-4 h-4 sm:w-5 h-5" />
+                    </button>
+                    <div className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm">
+                      {format(currentMonth, 'MMMM yyyy')}
                     </div>
-                    <button 
-                      onClick={handleToday}
-                      className="text-sm font-bold text-slate-600 hover:text-amber-600 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all"
-                    >
-                      Today
+                    <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                      <ChevronRight className="w-4 h-4 sm:w-5 h-5" />
                     </button>
                   </div>
+                  
+                  <button 
+                    onClick={handleToday}
+                    className="group relative text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 p-2 sm:px-4 sm:py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all shrink-0"
+                    title="Today"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 sm:hidden" />
+                    <span className="hidden sm:inline">Today</span>
+                  </button>
 
-                  <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Search content..."
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-sm"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
+                  <div className="flex-1 min-w-[140px] sm:max-w-xs relative shrink-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search..."
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-xs sm:text-sm"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm shrink-0">
+                      <button 
+                        onClick={() => setViewMode('list')}
+                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        title="List View"
+                      >
+                        <LayoutList className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => setViewMode('kanban')}
+                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        title="Kanban View"
+                      >
+                        <Columns className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => setViewMode('calendar')}
+                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        title="Calendar View"
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
-                        <button 
-                          onClick={() => setViewMode('list')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                          title="List View"
-                        >
-                          <LayoutList className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => setViewMode('kanban')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                          title="Kanban View"
-                        >
-                          <Columns className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => setViewMode('calendar')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                          title="Calendar View"
-                        >
-                          <CalendarIcon className="w-4 h-4" />
-                        </button>
-                      </div>
                       <select 
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
+                        className="flex-1 sm:flex-initial bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as any)}
                       >
@@ -2156,7 +2282,6 @@ function AppContent() {
                       </select>
                     </div>
                   </div>
-                </div>
 
                 {/* View Content */}
                 <div className="min-h-[400px]">
@@ -2178,9 +2303,10 @@ function AppContent() {
                       setIsColumnsLocked={setIsColumnsLocked}
                       handleCopy={handleCopy}
                       copiedId={copiedId}
-                      setPreviewImage={setPreviewImage}
+                      setPreviewImageIndex={setPreviewImageIndex}
                       handleOpenModal={handleOpenModal}
                       handleOpenShareModal={handleOpenShareModal}
+                      handleOpenFBModal={handleOpenFBModal}
                       handleDeletePost={handleDeletePost}
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
@@ -2193,6 +2319,7 @@ function AppContent() {
                       setFormData={setFormData}
                       handleOpenModal={handleOpenModal}
                       handleOpenShareModal={handleOpenShareModal}
+                      handleOpenFBModal={handleOpenFBModal}
                     />
                   )}
                   {viewMode === 'calendar' && (
@@ -2202,6 +2329,7 @@ function AppContent() {
                       handleCreateForDate={handleCreateForDate}
                       handleOpenModal={handleOpenModal}
                       handleOpenShareModal={handleOpenShareModal}
+                      handleOpenFBModal={handleOpenFBModal}
                     />
                   )}
                 </div>
@@ -2459,15 +2587,32 @@ function AppContent() {
                   <label className="text-xs font-medium text-slate-500 uppercase">Publish & Preview</label>
                   <div className="flex flex-wrap gap-3">
                     {socialLinks.facebook && (
-                      <a 
-                        href={socialLinks.facebook} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
-                      >
-                        <Facebook className="w-4 h-4" />
-                        Facebook
-                      </a>
+                      <div className="flex flex-col gap-2">
+                        <a 
+                          href={socialLinks.facebook} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
+                        >
+                          <Facebook className="w-4 h-4" />
+                          View Page
+                        </a>
+                        <button 
+                          onClick={() => {
+                            if (editingPost) {
+                              handleOpenFBModal({
+                                ...editingPost,
+                                caption: formData.caption || editingPost.caption,
+                                creatives: formData.creatives || editingPost.creatives
+                              });
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#1877F2] text-white hover:bg-[#0e63d1] rounded-xl text-xs font-bold transition-all shadow-sm"
+                        >
+                          <Send className="w-4 h-4" />
+                          Post/Schedule to FB
+                        </button>
+                      </div>
                     )}
                     {socialLinks.instagram && (
                       <a 
@@ -2627,7 +2772,7 @@ function AppContent() {
                             src={url} 
                             alt={`Creative ${idx}`} 
                             className="w-20 h-20 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setPreviewImage(url)}
+                            onClick={() => setPreviewImageIndex({ post: sharingPost, index: idx })}
                             referrerPolicy="no-referrer"
                           />
                         ))}
@@ -2655,34 +2800,96 @@ function AppContent() {
 
       {/* Image Preview Lightbox */}
       <AnimatePresence>
-        {previewImage && (
+        {previewImageIndex && (
           <div 
-            className="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-slate-900/90 backdrop-blur-md"
-            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-xl"
+            onClick={() => setPreviewImageIndex(null)}
           >
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="relative max-w-full max-h-full"
+              className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center gap-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <img 
-                src={previewImage} 
-                alt="Preview" 
-                className="max-w-full max-h-[85vh] rounded-lg shadow-2xl border border-white/10"
-                referrerPolicy="no-referrer"
-              />
-              <button 
-                onClick={() => setPreviewImage(null)}
-                className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              {/* Image with Navigation */}
+              <div className="relative w-full flex-1 flex items-center justify-center">
+                <img 
+                  src={previewImageIndex.post.creatives![previewImageIndex.index]} 
+                  alt="Preview" 
+                  className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl border border-white/10 ring-1 ring-white/20"
+                  referrerPolicy="no-referrer"
+                />
+
+                {previewImageIndex.post.creatives && previewImageIndex.post.creatives.length > 1 && (
+                  <>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImageIndex(prev => {
+                          if (!prev) return null;
+                          const nextIdx = (prev.index - 1 + prev.post.creatives!.length) % prev.post.creatives!.length;
+                          return { ...prev, index: nextIdx };
+                        });
+                      }}
+                      className="absolute left-0 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md border border-white/10 -ml-4"
+                    >
+                      <ChevronLeft className="w-8 h-8" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImageIndex(prev => {
+                          if (!prev) return null;
+                          const nextIdx = (prev.index + 1) % prev.post.creatives!.length;
+                          return { ...prev, index: nextIdx };
+                        });
+                      }}
+                      className="absolute right-0 p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all backdrop-blur-md border border-white/10 -mr-4"
+                    >
+                      <ChevronRight className="w-8 h-8" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Stats & Close */}
+              <div className="flex items-center gap-4 text-white">
+                <div className="px-6 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/10 font-bold text-sm">
+                  {previewImageIndex.index + 1} / {previewImageIndex.post.creatives?.length}
+                </div>
+                <button 
+                  onClick={() => setPreviewImageIndex(null)}
+                  className="p-3 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-lg transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Thumbnails list */}
+              <div className="flex gap-2 p-2 bg-white/5 rounded-2xl backdrop-blur-md border border-white/5 max-w-full overflow-x-auto no-scrollbar">
+                {previewImageIndex.post.creatives?.map((img, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setPreviewImageIndex({ ...previewImageIndex, index: idx })}
+                    className={`relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 transition-all ${previewImageIndex.index === idx ? 'ring-4 ring-indigo-500 scale-110 z-10' : 'opacity-40 hover:opacity-100'}`}
+                  >
+                    <img src={img} className="w-full h-full object-cover" alt="Thumb" referrerPolicy="no-referrer" />
+                  </button>
+                ))}
+              </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      <FacebookPostModal 
+        isOpen={isFBModalOpen} 
+        onClose={() => setIsFBModalOpen(false)}
+        initialCaption={selectedFBPost?.caption || ''}
+        initialMediaUrl={selectedFBPost?.creatives?.[0]}
+        creatives={selectedFBPost?.creatives || []}
+      />
     </div>
   );
 }
