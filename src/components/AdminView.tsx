@@ -99,11 +99,7 @@ export const AdminView = ({
     <div className="space-y-8">
       {/* Admin Tab Header */}
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Admin Center</h2>
-            <p className="text-slate-500 font-medium">Control the portal experience and manage user access.</p>
-          </div>
+        <div className="flex items-center justify-end">
           <div className="hidden md:flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl">
             {tabs.map(tab => (
               <button

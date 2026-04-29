@@ -2131,14 +2131,7 @@ function AppContent() {
           <div className="max-w-7xl mx-auto">
             {/* Page Title & Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
-              <div className="max-w-xl">
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
-                  {viewMode === 'admin' ? 'Admin Center' : viewMode === 'profile' ? 'Profile Management' : 'Content Planner'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  {viewMode === 'admin' ? 'Manage system settings and data restoration.' : viewMode === 'profile' ? 'View and update your personal information and account settings.' : 'Plan and manage your marketing content across all channels.'}
-                </p>
-              </div>
+
               {viewMode !== 'admin' && viewMode !== 'profile' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
                   <button 
