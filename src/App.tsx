@@ -178,6 +178,38 @@ const STATUS_ICONS: Record<PostStatus, any> = {
   'Published': Check,
 };
 
+const FBStatusBadge: React.FC<{ post: Post }> = ({ post }) => {
+  if (!post.fbStatus || post.fbStatus === 'idle') return null;
+  
+  const formatScheduledTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    try {
+      const date = new Date(timeStr);
+      return `at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } catch {
+      return '';
+    }
+  };
+
+  return (
+    <div className={`flex flex-col gap-0.5 items-start`}>
+      <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm ${
+        post.fbStatus === 'posted' 
+          ? 'bg-[#1877F2] text-white' 
+          : 'bg-amber-400 text-white'
+      }`}>
+        <Facebook className="w-2.5 h-2.5" />
+        {post.fbStatus === 'posted' ? 'FB Posted' : 'FB Scheduled'}
+      </div>
+      {post.fbStatus === 'scheduled' && post.fbScheduledTime && (
+        <span className="text-[8px] font-bold text-amber-600 pl-1">
+          {formatScheduledTime(post.fbScheduledTime)}
+        </span>
+      )}
+    </div>
+  );
+};
+
 interface KanbanViewProps {
   filteredPosts: Post[];
   setFormData: Dispatch<SetStateAction<Partial<Post>>>;
@@ -227,9 +259,12 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                   className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded">
-                      {post.contentTitle}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded">
+                        {post.contentTitle}
+                      </span>
+                      <FBStatusBadge post={post} />
+                    </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={(e) => {
@@ -335,19 +370,26 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   <div 
                     key={post.id}
                     onClick={() => handleOpenModal(post)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex items-center justify-between group/p`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex flex-col gap-0.5 group/p`}
                     title={post.topicTheme}
                   >
-                    <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenFBModal(post);
-                      }}
-                      className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 transition-all p-0.5"
-                    >
-                      <Facebook className="w-2.5 h-2.5" />
-                    </button>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenFBModal(post);
+                        }}
+                        className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 transition-all p-0.5"
+                      >
+                        <Facebook className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                    {post.fbStatus && post.fbStatus !== 'idle' && (
+                      <div className="scale-75 origin-left -mt-1 -mb-1">
+                        <FBStatusBadge post={post} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -435,13 +477,20 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
         ) : null;
       case 'contentTitle':
         return (
-          <select 
-            value={post.contentTitle}
-            onChange={(e) => handleUpdatePostInline(post.id, 'contentTitle', e.target.value)}
-            className="w-full bg-transparent border-none text-sm font-medium text-slate-900 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
-          >
-            {CONTENT_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <div className="flex flex-col gap-1">
+            <select 
+              value={post.contentTitle}
+              onChange={(e) => handleUpdatePostInline(post.id, 'contentTitle', e.target.value)}
+              className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+            >
+              {CONTENT_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {post.fbStatus && post.fbStatus !== 'idle' && (
+              <div className="px-2">
+                <FBStatusBadge post={post} />
+              </div>
+            )}
+          </div>
         );
       case 'contentType':
         return (
@@ -2882,9 +2931,7 @@ function AppContent() {
       <FacebookPostModal 
         isOpen={isFBModalOpen} 
         onClose={() => setIsFBModalOpen(false)}
-        initialCaption={selectedFBPost?.caption || ''}
-        initialMediaUrl={selectedFBPost?.creatives?.[0]}
-        creatives={selectedFBPost?.creatives || []}
+        post={selectedFBPost}
       />
     </div>
   );

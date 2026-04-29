@@ -14,19 +14,21 @@ import {
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
+import { Post } from '../types';
+import { db } from '../firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
 interface FacebookPostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialCaption: string;
-  initialMediaUrl?: string;
-  creatives?: string[];
+  post: Post | null;
 }
 
 const FB_CHAR_LIMIT = 63206;
 
-export function FacebookPostModal({ isOpen, onClose, initialCaption, initialMediaUrl, creatives: initialCreatives = [] }: FacebookPostModalProps) {
-  const [caption, setCaption] = useState(initialCaption);
-  const [creatives, setCreatives] = useState<string[]>(initialCreatives);
+export function FacebookPostModal({ isOpen, onClose, post }: FacebookPostModalProps) {
+  const [caption, setCaption] = useState(post?.caption || '');
+  const [creatives, setCreatives] = useState<string[]>(post?.creatives || []);
   const [showScheduler, setShowScheduler] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
@@ -35,51 +37,76 @@ export function FacebookPostModal({ isOpen, onClose, initialCaption, initialMedi
   const { postToFacebook, isLoading, error, success, postId, resetStatus } = useFacebookPost();
 
   useEffect(() => {
-    if (isOpen) {
-      setCaption(initialCaption);
-      const initialList = initialCreatives && initialCreatives.length > 0 ? initialCreatives : (initialMediaUrl ? [initialMediaUrl] : []);
-      setCreatives(initialList);
+    if (isOpen && post) {
+      setCaption(post.caption || '');
+      setCreatives(post.creatives || []);
       resetStatus();
       setValidationError(null);
       setShowScheduler(false);
       setScheduleDate('');
       setScheduleTime('');
     }
-  }, [isOpen, initialCaption, initialMediaUrl, initialCreatives]);
+  }, [isOpen, post]);
 
-  const handlePostNow = () => {
+  const updatePostStatus = async (fbPostId: string, fbStatus: 'posted' | 'scheduled', fbScheduledTime?: string) => {
+    if (!post) return;
+    try {
+      const postRef = doc(db, 'posts', post.id);
+      await updateDoc(postRef, {
+        fbStatus,
+        fbPostId,
+        fbScheduledTime: fbScheduledTime || null,
+        status: fbStatus === 'scheduled' ? 'Scheduled' : 'Published',
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error updating post status in Firestore:", err);
+    }
+  };
+
+  const handlePostNow = async () => {
     setValidationError(null);
-    postToFacebook({
+    const result = await postToFacebook({
       message: caption,
       mediaUrls: creatives
     });
+    // The hook doesn't return the result directly, it updates its state.
+    // We'll use useEffect to watch for success.
   };
 
-  const handleSchedule = () => {
+  const handleSchedule = async () => {
     setValidationError(null);
     if (!scheduleDate || !scheduleTime) {
       setValidationError("Please select both date and time for scheduling.");
       return;
     }
     
-    const dateTimeStr = `${scheduleDate}T${scheduleTime}`;
-    const scheduledDate = new Date(dateTimeStr);
-    const now = new Date();
+    const dateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+    const unixTimestamp = Math.floor(dateTime.getTime() / 1000);
     
-    // Facebook requires at least 10 mins in future
-    const minTime = new Date(now.getTime() + 10 * 60 * 1000);
+    // Facebook requires scheduled time to be between 10 minutes and 75 days in the future
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    const minTime = nowTimestamp + 600; // 10 mins
     
-    if (scheduledDate < minTime) {
+    if (unixTimestamp < minTime) {
       setValidationError("Scheduled time must be at least 10 minutes in the future.");
       return;
     }
 
-    postToFacebook({
+    await postToFacebook({
       message: caption,
       mediaUrls: creatives,
-      scheduleTime: dateTimeStr
+      scheduleTime: unixTimestamp
     });
   };
+
+  useEffect(() => {
+    if (success && postId && post) {
+      const fbStatus = showScheduler ? 'scheduled' : 'posted';
+      const fbScheduledTime = showScheduler ? `${scheduleDate}T${scheduleTime}` : undefined;
+      updatePostStatus(postId, fbStatus, fbScheduledTime);
+    }
+  }, [success, postId]);
 
   const removeCreative = (index: number) => {
     setCreatives(prev => prev.filter((_, i) => i !== index));
@@ -216,25 +243,34 @@ export function FacebookPostModal({ isOpen, onClose, initialCaption, initialMedi
                     <motion.div 
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="grid grid-cols-2 gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100"
+                      className="space-y-3"
                     >
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest pl-1">Date</label>
-                        <input 
-                          type="date"
-                          value={scheduleDate}
-                          onChange={(e) => setScheduleDate(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-200"
-                        />
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest pl-1">Date</label>
+                          <input 
+                            type="date"
+                            value={scheduleDate}
+                            onChange={(e) => setScheduleDate(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-200"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest pl-1">Time</label>
+                          <input 
+                            type="time"
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-200"
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest pl-1">Time</label>
-                        <input 
-                          type="time"
-                          value={scheduleTime}
-                          onChange={(e) => setScheduleTime(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-200"
-                        />
+                      <div className="px-2 flex items-center justify-between text-[10px] font-medium text-slate-400">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Detected Timezone: <span className="font-bold text-slate-500 uppercase">{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+                        </div>
+                        <p>Times are scheduled based on your local time.</p>
                       </div>
                     </motion.div>
                   )}

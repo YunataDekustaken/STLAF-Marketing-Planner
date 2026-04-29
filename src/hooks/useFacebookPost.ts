@@ -4,14 +4,21 @@ interface FacebookPostData {
   message: string;
   mediaUrl?: string;
   mediaUrls?: string[];
-  scheduleTime?: string;
+  scheduleTime?: string | number;
 }
 
 interface FacebookPostResponse {
   success: boolean;
   postId?: string;
   error?: string;
+  fbError?: {
+    message?: string;
+    type?: string;
+    code?: number;
+    error_subcode?: number;
+  };
 }
+
 
 export function useFacebookPost() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +47,8 @@ export function useFacebookPost() {
         setSuccess(true);
         setPostId(result.postId || null);
       } else {
-        setError(result.error || 'Failed to post to Facebook');
+        const detail = result.fbError ? ` (${result.fbError.type}: ${result.fbError.message})` : '';
+        setError((result.error || 'Failed to post to Facebook') + detail);
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred');

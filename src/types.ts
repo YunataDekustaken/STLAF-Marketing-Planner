@@ -23,6 +23,9 @@ export interface Post {
   userId?: string;
   createdAt?: any;
   updatedAt?: any;
+  fbStatus?: 'posted' | 'scheduled' | 'idle';
+  fbPostId?: string;
+  fbScheduledTime?: string;
 }
 
 export const INITIAL_POSTS: Post[] = [
