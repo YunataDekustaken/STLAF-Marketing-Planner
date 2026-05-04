@@ -29,10 +29,12 @@ interface SocialHubViewProps {
   handleOpenFBModal: (post: Post) => void;
   handleCreateForDate: (date: Date) => void;
   handleDeletePost: (id: string) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
+  handleDeletePostFromFB?: (post: Post) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
   canDelete?: boolean;
   governanceSettings?: {
     restrictDeletionToSupervisor: boolean;
     requireDeletionApproval: boolean;
+    requireFacebookDeletionApproval: boolean;
   };
   handleApproveDeletion?: (id: string) => Promise<void>;
   handleRejectDeletion?: (id: string) => Promise<void>;
@@ -44,6 +46,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   handleOpenFBModal,
   handleCreateForDate,
   handleDeletePost,
+  handleDeletePostFromFB,
   canDelete = true,
   governanceSettings,
   handleApproveDeletion,
@@ -52,7 +55,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 }) => {
   const publishedPosts = posts.filter(p => p.status === 'Published').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const scheduledPosts = posts.filter(p => p.status === 'Scheduled').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'published' | 'scheduled' | 'history'>('overview');
   const [historyEntries, setHistoryEntries] = useState<SocialHistoryEntry[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -111,6 +114,25 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
         type: 'error'
       });
       return;
+    }
+
+    // Check governance if handler provided
+    if (handleDeletePostFromFB) {
+      const govResult = await handleDeletePostFromFB(post);
+      if (govResult === 'requested') {
+        setNotification({
+          isOpen: true,
+          title: 'Request Submitted',
+          message: 'Facebook deletion request was sent to supervisors for approval.',
+          type: 'success'
+        });
+        setConfirmModal({ isOpen: false, type: null, post: null });
+        return;
+      }
+      if (govResult === 'denied' || govResult === 'error') {
+        setConfirmModal({ isOpen: false, type: null, post: null });
+        return;
+      }
     }
 
     const result = await deleteFacebookPost(post.fbPostId);
@@ -458,7 +480,12 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                     <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{post.contentType}</span>
                     {post.deletionRequested && (
                       <span className="px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[8px] font-black uppercase tracking-widest rounded-full border border-rose-200 dark:border-rose-800 animate-pulse">
-                        Pending Removal
+                        Pending Hub Removal
+                      </span>
+                    )}
+                    {post.facebookDeletionRequested && (
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-200 dark:border-amber-800 animate-pulse">
+                        Pending FB Removal
                       </span>
                     )}
                   </div>
@@ -486,7 +513,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                           <ExternalLink className="w-3.5 h-3.5" />
                           View Details
                         </button>
-                        {post.deletionRequested ? (
+                        {post.deletionRequested || post.facebookDeletionRequested ? (
                           userRole === 'marketing_supervisor' && (
                             <>
                               <button 
@@ -498,7 +525,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                                 className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                Approve Deletion
+                                Approve {post.facebookDeletionRequested ? 'FB' : ''} Deletion
                               </button>
                               <button 
                                 onClick={(e) => {
@@ -525,7 +552,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                               className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors disabled:opacity-50"
                             >
                               {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                              Delete from Facebook
+                              {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request FB Removal' : 'Delete from Facebook'}
                             </button>
                             <button 
                               onClick={async (e) => {

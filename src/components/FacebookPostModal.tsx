@@ -27,11 +27,16 @@ interface FacebookPostModalProps {
   onClose: () => void;
   post: Post | null;
   onSuccess?: (postId: string, fbStatus: 'posted' | 'scheduled') => void;
+  handleDeleteFromFB?: (post: Post) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
+  userRole?: string;
+  governanceSettings?: {
+    requireFacebookDeletionApproval: boolean;
+  };
 }
 
 const FB_CHAR_LIMIT = 63206;
 
-export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: FacebookPostModalProps) {
+export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDeleteFromFB, userRole, governanceSettings }: FacebookPostModalProps) {
   const [caption, setCaption] = useState(post?.caption || '');
   const [creatives, setCreatives] = useState<string[]>(post?.creatives || []);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -115,6 +120,27 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
   const handleDeleteFromFacebook = async () => {
     if (!post?.fbPostId) return;
     
+    // Check governance if handler provided
+    if (handleDeleteFromFB) {
+      const result = await handleDeleteFromFB(post);
+      
+      if (result === 'requested') {
+        setNotification({
+          isOpen: true,
+          title: 'Request Submitted',
+          message: 'Your deletion request has been sent for supervisor approval.',
+          type: 'success'
+        });
+        setTimeout(onClose, 1500);
+        return;
+      }
+      
+      if (result === 'denied' || result === 'error') {
+        setIsConfirmDeleteOpen(false);
+        return;
+      }
+    }
+
     setIsDeleting(true);
     const result = await deleteFacebookPost(post.fbPostId);
     
@@ -219,9 +245,11 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
           isOpen={isConfirmDeleteOpen}
           onClose={() => setIsConfirmDeleteOpen(false)}
           onConfirm={handleDeleteFromFacebook}
-          title="Delete from Facebook?"
-          message="Are you sure you want to delete this post from your Facebook page? This action is permanent and cannot be undone."
-          confirmText="Delete Now"
+          title={governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' ? "Request FB Removal?" : "Delete from Facebook?"}
+          message={governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' 
+            ? "Your request to remove this post from Facebook will be sent to a Marketing Supervisor for approval." 
+            : "Are you sure you want to delete this post from your Facebook page? This action is permanent and cannot be undone."}
+          confirmText={governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' ? "Send Request" : "Delete Now"}
           isLoading={isDeleting}
         />
 
@@ -309,11 +337,13 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
                   {(isAlreadyPublished || isAlreadyScheduled) && (
                     <button 
                       onClick={() => setIsConfirmDeleteOpen(true)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || post?.facebookDeletionRequested}
                       className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl font-bold text-sm hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all border border-rose-200 dark:border-rose-800 disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete from Facebook
+                      {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' 
+                        ? (post?.facebookDeletionRequested ? 'Removal Pending Approval' : 'Request FB Removal') 
+                        : 'Delete from Facebook'}
                     </button>
                   )}
                   

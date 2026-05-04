@@ -275,6 +275,22 @@ export const AdminView = ({
                       <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${localGovernanceSettings?.requireDeletionApproval ? 'right-1' : 'left-1'}`} />
                     </button>
                   </div>
+
+                  <div className="flex items-center justify-between group pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        Approval Required for Facebook Deletion
+                        <Clock className="w-3.5 h-3.5 text-rose-500" />
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Regular users must request permission from a Supervisor to delete posts from Facebook.</p>
+                    </div>
+                    <button 
+                      onClick={() => setLocalGovernanceSettings(prev => ({ ...prev, requireFacebookDeletionApproval: !prev.requireFacebookDeletionApproval }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-all duration-300 ${localGovernanceSettings?.requireFacebookDeletionApproval ? 'bg-rose-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${localGovernanceSettings?.requireFacebookDeletionApproval ? 'right-1' : 'left-1'}`} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-8">

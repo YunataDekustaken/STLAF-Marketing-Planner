@@ -27,6 +27,10 @@
         "funnelStatus": { "type": "string", "description": "Marketing funnel stage" },
         "customPrompt": { "type": "string", "description": "Custom AI instructions for caption generation" },
         "notes": { "type": "string", "description": "General notes" },
+        "deletionRequested": { "type": "boolean", "description": "Whether a removal from hub has been requested" },
+        "facebookDeletionRequested": { "type": "boolean", "description": "Whether a removal from Facebook has been requested" },
+        "requestedBy": { "type": "string", "description": "Email of user who requested deletion" },
+        "requestDate": { "type": "string", "format": "date-time", "description": "When the deletion was requested" },
         "userId": { "type": "string", "description": "The ID of the user who owns this post" }
       },
       "required": ["id", "date", "status", "contentTitle", "contentType", "format", "topicTheme"]

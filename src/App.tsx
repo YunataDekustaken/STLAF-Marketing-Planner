@@ -1092,6 +1092,7 @@ function AppContent() {
   const [governanceSettings, setGovernanceSettings] = useState({
     restrictDeletionToSupervisor: false,
     requireDeletionApproval: false,
+    requireFacebookDeletionApproval: false,
   });
   const [exportSettings, setExportSettings] = useState({
     date: true,
@@ -1822,9 +1823,57 @@ function AppContent() {
 
   const handleApproveDeletion = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'posts', id));
-      addNotification('onTaskDeleted', 'Deletion Approved', 'Content has been permanently removed by supervisor.');
-      toast.success("Content deleted permanently.");
+      const postDoc = await getDoc(doc(db, 'posts', id));
+      if (!postDoc.exists()) return;
+      const post = { id: postDoc.id, ...postDoc.data() } as Post;
+
+      if (post.facebookDeletionRequested && post.fbPostId) {
+        // This part is tricky because we need to call the FB API.
+        // Usually we'd use useFacebookPost hook, but this is a function in App.tsx.
+        // We can either:
+        // 1. Pass the delete function here
+        // 2. Just clear the metadata and let the supervisor handle the actual FB deletion manually if needed?
+        // Actually, the prompt implies "approval for delete from facebook".
+        // Let's assume for now we clear the FB link as if it's "Approved to be removed from local tracking of FB" 
+        // OR we should ideally call the API.
+        
+        // Since I don't have the hook here, I'll update the document to clear FB status
+        // and tell the user they need to manually verify if it's not automated. 
+        // BUT wait, I can call the server API directly with fetch.
+        
+        try {
+          const response = await fetch('/api/facebook/delete-post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId: post.fbPostId })
+          });
+          
+          if (!response.ok) throw new Error('Failed to delete from Facebook API');
+          
+          await updateDoc(doc(db, 'posts', id), {
+            fbPostId: null,
+            fbStatus: null,
+            fbPublishedTime: null,
+            fbScheduledTime: null,
+            facebookDeletionRequested: false,
+            status: 'Not Started',
+            updatedAt: serverTimestamp()
+          });
+          
+          addNotification('onTaskDeleted', 'FB Deletion Approved', 'Post has been removed from Facebook.');
+          toast.success("Approved and deleted from Facebook.");
+        } catch (apiErr) {
+          console.error("FB API Error during approval:", apiErr);
+          toast.error("Approved locally, but failed to delete from Facebook via API.");
+          // Still clear the request but maybe keep the ID so they can try again?
+          // No, better to keep the request pending if API fails.
+        }
+      } else {
+        await deleteDoc(doc(db, 'posts', id));
+        addNotification('onTaskDeleted', 'Deletion Approved', 'Content has been permanently removed by supervisor.');
+        toast.success("Content deleted permanently.");
+      }
+      
       if (editingPost?.id === id) setIsModalOpen(false);
     } catch (err) {
       console.error("Error approving deletion:", err);
@@ -1836,14 +1885,43 @@ function AppContent() {
     try {
       await updateDoc(doc(db, 'posts', id), {
         deletionRequested: false,
+        facebookDeletionRequested: false,
         requestedBy: null,
         requestDate: null
       });
-      toast.success("Deletion request rejected. Content restored.");
+      toast.success("Deletion request rejected.");
     } catch (err) {
       console.error("Error rejecting deletion:", err);
       toast.error("Failed to reject deletion.");
     }
+  };
+
+  const handleDeletePostFromFB = async (post: Post): Promise<'deleted' | 'requested' | 'denied' | 'error'> => {
+    if (governanceSettings.restrictDeletionToSupervisor && profile?.role !== 'marketing_supervisor') {
+      toast.error("Deletion is restricted to Marketing Supervisors only.");
+      return 'denied';
+    }
+
+    if (governanceSettings.requireFacebookDeletionApproval && profile?.role !== 'marketing_supervisor') {
+      try {
+        await updateDoc(doc(db, 'posts', post.id), {
+          facebookDeletionRequested: true,
+          requestedBy: profile?.email || 'unknown',
+          requestDate: new Date().toISOString(),
+          updatedAt: serverTimestamp()
+        });
+        
+        notifySupervisors('onTaskUpdated', 'FB Deletion Requested', `User ${profile?.displayName || profile?.email} requested to delete a post from Facebook.`, post.id);
+        toast.success("Facebook deletion request submitted for approval.");
+        return 'requested';
+      } catch (err) {
+        console.error("Error requesting FB deletion:", err);
+        toast.error("Failed to submit deletion request.");
+        return 'error';
+      }
+    }
+
+    return 'deleted'; 
   };
 
   const compressImage = (base64Str: string, maxWidth = 8192, maxHeight = 8192, quality = 0.95): Promise<string> => {
@@ -2861,6 +2939,7 @@ function AppContent() {
                       posts={posts}
                       handleOpenFBModal={handleOpenFBModal}
                       handleDeletePost={handleDeletePost}
+                      handleDeletePostFromFB={handleDeletePostFromFB}
                       handleApproveDeletion={handleApproveDeletion}
                       handleRejectDeletion={handleRejectDeletion}
                       userRole={profile?.role}
@@ -3485,6 +3564,9 @@ function AppContent() {
         isOpen={isFBModalOpen} 
         onClose={() => setIsFBModalOpen(false)}
         post={selectedFBPost}
+        handleDeleteFromFB={handleDeletePostFromFB}
+        userRole={profile?.role}
+        governanceSettings={governanceSettings}
         onSuccess={(fId, fStatus) => {
           if (selectedFBPost) {
             const title = fStatus === 'posted' ? 'Post Published' : 'Post Scheduled';

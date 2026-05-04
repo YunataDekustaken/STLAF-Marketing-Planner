@@ -30,6 +30,7 @@ export interface Post {
   approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
   isDirectPost?: boolean;
   deletionRequested?: boolean;
+  facebookDeletionRequested?: boolean;
   requestedBy?: string | null;
   requestDate?: string | null;
 }
