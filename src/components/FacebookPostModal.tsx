@@ -22,11 +22,12 @@ interface FacebookPostModalProps {
   isOpen: boolean;
   onClose: () => void;
   post: Post | null;
+  onSuccess?: (postId: string, fbStatus: 'posted' | 'scheduled') => void;
 }
 
 const FB_CHAR_LIMIT = 63206;
 
-export function FacebookPostModal({ isOpen, onClose, post }: FacebookPostModalProps) {
+export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: FacebookPostModalProps) {
   const [caption, setCaption] = useState(post?.caption || '');
   const [creatives, setCreatives] = useState<string[]>(post?.creatives || []);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -48,17 +49,24 @@ export function FacebookPostModal({ isOpen, onClose, post }: FacebookPostModalPr
     }
   }, [isOpen, post]);
 
-  const updatePostStatus = async (fbPostId: string, fbStatus: 'posted' | 'scheduled', fbScheduledTime?: string) => {
+  const updatePostStatus = async (fbPostId: string, fbStatus: 'posted' | 'scheduled', timeStr?: string) => {
     if (!post) return;
     try {
       const postRef = doc(db, 'posts', post.id);
-      await updateDoc(postRef, {
+      const updateData: any = {
         fbStatus,
         fbPostId,
-        fbScheduledTime: fbScheduledTime || null,
         status: fbStatus === 'scheduled' ? 'Scheduled' : 'Published',
         updatedAt: serverTimestamp()
-      });
+      };
+
+      if (fbStatus === 'scheduled') {
+        updateData.fbScheduledTime = timeStr || null;
+      } else {
+        updateData.fbPublishedTime = new Date().toISOString();
+      }
+
+      await updateDoc(postRef, updateData);
     } catch (err) {
       console.error("Error updating post status in Firestore:", err);
     }
@@ -66,12 +74,10 @@ export function FacebookPostModal({ isOpen, onClose, post }: FacebookPostModalPr
 
   const handlePostNow = async () => {
     setValidationError(null);
-    const result = await postToFacebook({
+    await postToFacebook({
       message: caption,
       mediaUrls: creatives
     });
-    // The hook doesn't return the result directly, it updates its state.
-    // We'll use useEffect to watch for success.
   };
 
   const handleSchedule = async () => {
@@ -105,6 +111,9 @@ export function FacebookPostModal({ isOpen, onClose, post }: FacebookPostModalPr
       const fbStatus = showScheduler ? 'scheduled' : 'posted';
       const fbScheduledTime = showScheduler ? `${scheduleDate}T${scheduleTime}` : undefined;
       updatePostStatus(postId, fbStatus, fbScheduledTime);
+      if (onSuccess) {
+        onSuccess(postId, fbStatus);
+      }
     }
   }, [success, postId]);
 

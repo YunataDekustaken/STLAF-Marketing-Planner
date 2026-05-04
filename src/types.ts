@@ -26,6 +26,8 @@ export interface Post {
   fbStatus?: 'posted' | 'scheduled' | 'idle';
   fbPostId?: string;
   fbScheduledTime?: string;
+  fbPublishedTime?: string;
+  approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
 }
 
 export const INITIAL_POSTS: Post[] = [

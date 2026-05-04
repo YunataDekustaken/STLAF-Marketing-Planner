@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   MoreVertical,
+  FileText,
+  Layout,
   X,
   Loader2,
   Undo2,
@@ -75,6 +77,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Toaster, toast } from 'react-hot-toast';
 import { Post, PostStatus, ViewMode, INITIAL_POSTS, UserProfile } from './types';
 import { generateCaption } from './services/geminiService';
 import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES } from './constants';
@@ -179,33 +182,65 @@ const STATUS_ICONS: Record<PostStatus, any> = {
 };
 
 const FBStatusBadge: React.FC<{ post: Post }> = ({ post }) => {
+  const [showDetails, setShowDetails] = useState(false);
   if (!post.fbStatus || post.fbStatus === 'idle') return null;
   
-  const formatScheduledTime = (timeStr?: string) => {
-    if (!timeStr) return '';
+  const formatFullDate = (timeStr?: string) => {
+    if (!timeStr) return 'Unknown';
     try {
       const date = new Date(timeStr);
-      return `at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return date.toLocaleDateString([], { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
     } catch {
-      return '';
+      return 'Invalid Date';
     }
   };
 
+  const timeInfo = post.fbStatus === 'scheduled' ? post.fbScheduledTime : post.fbPublishedTime;
+
   return (
-    <div className={`flex flex-col gap-0.5 items-start`}>
-      <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm ${
-        post.fbStatus === 'posted' 
-          ? 'bg-[#1877F2] text-white' 
-          : 'bg-amber-400 text-white'
-      }`}>
+    <div 
+      className="relative"
+      onMouseEnter={() => setShowDetails(true)}
+      onMouseLeave={() => setShowDetails(false)}
+    >
+      <div 
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest shadow-sm cursor-help select-none hover:brightness-110 transition-all ${
+          post.fbStatus === 'posted' 
+            ? 'bg-[#1877F2] text-white' 
+            : 'bg-amber-400 text-white'
+        }`}
+      >
         <Facebook className="w-2.5 h-2.5" />
         {post.fbStatus === 'posted' ? 'FB Posted' : 'FB Scheduled'}
       </div>
-      {post.fbStatus === 'scheduled' && post.fbScheduledTime && (
-        <span className="text-[8px] font-bold text-amber-600 pl-1">
-          {formatScheduledTime(post.fbScheduledTime)}
-        </span>
-      )}
+
+      <AnimatePresence>
+        {showDetails && (
+          <motion.div
+            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            className="absolute z-50 mt-1 left-0 bg-slate-800 text-white text-[9px] px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-slate-700"
+          >
+            <div className="font-bold flex items-center gap-1 mb-0.5">
+              <Clock className="w-2.5 h-2.5 text-blue-300" />
+              {post.fbStatus === 'posted' ? 'Published' : 'Scheduled'}
+            </div>
+            <div className="text-slate-300">
+              {formatFullDate(timeInfo)}
+            </div>
+            <div className="mt-1 pt-1 border-t border-slate-700 font-mono text-[8px] text-slate-400">
+              ID: {post.fbPostId?.substring(0, 12)}...
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -621,6 +656,23 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             <option value="In Progress">In Progress</option>
             <option value="Ready for Review">Ready for Review</option>
             <option value="Scheduled">Scheduled</option>
+            <option value="Published">Published</option>
+          </select>
+        );
+      case 'approvalStatus':
+        return (
+          <select 
+            value={post.approvalStatus || 'Pending'}
+            onChange={(e) => handleUpdatePostInline(post.id, 'approvalStatus', e.target.value)}
+            className={`w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 ${
+              post.approvalStatus === 'Approved' ? 'text-emerald-500 bg-emerald-50/50' : 
+              post.approvalStatus === 'For Revision' ? 'text-rose-500 bg-rose-50/50' : 
+              'text-slate-400 bg-slate-50/50'
+            }`}
+          >
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="For Revision">For Revision</option>
           </select>
         );
       case 'funnelStatus':
@@ -697,6 +749,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                         { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
                         { id: 'format', label: 'Format', width: 'w-40', visible: true },
                         { id: 'status', label: 'Status', width: 'w-44', visible: true },
+                        { id: 'approvalStatus', label: 'Approval', width: 'w-44', visible: true },
                         { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
                         { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
                         { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
@@ -918,6 +971,7 @@ function AppContent() {
     { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
     { id: 'format', label: 'Format', width: 'w-40', visible: true },
     { id: 'status', label: 'Status', width: 'w-44', visible: true },
+    { id: 'approvalStatus', label: 'Approval', width: 'w-44', visible: true },
     { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
     { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
     { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
@@ -948,6 +1002,7 @@ function AppContent() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [socialLinks, setSocialLinks] = useState({
     facebook: '',
@@ -963,6 +1018,22 @@ function AppContent() {
     onStatusScheduled: true,
     onStatusReadyForReview: true,
     onAICaption: true,
+    onPostPublished: true,
+    onPostApproved: true,
+  });
+  const [exportSettings, setExportSettings] = useState({
+    date: true,
+    contentTitle: true,
+    contentType: true,
+    topicTheme: true,
+    subtopic: true,
+    caption: true,
+    format: true,
+    status: true,
+    funnelStatus: true,
+    visualIdeas: true,
+    notes: true,
+    approvalStatus: true,
   });
   const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
 
@@ -982,6 +1053,13 @@ function AppContent() {
     
     try {
       await addDoc(collection(db, 'notifications'), newNotif);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <div className="font-bold">{title}</div>
+          <div className="text-xs opacity-80">{message}</div>
+        </div>,
+        { duration: 4000 }
+      );
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'notifications');
     }
@@ -1012,6 +1090,78 @@ function AppContent() {
     } catch (err) {
       console.error("Error notifying supervisors:", err);
     }
+  };
+
+  const notifyAll = async (type: keyof typeof notifSettings, title: string, message: string, postId: string) => {
+    if (!notifSettings[type]) return;
+    try {
+      const uQuery = query(
+        collection(db, 'users'),
+        where('status', '==', 'active')
+      );
+      const uDocs = await getDocs(uQuery);
+      const uPromises = uDocs.docs.map(uDoc => {
+        // If it's the current user, we already (optionally) show a toast via addNotification
+        // but we still might want it in their notifications list.
+        return addDoc(collection(db, 'notifications'), {
+          title,
+          message: `${message} (Update by ${profile?.displayName || user?.email || 'User'})`,
+          createdAt: serverTimestamp(),
+          read: false,
+          postId: postId || null,
+          userId: uDoc.id,
+          type
+        });
+      });
+      await Promise.all(uPromises);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <div className="font-bold">{title}</div>
+          <div className="text-xs opacity-80">📢 Notification sent to all users</div>
+        </div>
+      );
+    } catch (err) {
+      console.error("Error notifying all users:", err);
+    }
+  };
+
+  // Persistence for settings
+  useEffect(() => {
+    if (!isAuthReady || !user) return;
+
+    const loadSettings = async () => {
+      try {
+        const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          if (data.notifSettings) setNotifSettings(prev => ({ ...prev, ...data.notifSettings }));
+          if (data.exportSettings) setExportSettings(prev => ({ ...prev, ...data.exportSettings }));
+        }
+      } catch (err) {
+        console.error("Error loading settings:", err);
+      }
+    };
+
+    loadSettings();
+  }, [isAuthReady, user]);
+
+  const updateGlobalSettings = async (field: string, value: any) => {
+    if (!user || profile?.role !== 'marketing_supervisor') return;
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { [field]: value }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'settings/global');
+    }
+  };
+
+  const handleUpdateNotifSettings = (newSettings: any) => {
+    setNotifSettings(newSettings);
+    updateGlobalSettings('notifSettings', newSettings);
+  };
+
+  const handleUpdateExportSettings = (newSettings: any) => {
+    setExportSettings(newSettings);
+    updateGlobalSettings('exportSettings', newSettings);
   };
 
   const handleNotificationClick = async (notif: any) => {
@@ -1319,6 +1469,18 @@ function AppContent() {
         } else if (value === 'Ready for Review') {
           addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
           notifySupervisors('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+        } else if (value === 'Published') {
+          addNotification('onPostPublished', 'Post Published', 'A post has been manually marked as Published.', id);
+          notifyAll('onPostPublished', 'Post Published', 'A new post has been published!', id);
+        }
+      }
+
+      if (field === 'approvalStatus') {
+        if (value === 'Approved') {
+          addNotification('onPostApproved', 'Post Approved', 'Your post has been approved.', id);
+          notifyAll('onPostApproved', 'Post Approved', 'A post has been approved and is ready for the next step.', id);
+        } else if (value === 'For Revision') {
+          addNotification('onNewTask', 'Revision Required', 'A post requires revision.', id);
         }
       }
     } catch (err) {
@@ -1646,8 +1808,8 @@ function AppContent() {
     }
   };
 
-  const handleExportCSV = () => {
-    if (posts.length === 0) {
+  const handleExportCSV = (templateOnly: boolean = false) => {
+    if (!templateOnly && posts.length === 0) {
       alert('No data to export');
       return;
     }
@@ -1664,7 +1826,6 @@ function AppContent() {
         .replace(/\u2026/g, "...");      // Ellipsis
 
       // Remove emojis and other non-standard symbols
-      // This regex covers a wide range of emojis and symbols
       sanitized = sanitized.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}]/gu, '');
 
       // Remove non-printable control characters
@@ -1674,37 +1835,51 @@ function AppContent() {
       return sanitized.replace(/"/g, '""');
     };
 
-    const headers = ['Date', 'Title', 'Type', 'Theme', 'Subtopic', 'Caption', 'Format', 'Status', 'Funnel', 'Visual Ideas', 'Notes'];
-    const rows = posts.map(post => [
-      post.date,
-      `"${sanitizeForCSV(post.contentTitle)}"`,
-      `"${sanitizeForCSV(post.contentType)}"`,
-      `"${sanitizeForCSV(post.topicTheme)}"`,
-      `"${sanitizeForCSV(post.subtopic || '')}"`,
-      `"${sanitizeForCSV(post.caption || '')}"`,
-      `"${sanitizeForCSV(post.format)}"`,
-      `"${sanitizeForCSV(post.status)}"`,
-      `"${sanitizeForCSV(post.funnelStatus || '')}"`,
-      `"${sanitizeForCSV(post.visualIdeas || '')}"`,
-      `"${sanitizeForCSV(post.notes || '')}"`
-    ]);
+    const columnMap = [
+      { key: 'date', label: 'Date', getValue: (p: Post) => p.date },
+      { key: 'contentTitle', label: 'Title', getValue: (p: Post) => `"${sanitizeForCSV(p.contentTitle)}"` },
+      { key: 'contentType', label: 'Type', getValue: (p: Post) => `"${sanitizeForCSV(p.contentType)}"` },
+      { key: 'topicTheme', label: 'Theme', getValue: (p: Post) => `"${sanitizeForCSV(p.topicTheme)}"` },
+      { key: 'subtopic', label: 'Subtopic', getValue: (p: Post) => `"${sanitizeForCSV(p.subtopic || '')}"` },
+      { key: 'caption', label: 'Caption', getValue: (p: Post) => `"${sanitizeForCSV(p.caption || '')}"` },
+      { key: 'format', label: 'Format', getValue: (p: Post) => `"${sanitizeForCSV(p.format)}"` },
+      { key: 'status', label: 'Status', getValue: (p: Post) => `"${sanitizeForCSV(p.status)}"` },
+      { key: 'funnelStatus', label: 'Funnel', getValue: (p: Post) => `"${sanitizeForCSV(p.funnelStatus || '')}"` },
+      { key: 'visualIdeas', label: 'Visual Ideas', getValue: (p: Post) => `"${sanitizeForCSV(p.visualIdeas || '')}"` },
+      { key: 'notes', label: 'Notes', getValue: (p: Post) => `"${sanitizeForCSV(p.notes || '')}"` },
+      { key: 'approvalStatus', label: 'Approval', getValue: (p: Post) => `"${sanitizeForCSV(p.approvalStatus || '')}"` }
+    ];
 
-    // Add UTF-8 BOM (\uFEFF) at the beginning for Excel compatibility
-    const csvContent = '\uFEFF' + [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
+    const activeColumns = columnMap.filter(col => (exportSettings as any)[col.key]);
+    const headers = activeColumns.map(col => col.label);
+    
+    let csvContent = '\uFEFF' + headers.join(',') + '\n';
+
+    if (!templateOnly) {
+      const rows = posts.map(post => activeColumns.map(col => col.getValue(post)));
+      csvContent += rows.map(row => row.join(',')).join('\n');
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `content_planner_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    link.style.visibility = 'hidden';
+    const fileName = templateOnly 
+      ? `content_planner_template.csv` 
+      : `content_planner_export_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    addNotification('onExportCSV', 'Export Successful', `Your CSV export for ${format(currentMonth, 'MMMM yyyy')} is ready.`);
+    URL.revokeObjectURL(url);
+    
+    if (!templateOnly) {
+      addNotification('onExportCSV', 'Export Successful', `Your CSV export for ${format(currentMonth, 'MMMM yyyy')} is ready.`);
+    } else {
+      toast.success('Template Downloaded', { icon: '📄' });
+    }
   };
 
   const handleImportCSV = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -1933,6 +2108,7 @@ function AppContent() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+      <Toaster position="top-right" reverseOrder={false} />
       {/* Sidebar */}
       <aside 
         onMouseEnter={() => isSidebarCollapsed && setIsSidebarHovered(true)}
@@ -1994,10 +2170,10 @@ function AppContent() {
               <button 
                 onClick={() => setViewMode('admin')}
                 className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-                title={isSidebarCollapsed && !isSidebarHovered ? "Admin Center" : ""}
+                title={isSidebarCollapsed && !isSidebarHovered ? "Settings" : ""}
               >
                 <ShieldCheck className="w-5 h-5 shrink-0" />
-                {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Admin Center</span>}
+                {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Settings</span>}
               </button>
             </div>
           )}
@@ -2089,7 +2265,7 @@ function AppContent() {
               {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <PanelLeftClose className="w-5 h-5 group-hover:scale-110 transition-transform" />}
             </button>
             <h1 className="text-lg font-bold text-slate-800 pt-0 pl-0">
-              {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Admin Center'}
+              {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
           <div className="flex items-center gap-6">
@@ -2182,18 +2358,82 @@ function AppContent() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
 
               {viewMode !== 'admin' && viewMode !== 'profile' && (
-                <div className="flex items-center gap-1.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
-                  <button 
-                    onClick={handleExportCSV}
-                    className="group relative flex items-center gap-1.5 sm:gap-2 bg-white border border-slate-200 p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm shrink-0"
-                    title="Export CSV"
-                  >
-                    <Download className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
-                    <span className="hidden sm:inline">Export</span>
-                    <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      Export CSV
-                    </span>
-                  </button>
+                <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
+                  <div className="relative inline-block text-left">
+                    <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
+                      <button 
+                        onClick={() => {
+                          handleExportCSV(false);
+                          setShowExportMenu(false);
+                        }}
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-full text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all border-r border-slate-200"
+                        title="Export with Data"
+                      >
+                        <Download className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
+                        <span className="hidden sm:inline">Export</span>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowExportMenu(!showExportMenu);
+                        }}
+                        className={`flex items-center justify-center w-8 sm:w-10 h-full transition-all ${showExportMenu ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                        title="Export Options"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {showExportMenu && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-[60]" 
+                            onClick={() => setShowExportMenu(false)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-[70] overflow-hidden"
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportCSV(false);
+                                setShowExportMenu(false);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="text-slate-900">Export with Data</div>
+                                <div className="text-[10px] text-slate-400 font-normal">Full content library to CSV</div>
+                              </div>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportCSV(true);
+                                setShowExportMenu(false);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-50"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                <Layout className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="text-slate-900">Format Only (Template)</div>
+                                <div className="text-[10px] text-slate-400 font-normal">Empty template for import</div>
+                              </div>
+                            </button>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
                   {profile?.role === 'marketing_supervisor' && (
                     <>
@@ -2237,7 +2477,9 @@ function AppContent() {
             {viewMode === 'admin' ? (
               <AdminView 
                 notificationSettings={notifSettings}
-                onUpdateNotificationSettings={setNotifSettings}
+                onUpdateNotificationSettings={handleUpdateNotifSettings}
+                exportSettings={exportSettings}
+                onUpdateExportSettings={handleUpdateExportSettings}
                 addNotification={(title, message) => {
                   addNotification('onNewTask', title, message);
                 }}
@@ -2682,7 +2924,7 @@ function AppContent() {
                       </a>
                     )}
                     {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
-                      <p className="text-[10px] text-slate-400 italic">No social links configured in Admin Center.</p>
+                      <p className="text-[10px] text-slate-400 italic">No social links configured in Settings.</p>
                     )}
                   </div>
                 </div>
@@ -2932,6 +3174,14 @@ function AppContent() {
         isOpen={isFBModalOpen} 
         onClose={() => setIsFBModalOpen(false)}
         post={selectedFBPost}
+        onSuccess={(fId, fStatus) => {
+          if (selectedFBPost) {
+            const title = fStatus === 'posted' ? 'Post Published' : 'Post Scheduled';
+            const msg = fStatus === 'posted' ? 'A post has been published to Facebook!' : 'A post has been scheduled for Facebook.';
+            addNotification('onPostPublished', title, msg, selectedFBPost.id);
+            notifyAll('onPostPublished', title, msg, selectedFBPost.id);
+          }
+        }}
       />
     </div>
   );

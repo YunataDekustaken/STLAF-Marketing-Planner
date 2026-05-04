@@ -30,6 +30,8 @@ import { RoleManager } from './RoleManager';
 export const AdminView = ({ 
   notificationSettings,
   onUpdateNotificationSettings,
+  exportSettings,
+  onUpdateExportSettings,
   addNotification,
   quickLinks,
   onUpdateQuickLinks,
@@ -40,6 +42,8 @@ export const AdminView = ({
 }: { 
   notificationSettings: any,
   onUpdateNotificationSettings: (settings: any) => void,
+  exportSettings: any,
+  onUpdateExportSettings: (settings: any) => void,
   addNotification: (title: string, message: string, type?: 'info' | 'success' | 'warning') => void,
   quickLinks: {id: string, name: string, url: string}[],
   onUpdateQuickLinks: (links: {id: string, name: string, url: string}[]) => void,
@@ -50,6 +54,7 @@ export const AdminView = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'links'>('users');
   const [localSettings, setLocalSettings] = useState(notificationSettings);
+  const [localExportSettings, setLocalExportSettings] = useState(exportSettings);
   const [localQuickLinks, setLocalQuickLinks] = useState(quickLinks || []);
   const [localSocialLinks, setLocalSocialLinks] = useState(socialLinks);
 
@@ -60,6 +65,10 @@ export const AdminView = ({
   useEffect(() => {
     setLocalSettings(notificationSettings);
   }, [notificationSettings]);
+
+  useEffect(() => {
+    setLocalExportSettings(exportSettings);
+  }, [exportSettings]);
 
   useEffect(() => {
     if (quickLinks) setLocalQuickLinks(quickLinks);
@@ -209,6 +218,71 @@ export const AdminView = ({
                 </button>
               </div>
 
+              {/* CSV Export Settings Block */}
+              <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3 bg-emerald-50 rounded-xl">
+                    <Download className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">CSV Export Configuration</h3>
+                </div>
+
+                <div className="mb-8">
+                  <p className="text-sm text-slate-500 mb-6 font-medium">
+                    Select which columns should be included in the CSV export and import template:
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {[
+                      { key: 'date', label: 'Date' },
+                      { key: 'contentTitle', label: 'Title' },
+                      { key: 'contentType', label: 'Type' },
+                      { key: 'topicTheme', label: 'Theme' },
+                      { key: 'subtopic', label: 'Subtopic' },
+                      { key: 'caption', label: 'Caption' },
+                      { key: 'format', label: 'Format' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'funnelStatus', label: 'Funnel' },
+                      { key: 'visualIdeas', label: 'Visual Ideas' },
+                      { key: 'notes', label: 'Notes' },
+                      { key: 'approvalStatus', label: 'Approval' }
+                    ].map(item => (
+                      <label 
+                        key={item.key} 
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                          localExportSettings?.[item.key] 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                            : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                          localExportSettings?.[item.key] ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-300'
+                        }`}>
+                          {localExportSettings?.[item.key] && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          className="hidden"
+                          checked={localExportSettings?.[item.key] || false}
+                          onChange={() => setLocalExportSettings((prev: any) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                        />
+                        <span className="text-sm font-bold">{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    onUpdateExportSettings(localExportSettings);
+                    addNotification('Export Settings Updated', 'CSV export configuration has been saved.', 'success');
+                  }}
+                  className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                >
+                  Save Export Configuration
+                </button>
+              </div>
+
               {/* Social Redirection Block */}
               <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
                 <div className="flex items-center gap-4 mb-8">
@@ -322,7 +396,7 @@ export const AdminView = ({
                   </div>
                   
                   <div className="pt-6 border-t border-slate-100">
-                    <p className="text-xs italic text-slate-400">Admin Center is only accessible to Marketing Supervisors.</p>
+                    <p className="text-xs italic text-slate-400">Settings are only accessible to Marketing Supervisors.</p>
                   </div>
                 </div>
               </div>
