@@ -1107,6 +1107,8 @@ function AppContent() {
     onAICaption: true,
     onPostPublished: true,
     onPostApproved: true,
+    onNewConcern: true,
+    onNewSupportMessage: true,
   });
   const [governanceSettings, setGovernanceSettings] = useState({
     restrictDeletionToSupervisor: false,
@@ -1266,10 +1268,15 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthReady || !user) return;
 
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+    const unsubscribeReady = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data.notifSettings) setNotifSettings(prev => ({ ...prev, ...data.notifSettings }));
+        if (data.notifSettings) setNotifSettings(prev => ({ 
+          ...prev, 
+          ...data.notifSettings,
+          onNewConcern: data.notifSettings.onNewConcern ?? true,
+          onNewSupportMessage: data.notifSettings.onNewSupportMessage ?? true
+        }));
         if (data.exportSettings) setExportSettings(prev => ({ ...prev, ...data.exportSettings }));
         if (data.governanceSettings) setGovernanceSettings(prev => ({ 
           restrictDeletionToSupervisor: false,
@@ -1281,8 +1288,107 @@ function AppContent() {
       console.error("Error listening to settings:", err);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeReady();
   }, [isAuthReady, user]);
+
+  // Listener for new concerns to notify supervisors
+  useEffect(() => {
+    if (!user || profile?.role !== 'marketing_supervisor' || !notifSettings.onNewConcern) return;
+
+    // We only want to notify about NEW concerns created AFTER the listener starts
+    const startTime = new Date();
+    
+    const qConcerns = query(
+      collection(db, 'concerns'),
+      where('status', '==', 'pending')
+    );
+
+    const unsubscribeConcerns = onSnapshot(qConcerns, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const docTime = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(0);
+          
+          if (docTime > startTime) {
+            addNotificationSimple(
+              'New Support Concern', 
+              `A new concern has been submitted by ${data.userName || data.userEmail}: "${data.subject}"`,
+              'info'
+            );
+          }
+        }
+      });
+    });
+
+    return () => unsubscribeConcerns();
+  }, [user, profile?.role, notifSettings.onNewConcern]);
+
+  // Combined listener for messages inside concerns
+  useEffect(() => {
+    if (!user || !notifSettings.onNewSupportMessage) return;
+
+    const startTime = new Date();
+
+    const qMessages = query(collection(db, 'concerns'));
+
+    const unsubscribeMessages = onSnapshot(qMessages, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified') {
+          const data = change.doc.data();
+          const messages = data.messages || [];
+          if (messages.length === 0) return;
+
+          const lastMessage = messages[messages.length - 1];
+          const messageTime = new Date(lastMessage.timestamp);
+
+          if (messageTime > startTime) {
+            // If I am supervisor, notify me about user messages
+            if (profile?.role === 'marketing_supervisor' && lastMessage.role === 'user') {
+              addNotificationSimple(
+                'New Message', 
+                `New message from ${lastMessage.senderName}: "${lastMessage.text.substring(0, 50)}${lastMessage.text.length > 50 ? '...' : ''}"`,
+                'info'
+              );
+            }
+            // If I am a standard user, notify me about supervisor messages on MY concerns
+            else if (profile?.role !== 'marketing_supervisor' && lastMessage.role === 'supervisor' && data.userId === user.uid) {
+              addNotificationSimple(
+                'Supervisor Replied', 
+                `The supervisor replied to your concern: "${lastMessage.text.substring(0, 50)}${lastMessage.text.length > 50 ? '...' : ''}"`,
+                'success'
+              );
+            }
+          }
+        }
+      });
+    });
+
+    return () => unsubscribeMessages();
+  }, [user, profile?.role, notifSettings.onNewSupportMessage]);
+
+  const addNotificationSimple = async (title: string, message: string, type: 'info' | 'success' | 'warning' = 'info') => {
+    const targetUserId = user?.uid || 'guest_user';
+    const newNotif = {
+      title,
+      message,
+      createdAt: serverTimestamp(),
+      read: false,
+      userId: targetUserId,
+      type: 'system' // Custom types use system as base for global list
+    };
+    
+    try {
+      await addDoc(collection(db, 'notifications'), newNotif);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <div className="font-bold">{title}</div>
+          <div className="text-xs opacity-80">{message}</div>
+        </div>
+      );
+    } catch (err) {
+      console.error("Error adding notification:", err);
+    }
+  };
 
   const updateGlobalSettings = async (field: string, value: any) => {
     if (!user || profile?.role !== 'marketing_supervisor') return;

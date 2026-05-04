@@ -428,7 +428,9 @@ export const AdminView = ({
                       {[
                         { key: 'onExportCSV', label: 'Export CSV', desc: 'Notify when CSV export is completed' },
                         { key: 'onNewTask', label: 'New Task Created', desc: 'Notify when a new content task is added' },
-                        { key: 'onTaskDeleted', label: 'Task Deleted', desc: 'Notify when a task is permanently removed' }
+                        { key: 'onTaskDeleted', label: 'Task Deleted', desc: 'Notify when a task is permanently removed' },
+                        { key: 'onNewConcern', label: 'Support Concerns', desc: 'Notify when a new user concern is submitted' },
+                        { key: 'onNewSupportMessage', label: 'Support Chats', desc: 'Notify on new messages in support threads' }
                       ].map(item => (
                         <div key={item.key} className="flex items-center justify-between group">
                           <div>
