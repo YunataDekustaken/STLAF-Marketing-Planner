@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   // ── DELETE /api/facebook-post/:postId ──────────────────────────────────────
   if (req.method === 'DELETE') {
     // Vercel passes dynamic segments via req.query when the file is named
-    // [postId].js, but since this file is facebook-post.js the postId arrives
-    // as part of the URL path.  We extract it from req.url instead.
-    const postId = req.url.split('/api/facebook-post/')[1]?.split('?')[0];
+    // [postId].js, but since this file is facebook-post.js we use the 
+    // query param populated by our vercel.json rewrite or fallback to req.url parsing.
+    const postId = req.query.postId || req.url.split('/api/facebook-post/')[1]?.split('?')[0];
 
     if (!postId) {
       return res.status(400).json({ success: false, error: 'Missing postId in URL.' });
