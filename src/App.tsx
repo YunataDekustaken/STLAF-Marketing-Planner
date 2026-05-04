@@ -56,7 +56,8 @@ import {
   Share,
   Music2,
   Sun,
-  Moon
+  Moon,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -91,6 +92,7 @@ import { AdminView } from './components/AdminView';
 import { SocialHubView } from './components/SocialHubView';
 import { ProfileView } from './components/ProfileView';
 import { FacebookPostModal } from './components/FacebookPostModal';
+import { HelpView } from './components/HelpView';
 import { 
   collection, 
   onSnapshot, 
@@ -1006,6 +1008,23 @@ function AppContent() {
   const [previewImageIndex, setPreviewImageIndex] = useState<{ post: Post, index: number } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showColumnSettings, setShowColumnSettings] = useState(false);
+  
+  const [activeConcernsCount, setActiveConcernsCount] = useState(0);
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    
+    const q = query(
+      collection(db, 'concerns'),
+      where('status', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setActiveConcernsCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [auth.currentUser]);
   
   // Facebook Post State
   const [isFBModalOpen, setIsFBModalOpen] = useState(false);
@@ -2439,11 +2458,16 @@ function AppContent() {
             <div className="pt-4 mt-4 border-t border-slate-700/50">
               <button 
                 onClick={() => setViewMode('admin')}
-                className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+                className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out relative ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
                 title={isSidebarMini ? "Settings" : ""}
               >
                 <Settings className="w-5 h-5 shrink-0" />
                 {isSidebarExpanded && <span className="whitespace-nowrap">Settings</span>}
+                {activeConcernsCount > 0 && (
+                  <span className={`absolute ${isSidebarMini ? 'top-1 right-1' : 'right-4'} flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-lg`}>
+                    {activeConcernsCount}
+                  </span>
+                )}
               </button>
             </div>
           )}
@@ -2456,6 +2480,15 @@ function AppContent() {
             >
               <UserIcon className="w-5 h-5 shrink-0" />
               {isSidebarExpanded && <span className="whitespace-nowrap">My Profile</span>}
+            </button>
+
+            <button 
+              onClick={() => setViewMode('help')}
+              className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out mt-1 ${viewMode === 'help' ? 'bg-slate-700/50 text-indigo-400 border-l-4 border-indigo-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+              title={isSidebarMini ? "Help & Guide" : ""}
+            >
+              <HelpCircle className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && <span className="whitespace-nowrap">Help & Support</span>}
             </button>
           </div>
 
@@ -2587,7 +2620,7 @@ function AppContent() {
               )}
             </button>
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 pt-0 pl-0">
-              {viewMode === 'social' ? 'Social Hub' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
+              {viewMode === 'social' ? 'Social Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
           <div className="flex items-center gap-6">
@@ -2679,7 +2712,7 @@ function AppContent() {
             {/* Page Title & Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
 
-              {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && (
+              {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && viewMode !== 'help' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
                   <div className="relative inline-block text-left">
                     <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
@@ -2815,6 +2848,14 @@ function AppContent() {
                 onUpdateSocialLinks={handleUpdateSocialLinks}
                 onRestore={handleRestoreOldData}
                 isSeeding={isSeeding}
+                profile={profile}
+                pendingConcernsCount={activeConcernsCount}
+              />
+            ) : viewMode === 'help' ? (
+              <HelpView 
+                userEmail={user.email} 
+                displayName={profile?.displayName || user.email} 
+                userId={user.uid}
               />
             ) : viewMode === 'profile' ? (
               <ProfileView 

@@ -61,5 +61,11 @@ service cloud.firestore {
       allow create: if isActive() && request.resource.data.userId == request.auth.uid;
       allow delete: if isActive() && resource.data.userId == request.auth.uid;
     }
+
+    match /concerns/{concernId} {
+      allow create: if isActive() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin() || (isActive() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
   }
 }

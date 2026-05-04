@@ -22,11 +22,17 @@ import {
   Check,
   Music2,
   Shield,
-  Lock
+  Lock,
+  MessageSquare,
+  Send,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Cloud, RefreshCw, Users as UsersIcon, UserCog, Upload } from 'lucide-react';
+import { Cloud, RefreshCw, Users as UsersIcon, UserCog, Upload, Mail as MailIcon } from 'lucide-react';
 import { RoleManager } from './RoleManager';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '../firebase';
+import toast from 'react-hot-toast';
 
 export const AdminView = ({ 
   notificationSettings,
@@ -41,7 +47,9 @@ export const AdminView = ({
   onRestore,
   isSeeding,
   governanceSettings,
-  onUpdateGovernanceSettings
+  onUpdateGovernanceSettings,
+  profile,
+  pendingConcernsCount
 }: { 
   notificationSettings: any,
   onUpdateNotificationSettings: (settings: any) => void,
@@ -55,14 +63,21 @@ export const AdminView = ({
   socialLinks: { facebook: string, instagram: string, linkedin: string, tiktok: string },
   onUpdateSocialLinks: (links: any) => void,
   onRestore: () => void,
-  isSeeding: boolean
+  isSeeding: boolean,
+  profile: any,
+  pendingConcernsCount?: number
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'links'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'concerns' | 'links' | 'settings'>('users');
   const [localSettings, setLocalSettings] = useState(notificationSettings);
   const [localGovernanceSettings, setLocalGovernanceSettings] = useState(governanceSettings);
   const [localExportSettings, setLocalExportSettings] = useState(exportSettings);
   const [localQuickLinks, setLocalQuickLinks] = useState(quickLinks || []);
   const [localSocialLinks, setLocalSocialLinks] = useState(socialLinks);
+  const [concerns, setConcerns] = useState<any[]>([]);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const [isUpdatingLinks, setIsUpdatingLinks] = useState(false);
   const [showLinksConfirm, setShowLinksConfirm] = useState(false);
@@ -87,6 +102,23 @@ export const AdminView = ({
   useEffect(() => {
     setLocalSocialLinks(socialLinks);
   }, [socialLinks]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'concerns'),
+      orderBy('timestamp', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const entries = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setConcerns(entries);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleUpdateQuickLinks = async () => {
     setIsUpdatingLinks(true);
@@ -113,8 +145,36 @@ export const AdminView = ({
     addNotification('Governance Updated', 'System governance settings have been updated.', 'success');
   };
 
+  const handleSendReply = async (concernId: string) => {
+    if (!replyText.trim()) return;
+    setIsSubmittingReply(true);
+    try {
+      const newMessage = {
+        text: replyText.trim(),
+        senderId: profile?.uid || 'supervisor',
+        senderName: profile?.displayName || profile?.email || 'Supervisor',
+        role: 'supervisor',
+        timestamp: new Date().toISOString()
+      };
+
+      await updateDoc(doc(db, 'concerns', concernId), {
+        messages: arrayUnion(newMessage),
+        status: 'reviewed'
+      });
+      toast.success("Reply sent successfully.");
+      setReplyingTo(null);
+      setReplyText('');
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      toast.error("Failed to send reply.");
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
   const tabs = [
     { id: 'users', label: 'User Operations', icon: <UserCog className="w-4 h-4" /> },
+    { id: 'concerns', label: 'User Concerns', icon: <MessageSquare className="w-4 h-4" /> },
     { id: 'links', label: 'Quick Links', icon: <ExternalLink className="w-4 h-4" /> },
     { id: 'settings', label: 'System Settings', icon: <Zap className="w-4 h-4" /> }
   ] as const;
@@ -137,6 +197,11 @@ export const AdminView = ({
               >
                 {tab.icon}
                 {tab.label}
+                {tab.id === 'concerns' && pendingConcernsCount !== undefined && pendingConcernsCount > 0 && (
+                  <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                    {pendingConcernsCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -161,6 +226,187 @@ export const AdminView = ({
                 <RoleManager addNotification={addNotification} />
               </div>
             </motion.div>
+          )}
+
+          {activeTab === 'concerns' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300 overflow-hidden">
+                <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Recent User Concerns</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Messages submitted by users via the Help & Support tab.</p>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total: {concerns.length}</span>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {concerns.length === 0 ? (
+                    <div className="p-20 text-center">
+                      <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MailIcon className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p className="text-slate-400 font-bold">No concerns reported yet.</p>
+                    </div>
+                  ) : (
+                    concerns.map(item => (
+                      <div key={item.id} className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                        <div className="flex items-start justify-between gap-6">
+                          <div className="flex-1 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                item.status === 'resolved' 
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              }`}>
+                                {item.status}
+                              </span>
+                              <span className="text-xs text-slate-400 font-bold italic">
+                                {item.timestamp?.toDate ? new Date(item.timestamp.toDate()).toLocaleString() : 'Just now'}
+                              </span>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">{item.userName || item.userEmail}</p>
+                              {item.subject && <h4 className="text-lg font-black text-slate-900 dark:text-white mb-4 tracking-tight border-b border-slate-100 dark:border-slate-800 pb-2">{item.subject}</h4>}
+                              
+                              <div className="space-y-4 mb-6">
+                                {!item.messages && item.message && (
+                                  <div className="flex justify-start">
+                                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <User className="w-3 h-3 text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">User</span>
+                                      </div>
+                                      <p className="text-sm font-medium leading-relaxed">{item.message}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                {(item.messages || []).map((msg: any, idx: number) => (
+                                  <div key={idx} className={`flex ${msg.role === 'supervisor' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                                      msg.role === 'supervisor' 
+                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-100 border border-indigo-100 dark:border-indigo-800' 
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                    }`}>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                          {msg.role === 'supervisor' ? 'Supervisor (You)' : 'User'}
+                                        </span>
+                                        <span className="text-[10px] opacity-40 ml-auto">
+                                          {msg.timestamp ? new Date(msg.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {replyingTo === item.id ? (
+                                <div className="mt-4 space-y-3">
+                                  <textarea
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    placeholder="Write your response..."
+                                    className="w-full h-32 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-400 text-sm outline-none transition-all resize-none"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleSendReply(item.id)}
+                                      disabled={isSubmittingReply || !replyText.trim()}
+                                      className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                      {isSubmittingReply ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                      Send Response
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setReplyingTo(null);
+                                        setReplyText('');
+                                      }}
+                                      className="px-6 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold transition-all"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                item.status !== 'resolved' && (
+                                  <button
+                                    onClick={() => {
+                                      setReplyingTo(item.id);
+                                      setReplyText('');
+                                    }}
+                                    className="mt-4 flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    {item.messages && item.messages.length > 1 ? 'Reply to Thread' : 'Reply to Concern'}
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            {item.status !== 'resolved' && (
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await updateDoc(doc(db, 'concerns', item.id), { status: 'resolved' });
+                                    toast.success("Concern marked as resolved.");
+                                  } catch (err) {
+                                    toast.error("Failed to update status.");
+                                  }
+                                }}
+                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Mark Resolved
+                              </button>
+                            )}
+                            
+                            {isDeleting === item.id ? (
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await deleteDoc(doc(db, 'concerns', item.id));
+                                      toast.success("Record deleted.");
+                                      setIsDeleting(null);
+                                    } catch (err) {
+                                      toast.error("Failed to delete.");
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all"
+                                >
+                                  Confirm
+                                </button>
+                                <button 
+                                  onClick={() => setIsDeleting(null)}
+                                  className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 dark:hover:bg-slate-700 transition-all"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setIsDeleting(item.id)}
+                                className="p-2 text-slate-300 hover:text-rose-500 transition-colors self-end"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === 'settings' && (

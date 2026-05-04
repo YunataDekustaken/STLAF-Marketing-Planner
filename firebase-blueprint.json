@@ -78,6 +78,33 @@
         "lastLogin": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
+    },
+    "Concern": {
+      "title": "User Concern",
+      "description": "Messages sent by users to supervisors for help or feedback",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user" },
+        "userEmail": { "type": "string", "description": "Email of the user" },
+        "userName": { "type": "string", "description": "Display name of the user" },
+        "subject": { "type": "string", "description": "Short title or topic of the concern" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "resolved"] },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "senderId": { "type": "string" },
+              "senderName": { "type": "string" },
+              "role": { "type": "string", "enum": ["user", "supervisor"] },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userEmail", "status", "messages"]
     }
   },
   "firestore": {
@@ -96,6 +123,10 @@
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User account management and role storage"
+    },
+    "/concerns/{concernId}": {
+      "schema": "Concern",
+      "description": "User submitted support concerns"
     }
   }
 }
