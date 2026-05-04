@@ -13,7 +13,9 @@ import {
   Activity,
   Calendar,
   Trash2,
-  Loader2
+  Loader2,
+  Check,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { db, auth } from '../firebase';
@@ -26,14 +28,27 @@ interface SocialHubViewProps {
   posts: Post[];
   handleOpenFBModal: (post: Post) => void;
   handleCreateForDate: (date: Date) => void;
-  handleDeletePost: (id: string) => Promise<void>;
+  handleDeletePost: (id: string) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
+  canDelete?: boolean;
+  governanceSettings?: {
+    restrictDeletionToSupervisor: boolean;
+    requireDeletionApproval: boolean;
+  };
+  handleApproveDeletion?: (id: string) => Promise<void>;
+  handleRejectDeletion?: (id: string) => Promise<void>;
+  userRole?: string;
 }
 
 export const SocialHubView: React.FC<SocialHubViewProps> = ({ 
   posts, 
   handleOpenFBModal,
   handleCreateForDate,
-  handleDeletePost
+  handleDeletePost,
+  canDelete = true,
+  governanceSettings,
+  handleApproveDeletion,
+  handleRejectDeletion,
+  userRole
 }) => {
   const publishedPosts = posts.filter(p => p.status === 'Published').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const scheduledPosts = posts.filter(p => p.status === 'Scheduled').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -144,13 +159,23 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
   const handleRemoveFromHub = async (post: Post) => {
     try {
-      await handleDeletePost(post.id);
-      setNotification({
-        isOpen: true,
-        title: 'Removed from Hub',
-        message: 'The post was removed from the local planner hub.',
-        type: 'success'
-      });
+      const result = await handleDeletePost(post.id);
+      
+      if (result === 'deleted') {
+        setNotification({
+          isOpen: true,
+          title: 'Removed from Hub',
+          message: 'The post was removed from the local planner hub.',
+          type: 'success'
+        });
+      } else if (result === 'requested') {
+        setNotification({
+          isOpen: true,
+          title: 'Removal Requested',
+          message: 'Your removal request has been submitted for supervisor approval.',
+          type: 'success'
+        });
+      }
     } catch (err) {
       console.error("Error removing post:", err);
       setNotification({
@@ -217,10 +242,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
       {/* Header section */}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
         <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Social Media Hub</h2>
-          <p className="text-slate-500 font-medium text-sm sm:text-base">Manage your direct postings and track published content.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Social Media Hub</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base">Manage your direct postings and track published content.</p>
         </div>
         <button 
           onClick={() => handleCreateForDate(new Date())}
@@ -232,15 +257,15 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/50 rounded-2xl w-fit overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl w-fit overflow-x-auto no-scrollbar border border-slate-200 dark:border-slate-800 transition-colors duration-300">
         {['overview', 'scheduled', 'published', 'history'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
             className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
               activeTab === tab 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/5' 
+                : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             {tab}
@@ -255,62 +280,62 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <button 
                 onClick={() => setActiveTab('published')}
-                className="w-full text-left bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-[2rem] border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group/card"
+                className="w-full text-left bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group/card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl group-hover/card:bg-blue-500/20 transition-colors">
+                  <div className="p-3 bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl group-hover/card:bg-blue-500/30 transition-colors">
                     <Send className="w-6 h-6 text-blue-500" />
                   </div>
-                  <span className="text-2xl font-black text-slate-900">{publishedPosts.length}</span>
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">{publishedPosts.length}</span>
                 </div>
-                <h4 className="font-bold text-slate-800">Total Published</h4>
-                <p className="text-sm text-slate-500">Live across all platforms</p>
+                <h4 className="font-bold text-slate-800 dark:text-slate-200">Total Published</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Live across all platforms</p>
               </button>
               <button 
                 onClick={() => setActiveTab('scheduled')}
-                className="w-full text-left bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-[2rem] border border-amber-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all cursor-pointer group/card"
+                className="w-full text-left bg-gradient-to-br from-white to-amber-50/30 dark:from-slate-900 dark:to-amber-900/10 p-6 rounded-[2rem] border border-amber-100 dark:border-amber-900/30 shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-700 transition-all cursor-pointer group/card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-amber-500/10 rounded-2xl group-hover/card:bg-amber-500/20 transition-colors">
+                  <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-2xl group-hover/card:bg-amber-500/30 transition-colors">
                     <Clock className="w-6 h-6 text-amber-500" />
                   </div>
-                  <span className="text-2xl font-black text-slate-900">{scheduledPosts.length}</span>
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">{scheduledPosts.length}</span>
                 </div>
-                <h4 className="font-bold text-slate-800">Scheduled</h4>
-                <p className="text-sm text-slate-500">Awaiting automation</p>
+                <h4 className="font-bold text-slate-800 dark:text-slate-200">Scheduled</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Awaiting automation</p>
               </button>
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900">Recent Audit Trail</h3>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
+              <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 dark:text-white">Recent Audit Trail</h3>
                 <button onClick={() => setActiveTab('history')} className="text-xs font-bold text-amber-600 hover:underline">View All</button>
               </div>
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-slate-50 dark:divide-slate-800">
                 {historyEntries.length > 0 ? (
                   historyEntries.slice(0, 5).map(entry => (
-                    <div key={entry.id} className="p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                      <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
-                        <Activity className="w-5 h-5 text-slate-400" />
+                    <div key={entry.id} className="p-5 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center shrink-0">
+                        <Activity className="w-5 h-5 text-slate-400 dark:text-slate-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           {entry.platform === 'facebook' && <Facebook className="w-3 h-3 text-[#1877F2]" />}
-                          {entry.platform === 'system' && <Activity className="w-3 h-3 text-slate-400" />}
-                          <h4 className="font-bold text-slate-900 truncate text-sm">{entry.contentTitle}</h4>
+                          {entry.platform === 'system' && <Activity className="w-3 h-3 text-slate-400 dark:text-slate-600" />}
+                          <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-sm">{entry.contentTitle}</h4>
                           <span className={`static px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${getActionStyles(entry.action)}`}>
                             {getActionLabel(entry.action)}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-400">
-                          by <span className="font-bold text-slate-600">{entry.userName}</span> • {entry.timestamp ? format(entry.timestamp.toDate(), 'MMM dd, HH:mm') : 'Just now'}
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                          by <span className="font-bold text-slate-600 dark:text-slate-300">{entry.userName}</span> • {entry.timestamp ? format(entry.timestamp.toDate(), 'MMM dd, HH:mm') : 'Just now'}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-10 text-center text-slate-400">
+                  <div className="p-10 text-center text-slate-400 dark:text-slate-600">
                     <History className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     <p className="font-bold uppercase tracking-widest text-[10px]">No history events yet</p>
                   </div>
@@ -358,36 +383,36 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       )}
 
       {activeTab === 'history' && (
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex items-center gap-3">
-            <History className="w-6 h-6 text-slate-800" />
-            <h3 className="font-bold text-slate-900">Full Audit History</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
+          <div className="p-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/20 flex items-center gap-3">
+            <History className="w-6 h-6 text-slate-800 dark:text-slate-200" />
+            <h3 className="font-bold text-slate-900 dark:text-white">Full Audit History</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Timestamp</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Content</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Action</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Details</th>
+                <tr className="bg-slate-50/50 dark:bg-slate-950/40">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Timestamp</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Content</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Action</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">User</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {historyEntries.length > 0 ? (
                   historyEntries.map(entry => (
-                    <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={entry.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-xs font-bold text-slate-500">
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                           {entry.timestamp ? format(entry.timestamp.toDate(), 'MMM dd, yyyy HH:mm') : 'Just now'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           {entry.platform === 'facebook' && <Facebook className="w-3.5 h-3.5 text-[#1877F2]" />}
-                          {entry.platform === 'system' && <Activity className="w-3.5 h-3.5 text-slate-400" />}
-                          <span className="text-sm font-bold text-slate-800 line-clamp-1">{entry.contentTitle}</span>
+                          {entry.platform === 'system' && <Activity className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />}
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{entry.contentTitle}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -397,18 +422,18 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-700">{entry.userName}</span>
-                          <span className="text-[10px] text-slate-400">{entry.userEmail}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{entry.userName}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{entry.userEmail}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs text-slate-500 font-medium">{entry.details || '-'}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{entry.details || '-'}</span>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center text-slate-400">
+                    <td colSpan={5} className="px-6 py-20 text-center text-slate-400 dark:text-slate-600">
                       <History className="w-12 h-12 mx-auto mb-4 opacity-10" />
                       <p className="font-bold uppercase tracking-widest text-[10px]">No audit logs found</p>
                     </td>
@@ -424,13 +449,18 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {(activeTab === 'published' ? publishedPosts : scheduledPosts).length > 0 ? (
             (activeTab === 'published' ? publishedPosts : scheduledPosts).map(post => (
-              <div key={post.id} className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-5 flex flex-col h-full">
+              <div key={post.id} className="group bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all p-5 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4 relative">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-slate-900 rounded-lg">
+                    <div className="p-2 bg-slate-900 dark:bg-slate-800 rounded-lg border border-slate-700">
                       <Facebook className="w-4 h-4 text-[#1877F2]" />
                     </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{post.contentType}</span>
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{post.contentType}</span>
+                    {post.deletionRequested && (
+                      <span className="px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[8px] font-black uppercase tracking-widest rounded-full border border-rose-200 dark:border-rose-800 animate-pulse">
+                        Pending Removal
+                      </span>
+                    )}
                   </div>
                   <div className="relative">
                     <button 
@@ -438,56 +468,87 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                         e.stopPropagation();
                         setOpenMenuId(openMenuId === post.id ? null : post.id);
                       }}
-                      className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
+                      className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-600 transition-colors"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                     
                     {openMenuId === post.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[100] overflow-hidden py-1">
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-[100] overflow-hidden py-1">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenFBModal(post);
                             setOpenMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2 transition-colors"
+                          className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           View Details
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmModal({ isOpen: true, type: 'fb', post });
-                            setOpenMenuId(null);
-                          }}
-                          disabled={isDeleting}
-                          className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-2 transition-colors disabled:opacity-50"
-                        >
-                          {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                          Delete from Facebook
-                        </button>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setConfirmModal({ isOpen: true, type: 'hub', post });
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-500 hover:bg-slate-50 flex items-center gap-2 transition-colors border-t border-slate-50"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Remove from Hub
-                        </button>
+                        {post.deletionRequested ? (
+                          userRole === 'marketing_supervisor' && (
+                            <>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveDeletion?.(post.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                Approve Deletion
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRejectDeletion?.(post.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                Reject Deletion
+                              </button>
+                            </>
+                          )
+                        ) : canDelete && (
+                          <>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmModal({ isOpen: true, type: 'fb', post });
+                                setOpenMenuId(null);
+                              }}
+                              disabled={isDeleting}
+                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors disabled:opacity-50"
+                            >
+                              {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              Delete from Facebook
+                            </button>
+                            <button 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setConfirmModal({ isOpen: true, type: 'hub', post });
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              {governanceSettings?.requireDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request Removal' : 'Remove from Hub'}
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
                 
                 <div className="flex-1">
-                  <h4 className="font-bold text-slate-900 mb-2 line-clamp-1">{post.contentTitle}</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-white mb-2 line-clamp-1">{post.contentTitle}</h4>
                   <div className="relative group/caption">
-                    <p className={`text-sm text-slate-500 mb-4 leading-relaxed transition-all ${openMenuId === `caption_${post.id}` ? '' : 'line-clamp-3'}`}>
+                    <p className={`text-sm text-slate-500 dark:text-slate-400 mb-4 leading-relaxed transition-all ${openMenuId === `caption_${post.id}` ? '' : 'line-clamp-3'}`}>
                       {post.caption || "No caption provided for this post."}
                     </p>
                     {post.caption && post.caption.length > 120 && (
@@ -504,17 +565,17 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
+                <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Date</span>
-                    <span className="text-xs font-bold text-slate-700">{format(new Date(post.date), 'MMM dd')}</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Date</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{format(new Date(post.date), 'MMM dd')}</span>
                   </div>
                   <button 
                     onClick={() => handleOpenFBModal(post)}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                       post.status === 'Published' 
-                        ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
-                        : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
+                        : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                     }`}
                   >
                     {post.status === 'Published' ? 'View Post' : 'Post Now'}
@@ -523,12 +584,12 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               </div>
             ))
           ) : (
-            <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
-              <div className="p-4 bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Send className="w-8 h-8 text-slate-300" />
+            <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Send className="w-8 h-8 text-slate-300 dark:text-slate-700" />
               </div>
-              <h3 className="font-bold text-slate-900">No {activeTab} content</h3>
-              <p className="text-sm text-slate-500">Planned contents will appear here once they are {activeTab === 'published' ? 'posted' : 'scheduled'}.</p>
+              <h3 className="font-bold text-slate-900 dark:text-white">No {activeTab} content</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Planned contents will appear here once they are {activeTab === 'published' ? 'posted' : 'scheduled'}.</p>
             </div>
           )}
         </div>

@@ -40,11 +40,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100"
+            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors duration-300"
           >
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
-                <div className={`p-3 rounded-2xl ${isDanger ? 'bg-rose-50' : 'bg-amber-50'}`}>
+                <div className={`p-3 rounded-2xl ${isDanger ? 'bg-rose-50 dark:bg-rose-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
                   {isDanger ? (
                     <Trash2 className="w-6 h-6 text-rose-500" />
                   ) : (
@@ -53,21 +53,21 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </div>
                 <button 
                   onClick={onClose}
-                  className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors"
+                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <h3 className="text-xl font-black text-slate-900 mb-2">{title}</h3>
-              <p className="text-slate-500 font-medium leading-relaxed mb-8">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{title}</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-8">
                 {message}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-6 py-3.5 bg-slate-50 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-100 transition-all"
+                  className="flex-1 px-6 py-3.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
                 >
                   {cancelText}
                 </button>
@@ -76,8 +76,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   disabled={isLoading}
                   className={`flex-1 px-6 py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                     isDanger 
-                      ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-200' 
-                      : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
+                      ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-200 dark:shadow-none' 
+                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 shadow-lg shadow-slate-200 dark:shadow-none'
                   }`}
                 >
                   {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}

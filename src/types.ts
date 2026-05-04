@@ -29,6 +29,9 @@ export interface Post {
   fbPublishedTime?: string;
   approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
   isDirectPost?: boolean;
+  deletionRequested?: boolean;
+  requestedBy?: string | null;
+  requestDate?: string | null;
 }
 
 export const INITIAL_POSTS: Post[] = [

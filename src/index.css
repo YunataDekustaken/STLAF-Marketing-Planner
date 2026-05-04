@@ -11,6 +11,8 @@
   --color-amber-600: #b3933d;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -22,5 +24,5 @@
 }
 
 body {
-  @apply bg-[family-name:var(--font-sans)] bg-bg-main text-slate-900;
+  @apply bg-[family-name:var(--font-sans)] bg-bg-main text-slate-900 transition-colors duration-300;
 }

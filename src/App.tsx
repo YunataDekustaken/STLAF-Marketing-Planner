@@ -54,7 +54,9 @@ import {
   Instagram,
   Linkedin,
   Share,
-  Music2
+  Music2,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -271,8 +273,8 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                 <span className={`p-1 rounded-md border ${STATUS_COLORS[status]}`}>
                   <StatusIcon className="w-4 h-4" />
                 </span>
-                <h3 className="font-semibold text-slate-700">{status}</h3>
-                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                <h3 className="font-semibold text-slate-700 dark:text-slate-300">{status}</h3>
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
                   {statusPosts.length}
                 </span>
               </div>
@@ -281,7 +283,7 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                   setFormData(prev => ({ ...prev, status }));
                   handleOpenModal();
                 }}
-                className="p-1 hover:bg-slate-200 rounded-md text-slate-400 transition-colors"
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md text-slate-400 transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -293,11 +295,11 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                   layout
                   key={post.id}
                   onClick={() => handleOpenModal(post)}
-                  className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-500 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded">
                         {post.contentTitle}
                       </span>
                       <FBStatusBadge post={post} />
@@ -308,28 +310,28 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                           e.stopPropagation();
                           handleOpenFBModal(post);
                         }}
-                        className="p-1 text-[#1877F2] hover:bg-blue-50 rounded"
+                        className="p-1 text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                         title="Post to Facebook"
                       >
                         <Facebook className="w-3.5 h-3.5" />
                       </button>
-                      <div className="text-[10px] text-slate-400 font-medium">
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                         {format(new Date(post.date), 'MMM d')}
                       </div>
                     </div>
                   </div>
-                  <h4 className="text-sm font-semibold text-slate-800 mb-2 line-clamp-2">
+                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
                     {post.topicTheme || "Untitled Content"}
                   </h4>
                   <div className="flex items-center justify-between">
                     <div className="flex -space-x-1.5">
                       {post.creatives?.slice(0, 3).map((c, i) => (
-                        <div key={i} className="h-6 w-6 rounded-full border-2 border-white overflow-hidden bg-slate-100">
+                        <div key={i} className="h-6 w-6 rounded-full border-2 border-white dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-800">
                           <img src={c} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                         </div>
                       ))}
                     </div>
-                    <div className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                       {post.format}
                     </div>
                   </div>
@@ -367,10 +369,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
+      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
         {weekDays.map(day => (
-          <div key={day} className="px-2 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div key={day} className="px-2 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             {day}
           </div>
         ))}
@@ -384,10 +386,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
           return (
             <div 
               key={idx} 
-              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-amber-50/60 ring-1 ring-amber-200/50 z-10' : ''} group`}
+              className={`border-r border-b border-slate-100 dark:border-slate-800 p-2 flex flex-col gap-1 transition-colors ${!isCurrentMonth ? 'bg-slate-50/50 dark:bg-slate-950/20' : 'bg-white dark:bg-slate-900'} ${isToday ? 'bg-amber-50/60 dark:bg-amber-900/20 ring-1 ring-amber-200/50 dark:ring-amber-500/30 z-10' : ''} group`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-amber-700' : 'text-slate-500'} ${isToday ? 'bg-amber-200 w-6 h-6 flex items-center justify-center rounded-full shadow-sm' : ''}`}>
+                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300 dark:text-slate-700' : isToday ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'} ${isToday ? 'bg-amber-200 dark:bg-amber-600 w-6 h-6 flex items-center justify-center rounded-full shadow-sm' : ''}`}>
                   {format(day, 'd')}
                 </span>
                 {isCurrentMonth && (
@@ -396,7 +398,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                       const newPost = await handleCreateForDate(format(day, 'yyyy-MM-dd'));
                       if (newPost) handleOpenModal(newPost);
                     }}
-                    className="p-0.5 hover:bg-slate-100 rounded text-slate-300 hover:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-300 dark:text-slate-700 hover:text-amber-600 dark:hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
@@ -407,7 +409,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   <div 
                     key={post.id}
                     onClick={() => handleOpenModal(post)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex flex-col gap-0.5 group/p shadow-sm hover:shadow-md`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer font-medium border ${STATUS_COLORS[post.status]} dark:border-slate-700 hover:brightness-95 transition-all flex flex-col gap-0.5 group/p shadow-sm hover:shadow-md`}
                     title={`${post.contentTitle}: ${post.topicTheme || "Untitled"}\nStatus: ${post.status}${
                       post.fbStatus === 'scheduled' ? `\nFacebook Scheduled: ${post.fbScheduledTime ? format(new Date(post.fbScheduledTime), 'PPP p') : 'Pending'}` : 
                       post.fbStatus === 'posted' ? `\nFacebook Published: ${post.fbPublishedTime ? format(new Date(post.fbPublishedTime), 'PPP p') : 'Completed'}` : ''
@@ -420,7 +422,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                           e.stopPropagation();
                           handleOpenFBModal(post);
                         }}
-                        className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 transition-all p-0.5"
+                        className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
                       >
                         <Facebook className="w-2.5 h-2.5" />
                       </button>
@@ -466,6 +468,15 @@ interface MonthlyTableViewProps {
   searchQuery?: string;
   columnSettingsRef: React.RefObject<HTMLDivElement>;
   highlightedPostId: string | null;
+  canDelete?: boolean;
+  governanceSettings: {
+    restrictDeletionToSupervisor: boolean;
+    requireDeletionApproval: boolean;
+  };
+  profile: UserProfile | null;
+  handleApproveDeletion?: (id: string) => Promise<void>;
+  handleRejectDeletion?: (id: string) => Promise<void>;
+  userRole?: string;
 }
 
 const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
@@ -492,7 +503,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   handleDeletePost,
   searchQuery = '',
   columnSettingsRef,
-  highlightedPostId
+  highlightedPostId,
+  canDelete = true,
+  governanceSettings,
+  profile,
+  handleApproveDeletion,
+  handleRejectDeletion,
+  userRole
 }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -511,7 +528,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
     switch (colId) {
       case 'date':
         return pIdx === 0 ? (
-          <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-700'}`}>
+          <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}>
             {format(day, 'EEE, MMM d')}
           </div>
         ) : null;
@@ -521,9 +538,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             <select 
               value={post.contentTitle}
               onChange={(e) => handleUpdatePostInline(post.id, 'contentTitle', e.target.value)}
-              className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+              className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              {CONTENT_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+              {CONTENT_TITLES.map(t => <option key={t} value={t} className="bg-white dark:bg-slate-900">{t}</option>)}
             </select>
             {post.fbStatus && post.fbStatus !== 'idle' && (
               <div className="px-2">
@@ -537,9 +554,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <select 
             value={post.contentType}
             onChange={(e) => handleUpdatePostInline(post.id, 'contentType', e.target.value)}
-            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+            className="w-full bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            {CONTENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            {CONTENT_TYPES.map(t => <option key={t} value={t} className="bg-white dark:bg-slate-900">{t}</option>)}
           </select>
         );
       case 'topicTheme':
@@ -549,7 +566,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             placeholder="Enter theme..."
             onChange={(e) => handleUpdatePostInline(post.id, 'topicTheme', e.target.value)}
             rows={1}
-            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none overflow-hidden focus:min-h-[80px] transition-all"
+            className="w-full bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 resize-none overflow-hidden focus:min-h-[80px] transition-all"
           />
         );
       case 'subtopic':
@@ -559,7 +576,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             value={post.subtopic || ''}
             placeholder="Enter subtopic..."
             onChange={(e) => handleUpdatePostInline(post.id, 'subtopic', e.target.value)}
-            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+            className="w-full bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800"
           />
         );
       case 'caption':
@@ -570,13 +587,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               placeholder="No caption..."
               onChange={(e) => handleUpdatePostInline(post.id, 'caption', e.target.value)}
               rows={1}
-              className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
+              className="w-full bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
             />
             <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
               {post.caption && (
                 <button 
                   onClick={() => handleCopy(post.caption!, post.id)}
-                  className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  className="p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-slate-400"
                   title="Copy Caption"
                 >
                   {copiedId === post.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
@@ -584,14 +601,14 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               )}
               <button 
                 onClick={() => handleOpenFBModal(post)}
-                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-blue-50 hover:text-[#1877F2] transition-colors"
+                className="p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-[#1877F2] transition-colors text-slate-400"
                 title="Post to Facebook"
               >
                 <Facebook className="w-3 h-3" />
               </button>
               <button 
                 onClick={() => handleOpenModal(post)}
-                className="p-1 bg-white/80 border border-slate-200 rounded shadow-sm hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                className="p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded shadow-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-600 transition-colors text-slate-400"
                 title="AI Generation"
               >
                 <Sparkles className="w-3 h-3" />
@@ -606,7 +623,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             {post.creatives!.slice(0, 3).map((img, idx) => (
               <div 
                 key={idx}
-                className="relative inline-block h-10 w-10 rounded border-2 border-white overflow-hidden bg-slate-100 cursor-pointer hover:scale-110 hover:z-10 transition-all shadow-sm"
+                className="relative inline-block h-10 w-10 rounded border-2 border-white dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer hover:scale-110 hover:z-10 transition-all shadow-sm"
                 onClick={() => setPreviewImageIndex({ post, index: idx })}
               >
                 <img 
@@ -620,14 +637,14 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             {post.creatives!.length > 3 && (
               <button 
                 onClick={() => setPreviewImageIndex({ post, index: 3 })}
-                className="flex items-center justify-center h-10 w-10 rounded border-2 border-white bg-slate-200 text-[10px] font-bold text-slate-600 z-0 hover:bg-slate-300 transition-colors"
+                className="flex items-center justify-center h-10 w-10 rounded border-2 border-white dark:border-slate-800 bg-slate-200 dark:bg-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 z-0 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
               >
                 +{post.creatives!.length - 3}
               </button>
             )}
             <button 
               onClick={() => handleOpenModal(post)}
-              className="ml-2 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg opacity-0 group-hover/images:opacity-100 transition-all"
+              className="ml-2 p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg opacity-0 group-hover/images:opacity-100 transition-all"
             >
               <Upload className="w-4 h-4" />
             </button>
@@ -635,7 +652,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
         ) : (
           <button 
             onClick={() => handleOpenModal(post)}
-            className="w-10 h-10 rounded border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all font-bold"
+            className="w-10 h-10 rounded border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all font-bold"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -645,9 +662,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <select 
             value={post.format}
             onChange={(e) => handleUpdatePostInline(post.id, 'format', e.target.value)}
-            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+            className="w-full bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            {FORMATS.map(t => <option key={t} value={t}>{t}</option>)}
+            {FORMATS.map(t => <option key={t} value={t} className="bg-white dark:bg-slate-900">{t}</option>)}
           </select>
         );
       case 'status':
@@ -655,13 +672,13 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <select 
             value={post.status}
             onChange={(e) => handleUpdatePostInline(post.id, 'status', e.target.value as PostStatus)}
-            className={`w-full bg-transparent border-none text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 ${STATUS_COLORS[post.status]}`}
+            className={`w-full bg-transparent border-none text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 ${STATUS_COLORS[post.status]}`}
           >
-            <option value="Not Started">Not Started</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Ready for Review">Ready for Review</option>
-            <option value="Scheduled">Scheduled</option>
-            <option value="Published">Published</option>
+            <option value="Not Started" className="bg-white dark:bg-slate-900">Not Started</option>
+            <option value="In Progress" className="bg-white dark:bg-slate-900">In Progress</option>
+            <option value="Ready for Review" className="bg-white dark:bg-slate-900">Ready for Review</option>
+            <option value="Scheduled" className="bg-white dark:bg-slate-900">Scheduled</option>
+            <option value="Published" className="bg-white dark:bg-slate-900">Published</option>
           </select>
         );
       case 'approvalStatus':
@@ -669,15 +686,15 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <select 
             value={post.approvalStatus || 'Pending'}
             onChange={(e) => handleUpdatePostInline(post.id, 'approvalStatus', e.target.value)}
-            className={`w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 ${
-              post.approvalStatus === 'Approved' ? 'text-emerald-500 bg-emerald-50/50' : 
-              post.approvalStatus === 'For Revision' ? 'text-rose-500 bg-rose-50/50' : 
-              'text-slate-400 bg-slate-50/50'
+            className={`w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 ${
+              post.approvalStatus === 'Approved' ? 'text-emerald-500 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20' : 
+              post.approvalStatus === 'For Revision' ? 'text-rose-500 dark:text-rose-400 bg-rose-50/50 dark:bg-rose-900/20' : 
+              'text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50'
             }`}
           >
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="For Revision">For Revision</option>
+            <option value="Pending" className="bg-white dark:bg-slate-900">Pending</option>
+            <option value="Approved" className="bg-white dark:bg-slate-900">Approved</option>
+            <option value="For Revision" className="bg-white dark:bg-slate-900">For Revision</option>
           </select>
         );
       case 'funnelStatus':
@@ -685,9 +702,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <select 
             value={post.funnelStatus}
             onChange={(e) => handleUpdatePostInline(post.id, 'funnelStatus', e.target.value)}
-            className="w-full bg-transparent border-none text-xs text-slate-600 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100"
+            className="w-full bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            {FUNNEL_STATUSES.map(t => <option key={t} value={t}>{t}</option>)}
+            {FUNNEL_STATUSES.map(t => <option key={t} value={t} className="bg-white dark:bg-slate-900">{t}</option>)}
           </select>
         );
       case 'visualIdeas':
@@ -697,7 +714,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             value={post.visualIdeas || ''}
             placeholder="Visual ideas..."
             onChange={(e) => handleUpdatePostInline(post.id, 'visualIdeas', e.target.value)}
-            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+            className="w-full bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800"
           />
         );
       default:
@@ -708,7 +725,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               value={(post as any)[colId] || ''}
               placeholder={`Enter ${colId.toString() === 'notes' ? 'notes' : 'text'}...`}
               onChange={(e) => handleUpdatePostInline(post.id, colId as any, e.target.value)}
-              className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+              className="w-full bg-transparent border-none text-sm text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800"
             />
           );
         }
@@ -717,16 +734,16 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm transition-colors duration-300">
+      <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <LayoutList className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-semibold text-slate-700">Monthly Table</span>
+          <LayoutList className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Monthly Table</span>
         </div>
         <div className="relative" ref={columnSettingsRef}>
           <button 
             onClick={() => setShowColumnSettings(!showColumnSettings)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
           >
             <Columns className="w-3.5 h-3.5" />
             Columns
@@ -738,10 +755,10 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2"
+                className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 z-50 p-2"
               >
-                <div className="flex items-center justify-between p-2 mb-2 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Manage Columns</span>
+                <div className="flex items-center justify-between p-2 mb-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Manage Columns</span>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => setTableColumns([
@@ -759,19 +776,19 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                         { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
                         { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
                       ])}
-                      className="text-[10px] font-bold text-indigo-600 hover:underline"
+                      className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
                       Reset
                     </button>
                     <div className="flex items-center gap-2">
                     <button 
                       onClick={() => setIsColumnsLocked(!isColumnsLocked)}
-                      className={`p-1 rounded transition-colors ${isColumnsLocked ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                      className={`p-1 rounded transition-colors ${isColumnsLocked ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                       title={isColumnsLocked ? "Unlock Column Order" : "Lock Column Order"}
                     >
                       {isColumnsLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                     </button>
-                    <button onClick={() => setShowColumnSettings(false)}><X className="w-3.5 h-3.5 text-slate-400" /></button>
+                    <button onClick={() => setShowColumnSettings(false)}><X className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" /></button>
                   </div>
                   </div>
                 </div>
@@ -799,7 +816,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                 </div>
                 <button 
                   onClick={addCustomColumn}
-                  className="w-full mt-2 flex items-center justify-center gap-2 p-2 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-dashed border-indigo-200"
+                  className="w-full mt-2 flex items-center justify-center gap-2 p-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors border border-dashed border-indigo-200 dark:border-indigo-800"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add New Column
@@ -818,22 +835,22 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
       >
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
-              <thead className="sticky top-0 z-30 bg-slate-50 border-b border-slate-200 shadow-sm">
+              <thead className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
                 <SortableContext 
                   items={visibleColumns.map(c => c.id)}
                   strategy={horizontalListSortingStrategy}
                 >
-                  <tr className="bg-slate-50/50 border-b border-slate-200">
+                  <tr className="bg-slate-50/50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
                     {visibleColumns.map((col) => (
                       <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
                     ))}
-                    <th className="w-40 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200 backdrop-blur-sm z-[25]">
-                      <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 text-center">Actions</div>
+                    <th className="w-40 px-4 py-3 sticky right-0 bg-slate-50/50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 backdrop-blur-sm z-[25]">
+                      <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 text-center">Actions</div>
                     </th>
                   </tr>
                 </SortableContext>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {days.map((day) => {
                   const dateStr = format(day, 'yyyy-MM-dd');
                   const dayPosts = posts.filter(p => p.date === dateStr);
@@ -841,17 +858,17 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
  
                   if (dayPosts.length === 0) {
                     return (
-                      <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/40 border-l-4 border-l-amber-400' : ''}`}>
+                      <tr key={dateStr} className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''}`}>
                         {visibleColumns.map((col, idx) => (
                           <td key={col.id} className="px-4 py-3 align-top">
                             {col.id === 'date' ? (
-                              <div className={`text-xs font-bold ${isToday ? 'text-amber-700' : 'text-slate-400'}`}>
+                              <div className={`text-xs font-bold ${isToday ? 'text-amber-700 dark:text-amber-500' : 'text-slate-400 dark:text-slate-600'}`}>
                                 {format(day, 'EEE, MMM d')}
                               </div>
                             ) : idx === 1 ? (
                               <button 
                                 onClick={() => handleCreateForDate(dateStr).then(p => p && handleOpenModal(p))}
-                                className="text-xs text-slate-300 italic hover:text-amber-500 transition-colors flex items-center gap-1"
+                                className="text-xs text-slate-300 dark:text-slate-700 italic hover:text-amber-500 transition-colors flex items-center gap-1"
                               >
                                 <Plus className="w-3 h-3" />
                                 Add content...
@@ -859,7 +876,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                             ) : null}
                           </td>
                         ))}
-                        <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 backdrop-blur-sm group-hover:bg-slate-50/80 transition-colors border-l border-slate-100 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40"></td>
+                        <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40"></td>
                       </tr>
                     );
                   }
@@ -868,43 +885,70 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <tr 
                       key={post.id} 
                       id={`post-${post.id}`}
-                      className={`group hover:bg-slate-50/50 transition-all duration-500 ${isToday ? 'bg-amber-50/40 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
                     >
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
                           {renderCell(post, col.id, day, pIdx)}
                         </td>
                       ))}
-                      <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 backdrop-blur-sm group-hover:bg-slate-50/80 transition-colors border-l border-slate-100 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40">
+                      <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40">
                         <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                           <button 
                             onClick={() => handleOpenFBModal(post)}
-                            className="p-1.5 hover:bg-blue-50 rounded-lg text-[#1877F2] hover:text-blue-600 transition-colors"
+                            className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-[#1877F2] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             title="Post to Facebook"
                           >
                             <Facebook className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleOpenModal(post)}
-                            className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                             title="Edit Post"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleOpenShareModal(post)}
-                            className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                             title="Share Details"
                           >
                             <Share className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={() => handleDeletePost(post.id)}
-                            className="p-1.5 hover:bg-rose-50 rounded-lg text-rose-600 transition-colors"
-                            title="Delete Post"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {post.deletionRequested ? (
+                            <div className="flex items-center gap-1">
+                              {userRole === 'marketing_supervisor' ? (
+                                <>
+                                  <button 
+                                    onClick={() => handleApproveDeletion?.(post.id)}
+                                    className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                                    title="Approve Deletion"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleRejectDeletion?.(post.id)}
+                                    className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                                    title="Cancel Deletion Request"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-bold rounded-lg border border-rose-200 dark:border-rose-800 animate-pulse">
+                                  Pending Deletion
+                                </div>
+                              )}
+                            </div>
+                          ) : canDelete && (
+                            <button 
+                              onClick={() => handleDeletePost(post.id)}
+                              className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg text-rose-600 dark:text-rose-400 transition-colors"
+                              title={governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? "Request Deletion" : "Delete Post"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -921,14 +965,14 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
 
 const DetailItem = ({ label, value, fullWidth = false, isLink = false }: { label: string, value?: string, fullWidth?: boolean, isLink?: boolean }) => (
   <div className={`space-y-1 ${fullWidth ? 'col-span-2' : ''}`}>
-    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</p>
     {isLink && value ? (
-      <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-indigo-600 hover:underline flex items-center gap-1 break-all">
+      <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 break-all">
         {value} <ExternalLink className="w-3 h-3" />
       </a>
     ) : (
-      <p className="text-sm font-medium text-slate-900 break-words">
-        {value || <span className="italic text-slate-300 font-normal">N/A</span>}
+      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 break-words">
+        {value || <span className="italic text-slate-300 dark:text-slate-600 font-normal">N/A</span>}
       </p>
     )}
   </div>
@@ -967,6 +1011,20 @@ function AppContent() {
   const [isFBModalOpen, setIsFBModalOpen] = useState(false);
   const [selectedFBPost, setSelectedFBPost] = useState<Post | null>(null);
   const [isColumnsLocked, setIsColumnsLocked] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
   const [tableColumns, setTableColumns] = useState<TableColumn[]>([
     { id: 'date', label: 'Date', width: 'w-32', visible: true },
     { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
@@ -1030,6 +1088,10 @@ function AppContent() {
     onAICaption: true,
     onPostPublished: true,
     onPostApproved: true,
+  });
+  const [governanceSettings, setGovernanceSettings] = useState({
+    restrictDeletionToSupervisor: false,
+    requireDeletionApproval: false,
   });
   const [exportSettings, setExportSettings] = useState({
     date: true,
@@ -1184,20 +1246,22 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthReady || !user) return;
 
-    const loadSettings = async () => {
-      try {
-        const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
-        if (settingsDoc.exists()) {
-          const data = settingsDoc.data();
-          if (data.notifSettings) setNotifSettings(prev => ({ ...prev, ...data.notifSettings }));
-          if (data.exportSettings) setExportSettings(prev => ({ ...prev, ...data.exportSettings }));
-        }
-      } catch (err) {
-        console.error("Error loading settings:", err);
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.notifSettings) setNotifSettings(prev => ({ ...prev, ...data.notifSettings }));
+        if (data.exportSettings) setExportSettings(prev => ({ ...prev, ...data.exportSettings }));
+        if (data.governanceSettings) setGovernanceSettings(prev => ({ 
+          restrictDeletionToSupervisor: false,
+          requireDeletionApproval: false,
+          ...data.governanceSettings 
+        }));
       }
-    };
+    }, (err) => {
+      console.error("Error listening to settings:", err);
+    });
 
-    loadSettings();
+    return () => unsubscribe();
   }, [isAuthReady, user]);
 
   const updateGlobalSettings = async (field: string, value: any) => {
@@ -1217,6 +1281,11 @@ function AppContent() {
   const handleUpdateExportSettings = (newSettings: any) => {
     setExportSettings(newSettings);
     updateGlobalSettings('exportSettings', newSettings);
+  };
+
+  const handleUpdateGovernanceSettings = (newSettings: any) => {
+    setGovernanceSettings(newSettings);
+    updateGlobalSettings('governanceSettings', newSettings);
   };
 
   const handleNotificationClick = async (notif: any) => {
@@ -1707,15 +1776,73 @@ function AppContent() {
     }
   };
 
-  const handleDeletePost = async (id: string) => {
+  const handleDeletePost = async (id: string): Promise<'deleted' | 'requested' | 'denied' | 'error'> => {
+    if (governanceSettings.restrictDeletionToSupervisor && profile?.role !== 'marketing_supervisor') {
+      toast.error(
+        <div className="flex flex-col gap-1">
+          <div className="font-bold">Access Denied</div>
+          <div className="text-xs opacity-80">Deletion is restricted to Marketing Supervisors only.</div>
+        </div>
+      );
+      return 'denied';
+    }
+
+    if (governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor') {
+      try {
+        await updateDoc(doc(db, 'posts', id), {
+          deletionRequested: true,
+          requestedBy: profile?.displayName || profile?.email || 'Unknown User',
+          requestDate: new Date().toISOString()
+        });
+        addNotification('onTaskUpdated', 'Deletion Requested', `A deletion request for task ${id} has been submitted.`);
+        notifySupervisors('onTaskUpdated', 'New Deletion Request', `User ${profile?.displayName || profile?.email} requested to delete a task.`, id);
+        toast.success("Deletion request submitted for supervisor approval.");
+        if (editingPost?.id === id) setIsModalOpen(false);
+        return 'requested';
+      } catch (err) {
+        console.error("Error requesting deletion:", err);
+        toast.error("Failed to submit deletion request.");
+        return 'error';
+      }
+    }
+
     try {
       await deleteDoc(doc(db, 'posts', id));
       addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
       }
+      toast.success("Content deleted successfully.");
+      return 'deleted';
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `posts/${id}`);
+      return 'error';
+    }
+  };
+
+  const handleApproveDeletion = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'posts', id));
+      addNotification('onTaskDeleted', 'Deletion Approved', 'Content has been permanently removed by supervisor.');
+      toast.success("Content deleted permanently.");
+      if (editingPost?.id === id) setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error approving deletion:", err);
+      toast.error("Failed to approve deletion.");
+    }
+  };
+
+  const handleRejectDeletion = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'posts', id), {
+        deletionRequested: false,
+        requestedBy: null,
+        requestDate: null
+      });
+      toast.success("Deletion request rejected. Content restored.");
+    } catch (err) {
+      console.error("Error rejecting deletion:", err);
+      toast.error("Failed to reject deletion.");
     }
   };
 
@@ -2163,7 +2290,7 @@ function AppContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
       <Toaster position="top-right" reverseOrder={false} />
       {/* Sidebar */}
       <aside 
@@ -2274,53 +2401,88 @@ function AppContent() {
               </div>
             </div>
           )}
+
         </nav>
 
         <div className="mt-auto p-4 pt-2 border-t border-slate-700/50 flex flex-col gap-3">
-          {user ? (
-            <div className={`flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3'}`}>
-              {user.photoURL && (
-                <button 
-                  onClick={() => setViewMode('profile')}
-                  className="hover:scale-105 transition-transform"
-                >
-                  <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
-                </button>
-              )}
-              {isSidebarExpanded && (
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <p className="text-sm font-bold text-white truncate leading-tight">{user.displayName}</p>
+          <div className="flex items-center justify-between">
+            {user ? (
+              <div className={`flex items-center ${isSidebarMini ? 'justify-center w-full' : 'gap-3'}`}>
+                {user.photoURL && (
                   <button 
-                    onClick={logout}
-                    className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors block mt-0.5 font-medium"
+                    onClick={() => setViewMode('profile')}
+                    className="hover:scale-105 transition-transform"
                   >
-                    Sign Out
+                    <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
                   </button>
-                </div>
-              )}
-            </div>
-          ) : (
+                )}
+                {isSidebarExpanded && (
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-sm font-bold text-white truncate leading-tight">{user.displayName}</p>
+                    <button 
+                      onClick={logout}
+                      className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors block mt-0.5 font-medium"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button 
+                onClick={login}
+                className={`flex items-center justify-center ${isSidebarMini ? 'w-10 h-10 p-0' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
+                title={isSidebarMini ? "Sign In" : ""}
+              >
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                {isSidebarExpanded && <span className="whitespace-nowrap">Sign In</span>}
+              </button>
+            )}
+
+            {/* Theme Toggle Button */}
+            {!isSidebarMini && (
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all duration-300"
+                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {isDarkMode ? (
+                  <Sun className="w-4 h-4 text-amber-500" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Theme Toggle Icon for Mini Sidebar */}
+          {isSidebarMini && (
             <button 
-              onClick={login}
-              className={`w-full flex items-center justify-center ${isSidebarMini ? 'p-2' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
-              title={isSidebarMini ? "Sign In" : ""}
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="flex items-center justify-center p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all duration-300"
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              <Lock className="w-3.5 h-3.5 shrink-0" />
-              {isSidebarExpanded && <span className="whitespace-nowrap">Sign In</span>}
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-amber-500" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
             </button>
           )}
           
-          <div className={`mt-1 flex items-center gap-1.5 text-[8px] font-bold text-slate-600 uppercase tracking-widest ${isSidebarMini ? 'justify-center' : 'justify-start'}`}>
-            <Sparkles className="w-2 h-2 text-amber-500/40" />
-            {isSidebarExpanded && <span>Powered by Gemini AI</span>}
-          </div>
+          {!isSidebarMini && (
+            <div className="flex items-center justify-center gap-1.5 opacity-20 mt-1">
+              <Sparkles className="w-2 h-2 text-amber-500" />
+              {isSidebarExpanded && <span className="text-[9px] font-bold text-white uppercase tracking-tighter">Powered by Gemini AI</span>}
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 pl-[15px] pr-[32px] flex items-center justify-between sticky top-0 z-[80]">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 pl-[15px] pr-[32px] flex items-center justify-between sticky top-0 z-[80] transition-colors duration-300">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => {
@@ -2328,7 +2490,7 @@ function AppContent() {
                 else if (sidebarMode === 'mini-hover') setSidebarMode('mini-fixed');
                 else setSidebarMode('full');
               }}
-              className="p-2 pt-[8px] hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all duration-300 ease-out group flex items-center justify-center"
+              className="p-2 pt-[8px] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all duration-300 ease-out group flex items-center justify-center"
               title={
                 sidebarMode === 'full' ? "Switch to Auto-expand Mini" : 
                 sidebarMode === 'mini-hover' ? "Switch to Full Mini View" : 
@@ -2340,13 +2502,13 @@ function AppContent() {
               ) : sidebarMode === 'mini-hover' ? (
                 <div className="relative">
                   <PanelLeftOpen className="w-5 h-5 group-hover:scale-110 transition-transform text-amber-500" />
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full border border-white" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full border border-white dark:border-slate-900" />
                 </div>
               ) : (
                 <PanelLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
               )}
             </button>
-            <h1 className="text-lg font-bold text-slate-800 pt-0 pl-0">
+            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 pt-0 pl-0">
               {viewMode === 'social' ? 'Social Hub' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
@@ -2354,11 +2516,11 @@ function AppContent() {
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
-                className={`relative p-2 rounded-full transition-all ${showNotifications ? 'bg-slate-100 text-amber-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                className={`relative p-2 rounded-full transition-all ${showNotifications ? 'bg-slate-100 dark:bg-slate-800 text-amber-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
               >
                 <Bell className="w-5 h-5" />
                 {notifications.some(n => !n.read) && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
                 )}
               </button>
 
@@ -2560,10 +2722,14 @@ function AppContent() {
               <AdminView 
                 notificationSettings={notifSettings}
                 onUpdateNotificationSettings={handleUpdateNotifSettings}
+                governanceSettings={governanceSettings}
+                onUpdateGovernanceSettings={handleUpdateGovernanceSettings}
                 exportSettings={exportSettings}
                 onUpdateExportSettings={handleUpdateExportSettings}
-                addNotification={(title, message) => {
-                  addNotification('onNewTask', title, message);
+                addNotification={(title, message, type) => {
+                  if (type === 'success') toast.success(message);
+                  else if (type === 'warning') toast.error(message);
+                  else toast(message); // toast does not have info by default in react-hot-toast
                 }}
                 quickLinks={quickLinks}
                 onUpdateQuickLinks={handleUpdateQuickLinks}
@@ -2679,9 +2845,15 @@ function AppContent() {
                       handleOpenShareModal={handleOpenShareModal}
                       handleOpenFBModal={handleOpenFBModal}
                       handleDeletePost={handleDeletePost}
+                      handleApproveDeletion={handleApproveDeletion}
+                      handleRejectDeletion={handleRejectDeletion}
+                      userRole={profile?.role}
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
                       highlightedPostId={highlightedPostId}
+                      governanceSettings={governanceSettings}
+                      profile={profile}
+                      canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
                     />
                   )}
                   {viewMode === 'social' && (
@@ -2689,6 +2861,11 @@ function AppContent() {
                       posts={posts}
                       handleOpenFBModal={handleOpenFBModal}
                       handleDeletePost={handleDeletePost}
+                      handleApproveDeletion={handleApproveDeletion}
+                      handleRejectDeletion={handleRejectDeletion}
+                      userRole={profile?.role}
+                      governanceSettings={governanceSettings}
+                      canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
                       handleCreateForDate={(date) => {
                         const dateStr = format(date, 'yyyy-MM-dd');
                         handleCreateForDate(dateStr, true).then(p => {
@@ -3040,12 +3217,39 @@ function AppContent() {
                   Cancel
                 </button>
                 {editingPost && (
-                  <button 
-                    onClick={() => handleDeletePost(editingPost.id)}
-                    className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors mr-auto"
-                  >
-                    Delete Post
-                  </button>
+                  editingPost.deletionRequested ? (
+                    profile?.role === 'marketing_supervisor' ? (
+                      <div className="flex items-center gap-2 mr-auto">
+                        <button 
+                          onClick={() => handleApproveDeletion(editingPost.id)}
+                          className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1"
+                        >
+                          <Check className="w-3 h-3" />
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleRejectDeletion(editingPost.id)}
+                          className="px-4 py-2 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" />
+                          Deny
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mr-auto flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-600 rounded-lg border border-rose-100">
+                        <Clock className="w-3 h-3 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Deletion Pending Approval</span>
+                      </div>
+                    )
+                  ) : (!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor') && (
+                    <button 
+                      onClick={() => handleDeletePost(editingPost.id)}
+                      className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors mr-auto flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? 'Request Deletion' : 'Delete Post'}
+                    </button>
+                  )
                 )}
                 <button 
                   onClick={handleSavePost}
@@ -3321,10 +3525,10 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({ col, isLocked }) => {
       style={style} 
       {...attributes} 
       {...listeners}
-      className={`${col.width} px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider ${isLocked ? '' : 'cursor-grab active:cursor-grabbing hover:bg-slate-100'} transition-colors relative group`}
+      className={`${col.width} px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isLocked ? '' : 'cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-800'} transition-colors relative group`}
     >
       <div className="flex items-center gap-2">
-        {!isLocked && <GripVertical className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
+        {!isLocked && <GripVertical className="w-3 h-3 text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity" />}
         {col.label}
       </div>
     </th>
@@ -3364,11 +3568,11 @@ const SortableColumnItem: React.FC<SortableColumnItemProps> = ({
     <div 
       ref={setNodeRef} 
       style={style} 
-      className={`flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group ${isDragging ? 'bg-white shadow-lg ring-1 ring-indigo-200 opacity-80' : ''}`}
+      className={`flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group ${isDragging ? 'bg-white dark:bg-slate-800 shadow-lg ring-1 ring-indigo-200 dark:ring-indigo-900/40 opacity-80' : ''}`}
     >
       <div className="flex items-center gap-3">
         {!isLocked && (
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-200 rounded text-slate-400">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-400 dark:text-slate-600">
             <GripVertical className="w-3.5 h-3.5" />
           </div>
         )}
@@ -3376,22 +3580,22 @@ const SortableColumnItem: React.FC<SortableColumnItemProps> = ({
           type="checkbox" 
           checked={col.visible}
           onChange={() => toggleColumnVisibility(col.id)}
-          className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+          className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 dark:border-slate-700 focus:ring-indigo-500"
         />
-        <span className="text-xs font-medium text-slate-700">{col.label}</span>
+        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{col.label}</span>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <select 
           value={col.width}
           onChange={(e) => setTableColumns(prev => prev.map(c => c.id === col.id ? { ...c, width: e.target.value } : c))}
-          className="text-[10px] bg-slate-100 border-none rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+          className="text-[10px] bg-slate-100 dark:bg-slate-800 border-none rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-300 transition-colors"
         >
-          <option value="w-24">XS</option>
-          <option value="w-32">S</option>
-          <option value="w-40">M</option>
-          <option value="w-48">L</option>
-          <option value="w-64">XL</option>
-          <option value="w-80">XXL</option>
+          <option value="w-24" className="bg-white dark:bg-slate-900">XS</option>
+          <option value="w-32" className="bg-white dark:bg-slate-900">S</option>
+          <option value="w-40" className="bg-white dark:bg-slate-900">M</option>
+          <option value="w-48" className="bg-white dark:bg-slate-900">L</option>
+          <option value="w-64" className="bg-white dark:bg-slate-900">XL</option>
+          <option value="w-80" className="bg-white dark:bg-slate-900">XXL</option>
         </select>
         <button 
           onClick={() => {
