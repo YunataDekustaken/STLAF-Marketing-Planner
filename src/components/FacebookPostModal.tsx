@@ -19,6 +19,8 @@ import { Post } from '../types';
 import { db } from '../firebase';
 import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { auth } from '../firebase';
+import { ConfirmationModal } from './ConfirmationModal';
+import { NotificationToast } from './NotificationToast';
 
 interface FacebookPostModalProps {
   isOpen: boolean;
@@ -43,6 +45,13 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
   const { postToFacebook, deleteFacebookPost, isLoading, error, success, postId, resetStatus } = useFacebookPost();
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({ isOpen: false, title: '', message: '', type: 'success' });
 
   useEffect(() => {
     if (isOpen && post) {
@@ -54,6 +63,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
       setScheduleDate('');
       setScheduleTime('');
       setIsDeleting(false);
+      setIsConfirmDeleteOpen(false);
     }
   }, [isOpen, post]);
 
@@ -103,9 +113,6 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
   const handleDeleteFromFacebook = async () => {
     if (!post?.fbPostId) return;
     
-    const confirmed = window.confirm("Are you sure you want to delete this post from Facebook? This action cannot be undone.");
-    if (!confirmed) return;
-
     setIsDeleting(true);
     const result = await deleteFacebookPost(post.fbPostId);
     
@@ -133,13 +140,30 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
           details: 'Deleted post from Facebook Page'
         });
 
-        resetStatus();
-        onClose();
+        setNotification({
+          isOpen: true,
+          title: 'Deleted',
+          message: 'Post successfully deleted from Facebook.',
+          type: 'success'
+        });
+        
+        setTimeout(() => {
+          resetStatus();
+          onClose();
+        }, 1500);
       } catch (err) {
         console.error("Error updating post after deletion:", err);
       }
+    } else {
+      setNotification({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to delete post from Facebook.',
+        type: 'error'
+      });
     }
     setIsDeleting(false);
+    setIsConfirmDeleteOpen(false);
   };
 
   const handleSchedule = async () => {
@@ -188,6 +212,26 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        {/* Deletion Confirmation */}
+        <ConfirmationModal
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          onConfirm={handleDeleteFromFacebook}
+          title="Delete from Facebook?"
+          message="Are you sure you want to delete this post from your Facebook page? This action is permanent and cannot be undone."
+          confirmText="Delete Now"
+          isLoading={isDeleting}
+        />
+
+        {/* Notifications */}
+        <NotificationToast
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          title={notification.title}
+          message={notification.message}
+          type={notification.type}
+        />
+
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -262,15 +306,11 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
 
                   {(isAlreadyPublished || isAlreadyScheduled) && (
                     <button 
-                      onClick={handleDeleteFromFacebook}
+                      onClick={() => setIsConfirmDeleteOpen(true)}
                       disabled={isDeleting}
                       className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all border border-rose-200 disabled:opacity-50"
                     >
-                      {isDeleting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
+                      <Trash2 className="w-4 h-4" />
                       Delete from Facebook
                     </button>
                   )}

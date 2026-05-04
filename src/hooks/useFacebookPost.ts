@@ -67,7 +67,18 @@ export function useFacebookPost() {
         method: 'DELETE',
       });
 
-      const result = await response.json();
+      const text = await response.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (e) {
+        // If it's not JSON, maybe it's still a success if status is 200-299
+        if (response.ok) {
+          setSuccess(true);
+          return true;
+        }
+        throw new Error(`Server returned non-JSON error: ${text.substring(0, 100)}`);
+      }
 
       if (result.success) {
         setSuccess(true);

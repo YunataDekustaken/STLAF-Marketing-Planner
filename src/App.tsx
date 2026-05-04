@@ -385,10 +385,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
           return (
             <div 
               key={idx} 
-              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 overflow-hidden transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-amber-50/30' : ''} group`}
+              className={`border-r border-b border-slate-100 p-2 flex flex-col gap-1 transition-colors ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'} ${isToday ? 'bg-amber-50/60 ring-1 ring-amber-200/50 z-10' : ''} group`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-amber-600' : 'text-slate-500'} ${isToday ? 'bg-amber-100 w-6 h-6 flex items-center justify-center rounded-full' : ''}`}>
+                <span className={`text-xs font-bold ${!isCurrentMonth ? 'text-slate-300' : isToday ? 'text-amber-700' : 'text-slate-500'} ${isToday ? 'bg-amber-200 w-6 h-6 flex items-center justify-center rounded-full shadow-sm' : ''}`}>
                   {format(day, 'd')}
                 </span>
                 {isCurrentMonth && (
@@ -408,8 +408,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   <div 
                     key={post.id}
                     onClick={() => handleOpenModal(post)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded truncate cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex flex-col gap-0.5 group/p`}
-                    title={post.topicTheme}
+                    className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer font-medium border ${STATUS_COLORS[post.status]} hover:brightness-95 transition-all flex flex-col gap-0.5 group/p shadow-sm hover:shadow-md`}
+                    title={`${post.contentTitle}: ${post.topicTheme || "Untitled"}\nStatus: ${post.status}${
+                      post.fbStatus === 'scheduled' ? `\nFacebook Scheduled: ${post.fbScheduledTime ? format(new Date(post.fbScheduledTime), 'PPP p') : 'Pending'}` : 
+                      post.fbStatus === 'posted' ? `\nFacebook Published: ${post.fbPublishedTime ? format(new Date(post.fbPublishedTime), 'PPP p') : 'Completed'}` : ''
+                    }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
@@ -839,11 +842,11 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
  
                   if (dayPosts.length === 0) {
                     return (
-                      <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/20' : ''}`}>
+                      <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/40 border-l-4 border-l-amber-400' : ''}`}>
                         {visibleColumns.map((col, idx) => (
                           <td key={col.id} className="px-4 py-3 align-top">
                             {col.id === 'date' ? (
-                              <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-400'}`}>
+                              <div className={`text-xs font-bold ${isToday ? 'text-amber-700' : 'text-slate-400'}`}>
                                 {format(day, 'EEE, MMM d')}
                               </div>
                             ) : idx === 1 ? (
@@ -866,7 +869,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <tr 
                       key={post.id} 
                       id={`post-${post.id}`}
-                      className={`group hover:bg-slate-50/50 transition-all duration-500 ${isToday ? 'bg-amber-50/20' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
+                      className={`group hover:bg-slate-50/50 transition-all duration-500 ${isToday ? 'bg-amber-50/40 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
                     >
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
@@ -951,7 +954,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1)); // April 2026 based on initial posts
+  const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -1705,17 +1708,13 @@ function AppContent() {
   };
 
   const handleDeletePost = async (id: string) => {
-    console.log("App: handleDeletePost called with id:", id);
     try {
-      console.log("App: Executing deleteDoc...");
       await deleteDoc(doc(db, 'posts', id));
-      console.log("App: deleteDoc success.");
       addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
       }
     } catch (err) {
-      console.error("App: Error deleting post:", err);
       handleFirestoreError(err, OperationType.DELETE, `posts/${id}`);
     }
   };
@@ -2545,12 +2544,12 @@ function AppContent() {
                   <button 
                     onClick={() => handleOpenModal()}
                     className="group relative flex items-center gap-1.5 sm:gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0"
-                    title="Create New Task"
+                    title="Create New Post"
                   >
                     <Plus className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
-                    <span className="hidden sm:inline">Create Task</span>
+                    <span className="hidden sm:inline">Create Post</span>
                     <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-amber-600 text-slate-900 text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      Create New Task
+                      Create New Post
                     </span>
                   </button>
                 </div>
@@ -2692,7 +2691,11 @@ function AppContent() {
                       handleDeletePost={handleDeletePost}
                       handleCreateForDate={(date) => {
                         const dateStr = format(date, 'yyyy-MM-dd');
-                        handleCreateForDate(dateStr).then(p => p && handleOpenModal(p));
+                        handleCreateForDate(dateStr).then(p => {
+                          if (p) {
+                            handleOpenFBModal(p);
+                          }
+                        });
                       }}
                     />
                   )}
@@ -2971,15 +2974,18 @@ function AppContent() {
                   <div className="flex flex-wrap gap-3">
                     {socialLinks.facebook && (
                       <div className="flex flex-col gap-2">
-                        <a 
-                          href={socialLinks.facebook} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
-                        >
-                          <Facebook className="w-4 h-4" />
-                          View Page
-                        </a>
+                        <div className="flex items-center justify-between">
+                          <a 
+                            href={socialLinks.facebook} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
+                          >
+                            <Facebook className="w-4 h-4" />
+                            View Page
+                          </a>
+                          {editingPost && <FBStatusBadge post={editingPost} />}
+                        </div>
                         <button 
                           onClick={() => {
                             if (editingPost) {
@@ -3086,9 +3092,14 @@ function AppContent() {
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Social Media Redirection</h3>
                   <div className="flex flex-wrap gap-2">
                     {socialLinks.facebook && (
-                      <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-lg text-xs font-bold hover:bg-[#1877F2]/20 transition-colors">
-                        <Facebook className="w-4 h-4" /> Facebook
-                      </a>
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center justify-between">
+                          <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-lg text-xs font-bold hover:bg-[#1877F2]/20 transition-colors">
+                            <Facebook className="w-4 h-4" /> Facebook Page
+                          </a>
+                          {sharingPost && <FBStatusBadge post={sharingPost} />}
+                        </div>
+                      </div>
                     )}
                     {socialLinks.instagram && (
                       <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#E4405F]/10 text-[#E4405F] rounded-lg text-xs font-bold hover:bg-[#E4405F]/20 transition-colors">

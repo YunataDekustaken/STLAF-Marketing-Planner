@@ -3,7 +3,6 @@ import { Post, SocialHistoryEntry } from '../types';
 import { 
   Facebook, 
   Instagram, 
-  Linkedin, 
   Send, 
   Clock, 
   CheckCircle2, 
@@ -20,6 +19,8 @@ import { format } from 'date-fns';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useFacebookPost } from '../hooks/useFacebookPost';
+import { ConfirmationModal } from './ConfirmationModal';
+import { NotificationToast } from './NotificationToast';
 
 interface SocialHubViewProps {
   posts: Post[];
@@ -41,32 +42,66 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   const [historyEntries, setHistoryEntries] = useState<SocialHistoryEntry[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
+  // Modal States
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'fb' | 'hub' | null;
+    post: Post | null;
+  }>({ isOpen: false, type: null, post: null });
+
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({ isOpen: false, title: '', message: '', type: 'success' });
+
   const { deleteFacebookPost, isLoading: isDeleting, error: fbError } = useFacebookPost();
 
   useEffect(() => {
     if (fbError) {
-      alert(fbError);
+      setNotification({
+        isOpen: true,
+        title: 'Facebook Error',
+        message: fbError,
+        type: 'error'
+      });
     }
   }, [fbError]);
 
-  const handleDeleteFromFBDirect = async (e: React.MouseEvent, post: Post) => {
-    e.stopPropagation();
-    console.log("handleDeleteFromFBDirect caught for post:", post.id, "fbPostId:", post.fbPostId);
+  useEffect(() => {
+    const q = query(
+      collection(db, 'history'),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const entries = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SocialHistoryEntry[];
+      setHistoryEntries(entries);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleDeleteFromFBDirect = async (post: Post) => {
     if (!post.fbPostId) {
-      alert("This post does not have a linked Facebook ID.");
+      setNotification({
+        isOpen: true,
+        title: 'Error',
+        message: 'This post does not have a linked Facebook ID.',
+        type: 'error'
+      });
       return;
     }
-    
-    const confirmed = window.confirm("Are you sure you want to delete this post from Facebook? This action cannot be undone.");
-    if (!confirmed) return;
 
-    console.log("Calling deleteFacebookPost hook...");
     const result = await deleteFacebookPost(post.fbPostId);
-    console.log("deleteFacebookPost result:", result);
     
     if (result) {
       try {
-        console.log("Updating Firestore doc to remove FB link...");
         const postRef = doc(db, 'posts', post.id);
         await updateDoc(postRef, {
           fbPostId: null,
@@ -87,12 +122,45 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
           userName: auth.currentUser?.displayName || 'Unknown User',
           details: 'Deleted post from Facebook Page via Social Hub'
         });
+
+        setNotification({
+          isOpen: true,
+          title: 'Post Deleted',
+          message: 'The post has been successfully removed from Facebook.',
+          type: 'success'
+        });
       } catch (err) {
         console.error("Error updating post after deletion:", err);
-        alert("Facebook post was deleted, but failed to update local record.");
+        setNotification({
+          isOpen: true,
+          title: 'Sync Error',
+          message: 'Facebook post was deleted, but failed to update local record.',
+          type: 'error'
+        });
       }
     }
-    setOpenMenuId(null);
+    setConfirmModal({ isOpen: false, type: null, post: null });
+  };
+
+  const handleRemoveFromHub = async (post: Post) => {
+    try {
+      await handleDeletePost(post.id);
+      setNotification({
+        isOpen: true,
+        title: 'Removed from Hub',
+        message: 'The post was removed from the local planner hub.',
+        type: 'success'
+      });
+    } catch (err) {
+      console.error("Error removing post:", err);
+      setNotification({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to remove post from hub.',
+        type: 'error'
+      });
+    }
+    setConfirmModal({ isOpen: false, type: null, post: null });
   };
 
   const getActionStyles = (action: string) => {
@@ -117,6 +185,36 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen && confirmModal.type === 'fb'}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={() => confirmModal.post && handleDeleteFromFBDirect(confirmModal.post)}
+        title="Delete from Facebook?"
+        message={`This will permanently delete "${confirmModal.post?.contentTitle}" from your Facebook page. This action cannot be undone.`}
+        confirmText="Delete Post"
+        isLoading={isDeleting}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen && confirmModal.type === 'hub'}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={() => confirmModal.post && handleRemoveFromHub(confirmModal.post)}
+        title="Remove from Hub?"
+        message={`Are you sure you want to remove "${confirmModal.post?.contentTitle}" from the planner hub? This will NOT delete it from Facebook.`}
+        confirmText="Remove Now"
+        isDanger={false}
+      />
+
+      {/* Notifications */}
+      <NotificationToast
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
+
       {/* Header section */}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
@@ -155,26 +253,32 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
           {/* Quick Stats */}
           <div className="lg:col-span-2 space-y-6 sm:space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div className="bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-[2rem] border border-blue-100 shadow-sm">
+              <button 
+                onClick={() => setActiveTab('published')}
+                className="w-full text-left bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-[2rem] border border-blue-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group/card"
+              >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl">
+                  <div className="p-3 bg-blue-500/10 rounded-2xl group-hover/card:bg-blue-500/20 transition-colors">
                     <Send className="w-6 h-6 text-blue-500" />
                   </div>
                   <span className="text-2xl font-black text-slate-900">{publishedPosts.length}</span>
                 </div>
                 <h4 className="font-bold text-slate-800">Total Published</h4>
                 <p className="text-sm text-slate-500">Live across all platforms</p>
-              </div>
-              <div className="bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-[2rem] border border-amber-100 shadow-sm">
+              </button>
+              <button 
+                onClick={() => setActiveTab('scheduled')}
+                className="w-full text-left bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-[2rem] border border-amber-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all cursor-pointer group/card"
+              >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-amber-500/10 rounded-2xl">
+                  <div className="p-3 bg-amber-500/10 rounded-2xl group-hover/card:bg-amber-500/20 transition-colors">
                     <Clock className="w-6 h-6 text-amber-500" />
                   </div>
                   <span className="text-2xl font-black text-slate-900">{scheduledPosts.length}</span>
                 </div>
                 <h4 className="font-bold text-slate-800">Scheduled</h4>
                 <p className="text-sm text-slate-500">Awaiting automation</p>
-              </div>
+              </button>
             </div>
 
             {/* Recent Activity */}
@@ -220,27 +324,32 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
           <div className="space-y-6">
             <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl">
               <h3 className="font-bold mb-6 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                Platform Health
+                <Activity className="w-5 h-5 text-amber-500" />
+                Connected Apps
               </h3>
               <div className="space-y-4">
-                {[
-                  { name: 'Facebook Business', icon: Facebook, color: 'text-[#1877F2]' },
-                  { name: 'Instagram Professional', icon: Instagram, color: 'text-pink-500' },
-                  { name: 'LinkedIn Company', icon: Linkedin, color: 'text-[#0A66C2]' }
-                ].map(platform => (
-                  <div key={platform.name} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                      <platform.icon className={`w-5 h-5 ${platform.color}`} />
-                      <span className="text-sm font-semibold">{platform.name}</span>
+                <div className="flex items-center justify-between p-3 bg-white/10 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Facebook className="w-5 h-5 text-[#1877F2]" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">Facebook Page</span>
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Synchronized</span>
                     </div>
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                   </div>
-                ))}
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl opacity-40 grayscale">
+                  <div className="flex items-center gap-3">
+                    <Instagram className="w-5 h-5 text-pink-500" />
+                    <span className="text-sm font-semibold">Instagram</span>
+                  </div>
+                  <span className="text-[8px] font-black uppercase text-slate-500">Not Connected</span>
+                </div>
               </div>
               <div className="mt-8 pt-8 border-t border-white/5">
                 <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
-                  Your accounts are securely synced with the Social Hub. Posting directly from here will update your Monthly Table status automatically.
+                  Your Facebook Page API is active. Posting from the hub will update your Planner Table automatically without leaving the app.
                 </p>
               </div>
             </div>
@@ -349,7 +458,9 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                         </button>
                         <button 
                           onClick={(e) => {
-                            handleDeleteFromFBDirect(e, post);
+                            e.stopPropagation();
+                            setConfirmModal({ isOpen: true, type: 'fb', post });
+                            setOpenMenuId(null);
                           }}
                           disabled={isDeleting}
                           className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 flex items-center gap-2 transition-colors disabled:opacity-50"
@@ -360,18 +471,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                         <button 
                           onClick={async (e) => {
                             e.stopPropagation();
-                            console.log("Remove from Hub clicked for post:", post.id);
-                            if (window.confirm("Remove this post from the hub? This will NOT delete it from Facebook.")) {
-                              try {
-                                console.log("Calling handleDeletePost prop...");
-                                await handleDeletePost(post.id);
-                                console.log("handleDeletePost call finished.");
-                                setOpenMenuId(null);
-                              } catch (err) {
-                                console.error("Error removing post:", err);
-                                alert("Failed to remove post from hub.");
-                              }
-                            }
+                            setConfirmModal({ isOpen: true, type: 'hub', post });
+                            setOpenMenuId(null);
                           }}
                           className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-500 hover:bg-slate-50 flex items-center gap-2 transition-colors border-t border-slate-50"
                         >
