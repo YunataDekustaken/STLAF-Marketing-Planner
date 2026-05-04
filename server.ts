@@ -151,6 +151,38 @@ async function startServer() {
     }
   });
 
+  // Delete Facebook Post API Route
+  app.delete("/api/facebook-post/:postId", async (req, res) => {
+    const { postId } = req.params;
+    const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+
+    if (!PAGE_ACCESS_TOKEN) {
+      return res.status(500).json({ 
+        success: false, 
+        error: "Facebook credentials (FACEBOOK_PAGE_ACCESS_TOKEN) are not configured on the server." 
+      });
+    }
+
+    try {
+      const endpoint = `https://graph.facebook.com/v19.0/${postId}`;
+      await axios.delete(endpoint, {
+        params: {
+          access_token: PAGE_ACCESS_TOKEN
+        }
+      });
+      
+      return res.json({ success: true });
+    } catch (error: any) {
+      const errorData = error.response?.data?.error || {};
+      console.error("Facebook API Delete Error:", JSON.stringify(errorData, null, 2));
+      
+      res.status(error.response?.status || 500).json({ 
+        success: false, 
+        error: errorData.message || "Failed to delete post from Facebook"
+      });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

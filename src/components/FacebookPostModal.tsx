@@ -10,13 +10,15 @@ import {
   CheckCircle2, 
   AlertCircle,
   ExternalLink,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
 import { Post } from '../types';
 import { db } from '../firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
+import { auth } from '../firebase';
 
 interface FacebookPostModalProps {
   isOpen: boolean;
@@ -35,7 +37,12 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
   const [scheduleTime, setScheduleTime] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   
-  const { postToFacebook, isLoading, error, success, postId, resetStatus } = useFacebookPost();
+  const isAlreadyPublished = post?.status === 'Published' && post?.fbPostId;
+  const isAlreadyScheduled = post?.status === 'Scheduled' && post?.fbPostId;
+  
+  const { postToFacebook, deleteFacebookPost, isLoading, error, success, postId, resetStatus } = useFacebookPost();
+
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isOpen && post) {
@@ -46,6 +53,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
       setShowScheduler(false);
       setScheduleDate('');
       setScheduleTime('');
+      setIsDeleting(false);
     }
   }, [isOpen, post]);
 
@@ -67,6 +75,18 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
       }
 
       await updateDoc(postRef, updateData);
+
+      // Log to history
+      await addDoc(collection(db, 'history'), {
+        postId: post.id,
+        contentTitle: post.contentTitle,
+        action: fbStatus === 'scheduled' ? 'schedule' : 'manual_publish',
+        platform: 'facebook',
+        timestamp: serverTimestamp(),
+        userEmail: auth.currentUser?.email || 'unknown',
+        userName: auth.currentUser?.displayName || 'Unknown User',
+        details: fbStatus === 'scheduled' ? `Scheduled for ${timeStr}` : 'Posted immediately'
+      });
     } catch (err) {
       console.error("Error updating post status in Firestore:", err);
     }
@@ -78,6 +98,48 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
       message: caption,
       mediaUrls: creatives
     });
+  };
+
+  const handleDeleteFromFacebook = async () => {
+    if (!post?.fbPostId) return;
+    
+    const confirmed = window.confirm("Are you sure you want to delete this post from Facebook? This action cannot be undone.");
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    const result = await deleteFacebookPost(post.fbPostId);
+    
+    if (result) {
+      try {
+        const postRef = doc(db, 'posts', post.id);
+        await updateDoc(postRef, {
+          fbPostId: null,
+          fbStatus: null,
+          fbPublishedTime: null,
+          fbScheduledTime: null,
+          status: 'Not Started', // Revert status
+          updatedAt: serverTimestamp()
+        });
+
+        // Log to history
+        await addDoc(collection(db, 'history'), {
+          postId: post.id,
+          contentTitle: post.contentTitle,
+          action: 'delete',
+          platform: 'facebook',
+          timestamp: serverTimestamp(),
+          userEmail: auth.currentUser?.email || 'unknown',
+          userName: auth.currentUser?.displayName || 'Unknown User',
+          details: 'Deleted post from Facebook Page'
+        });
+
+        resetStatus();
+        onClose();
+      } catch (err) {
+        console.error("Error updating post after deletion:", err);
+      }
+    }
+    setIsDeleting(false);
   };
 
   const handleSchedule = async () => {
@@ -139,7 +201,9 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
                 <Facebook className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-black text-slate-800 tracking-tight">Post to Facebook</h3>
+                <h3 className="font-black text-slate-800 tracking-tight">
+                  {(isAlreadyPublished || isAlreadyScheduled || success) ? 'Post Details' : 'Post to Facebook'}
+                </h3>
                 <p className="text-[10px] font-bold text-[#1877F2] uppercase tracking-wider">Facebook Page Integration</p>
               </div>
             </div>
@@ -152,32 +216,72 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {success ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500 mb-2">
-                  <CheckCircle2 className="w-12 h-12" />
+            {(success || isAlreadyPublished || isAlreadyScheduled) ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center space-y-6">
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-2 shadow-inner ${isAlreadyPublished ? 'bg-emerald-100 text-emerald-500' : 'bg-amber-100 text-amber-500'}`}>
+                  {isAlreadyPublished ? <CheckCircle2 className="w-12 h-12" /> : <Clock className="w-12 h-12" />}
                 </div>
-                <h4 className="text-2xl font-black text-slate-800">Successfully Posted!</h4>
-                <p className="text-slate-500 max-w-xs">Your content has been {showScheduler ? 'scheduled' : 'published'} to your Facebook Page.</p>
+                <div>
+                  <h4 className="text-2xl font-black text-slate-800">
+                    {isAlreadyPublished ? 'Post is Live!' : isAlreadyScheduled ? 'Post is Scheduled' : 'Successfully Posted!'}
+                  </h4>
+                  <p className="text-slate-500 mt-1 font-medium">
+                    {isAlreadyPublished 
+                      ? 'This content has been published to your Facebook Page.' 
+                      : isAlreadyScheduled 
+                        ? `This post is scheduled for ${post?.fbScheduledTime ? new Date(post.fbScheduledTime).toLocaleString() : 'the future'}.`
+                        : `Your content has been ${showScheduler ? 'scheduled' : 'published'} successfully.`
+                    }
+                  </p>
+                </div>
                 
-                {postId && (
-                  <a 
-                    href={`https://facebook.com/${postId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-6 py-3 bg-[#1877F2] text-white rounded-xl font-bold text-sm hover:bg-[#0e63d1] transition-all shadow-lg shadow-blue-200 mt-4"
+                {/* Simplified Post Preview in View Mode */}
+                <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left">
+                  <p className="text-sm text-slate-700 line-clamp-3 mb-3 leading-relaxed">{caption}</p>
+                  {creatives.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                      {creatives.map((url, i) => (
+                        <img key={i} src={url} className="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0" alt="" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 w-full">
+                  {(postId || post?.fbPostId) && (
+                    <a 
+                      href={`https://facebook.com/${postId || post?.fbPostId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#1877F2] text-white rounded-xl font-bold text-sm hover:bg-[#0e63d1] transition-all shadow-lg shadow-blue-200"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View on Facebook
+                    </a>
+                  )}
+
+                  {(isAlreadyPublished || isAlreadyScheduled) && (
+                    <button 
+                      onClick={handleDeleteFromFacebook}
+                      disabled={isDeleting}
+                      className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all border border-rose-200 disabled:opacity-50"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Delete from Facebook
+                    </button>
+                  )}
+                  
+                  <button 
+                    onClick={onClose}
+                    className="px-6 py-3.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all"
                   >
-                    <ExternalLink className="w-4 h-4" />
-                    View on Facebook
-                  </a>
-                )}
-                
-                <button 
-                  onClick={onClose}
-                  className="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all mt-2"
-                >
-                  Done
-                </button>
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -289,7 +393,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
           </div>
 
           {/* Footer Actions */}
-          {!success && (
+          {!(success || isAlreadyPublished || isAlreadyScheduled) && (
             <div className="px-6 py-6 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
               <button 
                 onClick={onClose}

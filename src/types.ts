@@ -81,7 +81,19 @@ export const INITIAL_POSTS: Post[] = [
   }
 ];
 
-export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar' | 'profile';
+export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar' | 'profile' | 'social';
+
+export interface SocialHistoryEntry {
+  id: string;
+  postId: string;
+  contentTitle: string;
+  action: 'manual_publish' | 'schedule' | 'auto_publish' | 'delete';
+  platform: 'facebook' | 'instagram' | 'linkedin' | 'system';
+  timestamp: any; // Firestore timestamp
+  userEmail: string;
+  userName: string;
+  details?: string;
+}
 
 export type UserRole = 'marketing_supervisor' | 'marketing_member' | 'department';
 

@@ -57,6 +57,33 @@ export function useFacebookPost() {
     }
   };
 
+  const deleteFacebookPost = async (fbPostId: string) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const response = await fetch(`/api/facebook-post/${fbPostId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(true);
+        return true;
+      } else {
+        setError(result.error || 'Failed to delete post from Facebook');
+        return false;
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const resetStatus = () => {
     setIsLoading(false);
     setError(null);
@@ -66,6 +93,7 @@ export function useFacebookPost() {
 
   return {
     postToFacebook,
+    deleteFacebookPost,
     isLoading,
     error,
     success,

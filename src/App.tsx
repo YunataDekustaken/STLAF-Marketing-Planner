@@ -49,6 +49,8 @@ import {
   Info,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelLeft,
+  Share2,
   Facebook,
   Instagram,
   Linkedin,
@@ -85,6 +87,7 @@ import { auth, db, storage } from './firebase';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
+import { SocialHubView } from './components/SocialHubView';
 import { ProfileView } from './components/ProfileView';
 import { FacebookPostModal } from './components/FacebookPostModal';
 import { 
@@ -539,12 +542,12 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
         );
       case 'topicTheme':
         return (
-          <input 
-            type="text"
+          <textarea 
             value={post.topicTheme}
             placeholder="Enter theme..."
             onChange={(e) => handleUpdatePostInline(post.id, 'topicTheme', e.target.value)}
-            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100"
+            rows={1}
+            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 resize-none overflow-hidden focus:min-h-[80px] transition-all"
           />
         );
       case 'subtopic':
@@ -813,7 +816,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
       >
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
-              <thead>
+              <thead className="sticky top-0 z-30 bg-slate-50 border-b border-slate-200 shadow-sm">
                 <SortableContext 
                   items={visibleColumns.map(c => c.id)}
                   strategy={horizontalListSortingStrategy}
@@ -822,7 +825,8 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     {visibleColumns.map((col) => (
                       <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
                     ))}
-                    <th className="w-32 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200">
+                    <th className="w-40 px-4 py-3 sticky right-0 bg-slate-50/50 border-l border-slate-200 backdrop-blur-sm z-[25]">
+                      <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 text-center">Actions</div>
                     </th>
                   </tr>
                 </SortableContext>
@@ -832,7 +836,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                   const dateStr = format(day, 'yyyy-MM-dd');
                   const dayPosts = posts.filter(p => p.date === dateStr);
                   const isToday = isSameDay(day, new Date());
-
+ 
                   if (dayPosts.length === 0) {
                     return (
                       <tr key={dateStr} className={`group hover:bg-slate-50/50 transition-colors ${isToday ? 'bg-amber-50/20' : ''}`}>
@@ -853,11 +857,11 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                             ) : null}
                           </td>
                         ))}
-                        <td className="px-4 py-3 align-top sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors border-l border-slate-100"></td>
+                        <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 backdrop-blur-sm group-hover:bg-slate-50/80 transition-colors border-l border-slate-100 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40"></td>
                       </tr>
                     );
                   }
-
+ 
                   return dayPosts.map((post, pIdx) => (
                     <tr 
                       key={post.id} 
@@ -869,8 +873,8 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                           {renderCell(post, col.id, day, pIdx)}
                         </td>
                       ))}
-                      <td className="px-4 py-3 align-top sticky right-0 bg-white group-hover:bg-slate-50/50 transition-colors border-l border-slate-100">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 backdrop-blur-sm group-hover:bg-slate-50/80 transition-colors border-l border-slate-100 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                           <button 
                             onClick={() => handleOpenFBModal(post)}
                             className="p-1.5 hover:bg-blue-50 rounded-lg text-[#1877F2] hover:text-blue-600 transition-colors"
@@ -999,8 +1003,12 @@ function AppContent() {
   const [captionHistory, setCaptionHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<'full' | 'mini-hover' | 'mini-fixed'>('full');
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  
+  // Derived helper for rendering logic
+  const isSidebarExpanded = sidebarMode === 'full' || (sidebarMode === 'mini-hover' && isSidebarHovered);
+  const isSidebarMini = !isSidebarExpanded;
   const [showNotifications, setShowNotifications] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -1124,6 +1132,51 @@ function AppContent() {
       console.error("Error notifying all users:", err);
     }
   };
+
+  // Automation for scheduled posts
+  useEffect(() => {
+    if (!posts.length || profile?.role !== 'marketing_supervisor') return;
+
+    const checkScheduledPosts = async () => {
+      const now = new Date();
+      const updates = posts.filter(post => {
+        if (post.status !== 'Scheduled') return false;
+        const postDate = new Date(post.date);
+        return postDate <= now;
+      });
+
+      if (updates.length === 0) return;
+
+      for (const post of updates) {
+        try {
+          await updateDoc(doc(db, 'posts', post.id), { status: 'Published' });
+          
+          // Log to history
+          await addDoc(collection(db, 'history'), {
+            postId: post.id,
+            contentTitle: post.contentTitle,
+            action: 'auto_publish',
+            platform: 'system',
+            timestamp: serverTimestamp(),
+            userEmail: 'system-automation@gemini.ai',
+            userName: 'System Auto-Publish',
+            details: `Scheduled date ${post.date} reached.`
+          });
+        } catch (err) {
+          console.error(`Failed to auto-publish post ${post.id}:`, err);
+        }
+      }
+
+      if (updates.length > 0) {
+        addNotification('System Update', `${updates.length} scheduled posts have been automatically marked as Published.`, 'info');
+      }
+    };
+
+    // Run once on load and then every 5 minutes
+    checkScheduledPosts();
+    const interval = setInterval(checkScheduledPosts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [posts.length, profile?.role]);
 
   // Persistence for settings
   useEffect(() => {
@@ -1652,13 +1705,17 @@ function AppContent() {
   };
 
   const handleDeletePost = async (id: string) => {
+    console.log("App: handleDeletePost called with id:", id);
     try {
+      console.log("App: Executing deleteDoc...");
       await deleteDoc(doc(db, 'posts', id));
+      console.log("App: deleteDoc success.");
       addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
       }
     } catch (err) {
+      console.error("App: Error deleting post:", err);
       handleFirestoreError(err, OperationType.DELETE, `posts/${id}`);
     }
   };
@@ -2111,13 +2168,13 @@ function AppContent() {
       <Toaster position="top-right" reverseOrder={false} />
       {/* Sidebar */}
       <aside 
-        onMouseEnter={() => isSidebarCollapsed && setIsSidebarHovered(true)}
+        onMouseEnter={() => sidebarMode === 'mini-hover' && setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
-        className={`${isSidebarCollapsed && !isSidebarHovered ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] relative z-30 shadow-2xl`}
+        className={`${isSidebarMini ? 'w-20' : 'w-64'} bg-primary-dark text-slate-300 flex flex-col shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] relative z-[100] shadow-2xl`}
       >
         <div 
           onClick={() => setViewMode('list')}
-          className={`pt-[32px] pl-[24px] pr-[24px] pb-[19px] flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}
+          className={`pt-[32px] pl-[24px] pr-[24px] pb-[19px] flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarMini ? 'justify-center' : 'gap-3'}`}
         >
           <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-tighter">
@@ -2127,7 +2184,7 @@ function AppContent() {
               <Sparkles className="w-3 h-3 text-amber-500" />
             </div>
           </div>
-          {(!isSidebarCollapsed || isSidebarHovered) && (
+          {isSidebarExpanded && (
             <motion.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -2142,38 +2199,47 @@ function AppContent() {
         <nav className="flex-1 px-3 space-y-1 mt-4 overflow-hidden">
           <button 
             onClick={() => setViewMode('list')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-            title={isSidebarCollapsed && !isSidebarHovered ? "Monthly Table" : ""}
+            className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'list' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+            title={isSidebarMini ? "Monthly Table" : ""}
           >
             <LayoutList className="w-5 h-5 shrink-0" />
-            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Monthly Table</span>}
+            {isSidebarExpanded && <span className="whitespace-nowrap">Monthly Table</span>}
           </button>
           <button 
             onClick={() => setViewMode('kanban')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-            title={isSidebarCollapsed && !isSidebarHovered ? "Kanban Board" : ""}
+            className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'kanban' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+            title={isSidebarMini ? "Kanban Board" : ""}
           >
             <Columns className="w-5 h-5 shrink-0" />
-            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Kanban Board</span>}
+            {isSidebarExpanded && <span className="whitespace-nowrap">Kanban Board</span>}
           </button>
           <button 
             onClick={() => setViewMode('calendar')}
-            className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-            title={isSidebarCollapsed && !isSidebarHovered ? "Calendar View" : ""}
+            className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'calendar' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+            title={isSidebarMini ? "Calendar View" : ""}
           >
             <CalendarIcon className="w-5 h-5 shrink-0" />
-            {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Calendar View</span>}
+            {isSidebarExpanded && <span className="whitespace-nowrap">Calendar View</span>}
+          </button>
+
+          <button 
+            onClick={() => setViewMode('social')}
+            className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'social' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+            title={isSidebarMini ? "Social Hub" : ""}
+          >
+            <Share2 className="w-5 h-5 shrink-0" />
+            {isSidebarExpanded && <span className="whitespace-nowrap">Social Hub</span>}
           </button>
           
           {profile?.role === 'marketing_supervisor' && (
             <div className="pt-4 mt-4 border-t border-slate-700/50">
               <button 
                 onClick={() => setViewMode('admin')}
-                className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-                title={isSidebarCollapsed && !isSidebarHovered ? "Settings" : ""}
+                className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+                title={isSidebarMini ? "Settings" : ""}
               >
                 <ShieldCheck className="w-5 h-5 shrink-0" />
-                {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Settings</span>}
+                {isSidebarExpanded && <span className="whitespace-nowrap">Settings</span>}
               </button>
             </div>
           )}
@@ -2181,16 +2247,16 @@ function AppContent() {
           <div className={`${profile?.role !== 'marketing_supervisor' ? 'pt-4 mt-4 border-t border-slate-700/50' : 'mt-1'}`}>
             <button 
               onClick={() => setViewMode('profile')}
-              className={`w-full flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'profile' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-              title={isSidebarCollapsed && !isSidebarHovered ? "My Profile" : ""}
+              className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'profile' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+              title={isSidebarMini ? "My Profile" : ""}
             >
               <UserIcon className="w-5 h-5 shrink-0" />
-              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">My Profile</span>}
+              {isSidebarExpanded && <span className="whitespace-nowrap">My Profile</span>}
             </button>
           </div>
 
           {/* Quick Links Section */}
-          {(!isSidebarCollapsed || isSidebarHovered) && quickLinks.length > 0 && (
+          {isSidebarExpanded && quickLinks.length > 0 && (
             <div className="px-4 pt-8 pb-4">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Quick Links</p>
               <div className="space-y-3">
@@ -2213,7 +2279,7 @@ function AppContent() {
 
         <div className="mt-auto p-4 pt-2 border-t border-slate-700/50 flex flex-col gap-3">
           {user ? (
-            <div className={`flex items-center ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'gap-3'}`}>
+            <div className={`flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3'}`}>
               {user.photoURL && (
                 <button 
                   onClick={() => setViewMode('profile')}
@@ -2222,7 +2288,7 @@ function AppContent() {
                   <img src={user.photoURL} className="w-10 h-10 rounded-full border border-slate-600 shrink-0" alt="Profile" referrerPolicy="no-referrer" />
                 </button>
               )}
-              {(!isSidebarCollapsed || isSidebarHovered) && (
+              {isSidebarExpanded && (
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <p className="text-sm font-bold text-white truncate leading-tight">{user.displayName}</p>
                   <button 
@@ -2237,17 +2303,17 @@ function AppContent() {
           ) : (
             <button 
               onClick={login}
-              className={`w-full flex items-center justify-center ${isSidebarCollapsed && !isSidebarHovered ? 'p-2' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
-              title={isSidebarCollapsed && !isSidebarHovered ? "Sign In" : ""}
+              className={`w-full flex items-center justify-center ${isSidebarMini ? 'p-2' : 'gap-2 px-4 py-2'} bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all`}
+              title={isSidebarMini ? "Sign In" : ""}
             >
               <Lock className="w-3.5 h-3.5 shrink-0" />
-              {(!isSidebarCollapsed || isSidebarHovered) && <span className="whitespace-nowrap">Sign In</span>}
+              {isSidebarExpanded && <span className="whitespace-nowrap">Sign In</span>}
             </button>
           )}
           
-          <div className={`mt-1 flex items-center gap-1.5 text-[8px] font-bold text-slate-600 uppercase tracking-widest ${isSidebarCollapsed && !isSidebarHovered ? 'justify-center' : 'justify-start'}`}>
+          <div className={`mt-1 flex items-center gap-1.5 text-[8px] font-bold text-slate-600 uppercase tracking-widest ${isSidebarMini ? 'justify-center' : 'justify-start'}`}>
             <Sparkles className="w-2 h-2 text-amber-500/40" />
-            {(!isSidebarCollapsed || isSidebarHovered) && <span>Powered by Gemini AI</span>}
+            {isSidebarExpanded && <span>Powered by Gemini AI</span>}
           </div>
         </div>
       </aside>
@@ -2255,17 +2321,34 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 pl-[15px] pr-[32px] flex items-center justify-between sticky top-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200 pl-[15px] pr-[32px] flex items-center justify-between sticky top-0 z-[80]">
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 pt-[8px] hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all duration-300 ease-out group"
-              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              onClick={() => {
+                if (sidebarMode === 'full') setSidebarMode('mini-hover');
+                else if (sidebarMode === 'mini-hover') setSidebarMode('mini-fixed');
+                else setSidebarMode('full');
+              }}
+              className="p-2 pt-[8px] hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all duration-300 ease-out group flex items-center justify-center"
+              title={
+                sidebarMode === 'full' ? "Switch to Auto-expand Mini" : 
+                sidebarMode === 'mini-hover' ? "Switch to Full Mini View" : 
+                "Switch to Large View"
+              }
             >
-              {isSidebarCollapsed ? <PanelLeftOpen className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <PanelLeftClose className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+              {sidebarMode === 'full' ? (
+                <PanelLeftClose className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              ) : sidebarMode === 'mini-hover' ? (
+                <div className="relative">
+                  <PanelLeftOpen className="w-5 h-5 group-hover:scale-110 transition-transform text-amber-500" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full border border-white" />
+                </div>
+              ) : (
+                <PanelLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              )}
             </button>
             <h1 className="text-lg font-bold text-slate-800 pt-0 pl-0">
-              {viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
+              {viewMode === 'social' ? 'Social Hub' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
           <div className="flex items-center gap-6">
@@ -2357,7 +2440,7 @@ function AppContent() {
             {/* Page Title & Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
 
-              {viewMode !== 'admin' && viewMode !== 'profile' && (
+              {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
                   <div className="relative inline-block text-left">
                     <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
@@ -2499,76 +2582,78 @@ function AppContent() {
             ) : (
               <>
                 {/* Month Navigation & Filters */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
-                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
-                    <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                      <ChevronLeft className="w-4 h-4 sm:w-5 h-5" />
+                {viewMode !== 'social' && (
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
+                      <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                        <ChevronLeft className="w-4 h-4 sm:w-5 h-5" />
+                      </button>
+                      <div className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm">
+                        {format(currentMonth, 'MMMM yyyy')}
+                      </div>
+                      <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                        <ChevronRight className="w-4 h-4 sm:w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <button 
+                      onClick={handleToday}
+                      className="group relative text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 p-2 sm:px-4 sm:py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all shrink-0"
+                      title="Today"
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5 sm:hidden" />
+                      <span className="hidden sm:inline">Today</span>
                     </button>
-                    <div className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm">
-                      {format(currentMonth, 'MMMM yyyy')}
-                    </div>
-                    <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
-                      <ChevronRight className="w-4 h-4 sm:w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  <button 
-                    onClick={handleToday}
-                    className="group relative text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 p-2 sm:px-4 sm:py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all shrink-0"
-                    title="Today"
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5 sm:hidden" />
-                    <span className="hidden sm:inline">Today</span>
-                  </button>
 
-                  <div className="flex-1 min-w-[140px] sm:max-w-xs relative shrink-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Search..."
-                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-xs sm:text-sm"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+                    <div className="flex-1 min-w-[140px] sm:max-w-xs relative shrink-0">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Search..."
+                        className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-xs sm:text-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
 
-                  <div className="flex items-center gap-2 ml-auto">
-                    <div className="flex items-center bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm shrink-0">
-                      <button 
-                        onClick={() => setViewMode('list')}
-                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        title="List View"
-                      >
-                        <LayoutList className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => setViewMode('kanban')}
-                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        title="Kanban View"
-                      >
-                        <Columns className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => setViewMode('calendar')}
-                        className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        title="Calendar View"
-                      >
-                        <CalendarIcon className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <div className="flex items-center bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm shrink-0">
+                        <button 
+                          onClick={() => setViewMode('list')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="List View"
+                        >
+                          <LayoutList className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => setViewMode('kanban')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="Kanban View"
+                        >
+                          <Columns className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => setViewMode('calendar')}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          title="Calendar View"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                        <select 
+                          className="flex-1 sm:flex-initial bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value as any)}
+                        >
+                          <option value="All">All Statuses</option>
+                          <option value="Not Started">Not Started</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Ready for Review">Ready for Review</option>
+                          <option value="Scheduled">Scheduled</option>
+                        </select>
+                      </div>
                     </div>
-                      <select 
-                        className="flex-1 sm:flex-initial bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
-                      >
-                        <option value="All">All Statuses</option>
-                        <option value="Not Started">Not Started</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Ready for Review">Ready for Review</option>
-                        <option value="Scheduled">Scheduled</option>
-                      </select>
-                    </div>
-                  </div>
+                )}
 
                 {/* View Content */}
                 <div className="min-h-[400px]">
@@ -2598,6 +2683,17 @@ function AppContent() {
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
                       highlightedPostId={highlightedPostId}
+                    />
+                  )}
+                  {viewMode === 'social' && (
+                    <SocialHubView
+                      posts={posts}
+                      handleOpenFBModal={handleOpenFBModal}
+                      handleDeletePost={handleDeletePost}
+                      handleCreateForDate={(date) => {
+                        const dateStr = format(date, 'yyyy-MM-dd');
+                        handleCreateForDate(dateStr).then(p => p && handleOpenModal(p));
+                      }}
                     />
                   )}
                   {viewMode === 'kanban' && (
