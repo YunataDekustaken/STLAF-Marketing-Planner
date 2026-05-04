@@ -17,7 +17,6 @@ import {
   Facebook,
   Instagram,
   Linkedin,
-  ShieldCheck,
   CheckCircle2,
   Clock,
   Check,

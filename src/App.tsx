@@ -44,7 +44,6 @@ import {
   BarChart3,
   Settings,
   User as UserIcon,
-  ShieldCheck,
   Download,
   Info,
   PanelLeftClose,
@@ -352,7 +351,7 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
 interface CalendarViewProps {
   currentMonth: Date;
   posts: Post[];
-  handleCreateForDate: (dateStr: string) => Promise<Post | null>;
+  handleCreateForDate: (dateStr: string, isDirect?: boolean) => Promise<Post | null>;
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
   handleOpenFBModal: (post: Post) => void;
@@ -1510,7 +1509,7 @@ function AppContent() {
     
     const matchesStatus = statusFilter === 'All' || post.status === statusFilter;
     
-    return matchesMonth && matchesSearch && matchesStatus;
+    return !post.isDirectPost && matchesMonth && matchesSearch && matchesStatus;
   });
 
   const handleUpdatePostInline = async (id: string, field: keyof Post, value: any) => {
@@ -1544,7 +1543,7 @@ function AppContent() {
     }
   };
 
-  const handleCreateForDate = async (dateStr: string) => {
+  const handleCreateForDate = async (dateStr: string, isDirect: boolean = false) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newPost: Post = {
       id,
@@ -1560,6 +1559,7 @@ function AppContent() {
       customPrompt: '',
       creatives: [],
       userId: user?.uid || 'guest_user',
+      isDirectPost: isDirect
     };
     
     try {
@@ -2237,7 +2237,7 @@ function AppContent() {
                 className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'admin' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
                 title={isSidebarMini ? "Settings" : ""}
               >
-                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <Settings className="w-5 h-5 shrink-0" />
                 {isSidebarExpanded && <span className="whitespace-nowrap">Settings</span>}
               </button>
             </div>
@@ -2691,7 +2691,7 @@ function AppContent() {
                       handleDeletePost={handleDeletePost}
                       handleCreateForDate={(date) => {
                         const dateStr = format(date, 'yyyy-MM-dd');
-                        handleCreateForDate(dateStr).then(p => {
+                        handleCreateForDate(dateStr, true).then(p => {
                           if (p) {
                             handleOpenFBModal(p);
                           }

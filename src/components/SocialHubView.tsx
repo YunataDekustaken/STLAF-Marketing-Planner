@@ -484,10 +484,25 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   </div>
                 </div>
                 
-                <h4 className="font-bold text-slate-900 mb-2 line-clamp-1">{post.contentTitle}</h4>
-                <p className="text-sm text-slate-500 mb-6 line-clamp-3 leading-relaxed h-[63px]">
-                  {post.caption || "No caption provided for this post."}
-                </p>
+                <div className="flex-1">
+                  <h4 className="font-bold text-slate-900 mb-2 line-clamp-1">{post.contentTitle}</h4>
+                  <div className="relative group/caption">
+                    <p className={`text-sm text-slate-500 mb-4 leading-relaxed transition-all ${openMenuId === `caption_${post.id}` ? '' : 'line-clamp-3'}`}>
+                      {post.caption || "No caption provided for this post."}
+                    </p>
+                    {post.caption && post.caption.length > 120 && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(openMenuId === `caption_${post.id}` ? null : `caption_${post.id}`);
+                        }}
+                        className="text-[10px] font-bold text-amber-600 hover:text-amber-700 mb-4 transition-colors"
+                      >
+                        {openMenuId === `caption_${post.id}` ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
                   <div className="flex flex-col">

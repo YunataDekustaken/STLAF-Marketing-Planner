@@ -28,6 +28,7 @@ export interface Post {
   fbScheduledTime?: string;
   fbPublishedTime?: string;
   approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
+  isDirectPost?: boolean;
 }
 
 export const INITIAL_POSTS: Post[] = [

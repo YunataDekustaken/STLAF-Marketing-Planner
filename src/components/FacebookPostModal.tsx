@@ -74,6 +74,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
       const updateData: any = {
         fbStatus,
         fbPostId,
+        caption,
+        creatives,
         status: fbStatus === 'scheduled' ? 'Scheduled' : 'Published',
         updatedAt: serverTimestamp()
       };
@@ -341,10 +343,44 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
                   />
                 </div>
 
-                {/* Media Preview */}
-                {creatives && creatives.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Attached Media ({creatives.length})</label>
+                {/* Media Preview & Upload */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                      Attached Media ({creatives.length})
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        id="direct-image-upload"
+                        className="hidden"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            Array.from(files).forEach((file: File) => {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const base64 = reader.result as string;
+                                setCreatives(prev => [...prev, base64]);
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                          }
+                        }}
+                      />
+                      <label 
+                        htmlFor="direct-image-upload"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-[#1877F2] rounded-lg text-xs font-bold hover:bg-blue-100 transition-all cursor-pointer border border-blue-100"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Add Image
+                      </label>
+                    </div>
+                  </div>
+
+                  {creatives && creatives.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto no-scrollbar p-1">
                       {creatives.map((url, idx) => (
                         <div key={idx} className="relative group overflow-hidden rounded-xl border border-slate-100 bg-slate-50 aspect-video flex items-center justify-center">
@@ -362,8 +398,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess }: Facebook
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Error Display */}
                 {(error || validationError) && (
