@@ -75,6 +75,17 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   }>({ isOpen: false, title: '', message: '', type: 'success' });
 
   const { deleteFacebookPost, isLoading: isDeleting, error: fbError } = useFacebookPost();
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
 
   useEffect(() => {
     if (fbError) {
@@ -283,7 +294,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
         {['overview', 'scheduled', 'published', 'history'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => {
+              setActiveTab(tab as any);
+              setOpenMenuId(null);
+            }}
             className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
               activeTab === tab 
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/5' 
@@ -501,73 +515,85 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                     </button>
                     
                     {openMenuId === post.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-[100] overflow-hidden py-1">
-                        <button 
+                      <>
+                        <div 
+                          className="fixed inset-0 z-[90]" 
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpenFBModal(post);
                             setOpenMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                        />
+                        <div 
+                          ref={menuRef}
+                          className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-[100] overflow-hidden py-1"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          View Details
-                        </button>
-                        {post.deletionRequested || post.facebookDeletionRequested ? (
-                          userRole === 'marketing_supervisor' && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenFBModal(post);
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            View Details
+                          </button>
+                          {post.deletionRequested || post.facebookDeletionRequested ? (
+                            userRole === 'marketing_supervisor' && (
+                              <>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleApproveDeletion?.(post.id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  Approve {post.facebookDeletionRequested ? 'FB' : ''} Deletion
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRejectDeletion?.(post.id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  Reject Deletion
+                                </button>
+                              </>
+                            )
+                          ) : canDelete && (
                             <>
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleApproveDeletion?.(post.id);
+                                  setConfirmModal({ isOpen: true, type: 'fb', post });
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
+                                disabled={isDeleting}
+                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors disabled:opacity-50"
                               >
-                                <Check className="w-3.5 h-3.5" />
-                                Approve {post.facebookDeletionRequested ? 'FB' : ''} Deletion
+                                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request FB Removal' : 'Delete from Facebook'}
                               </button>
                               <button 
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
-                                  handleRejectDeletion?.(post.id);
+                                  setConfirmModal({ isOpen: true, type: 'hub', post });
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
                               >
-                                <X className="w-3.5 h-3.5" />
-                                Reject Deletion
+                                <Trash2 className="w-3.5 h-3.5" />
+                                {governanceSettings?.requireDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request Removal' : 'Remove from Hub'}
                               </button>
                             </>
-                          )
-                        ) : canDelete && (
-                          <>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConfirmModal({ isOpen: true, type: 'fb', post });
-                                setOpenMenuId(null);
-                              }}
-                              disabled={isDeleting}
-                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors disabled:opacity-50"
-                            >
-                              {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                              {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request FB Removal' : 'Delete from Facebook'}
-                            </button>
-                            <button 
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                setConfirmModal({ isOpen: true, type: 'hub', post });
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              {governanceSettings?.requireDeletionApproval && userRole !== 'marketing_supervisor' ? 'Request Removal' : 'Remove from Hub'}
-                            </button>
-                          </>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
