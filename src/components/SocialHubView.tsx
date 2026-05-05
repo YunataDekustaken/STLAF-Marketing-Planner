@@ -38,6 +38,7 @@ interface SocialHubViewProps {
   };
   handleApproveDeletion?: (id: string) => Promise<void>;
   handleRejectDeletion?: (id: string) => Promise<void>;
+  handleCancelDeletionRequest?: (id: string, type: 'hub' | 'facebook') => Promise<void>;
   userRole?: string;
 }
 
@@ -51,6 +52,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   governanceSettings,
   handleApproveDeletion,
   handleRejectDeletion,
+  handleCancelDeletionRequest,
   userRole
 }) => {
   const publishedPosts = posts.filter(p => p.status === 'Published').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -539,32 +541,46 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                             View Details
                           </button>
                           {post.deletionRequested || post.facebookDeletionRequested ? (
-                            userRole === 'marketing_supervisor' && (
-                              <>
+                            <div className="flex flex-col">
+                              {userRole === 'marketing_supervisor' ? (
+                                <>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApproveDeletion?.(post.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    Approve {post.facebookDeletionRequested ? 'FB' : ''} Deletion
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRejectDeletion?.(post.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    Reject Deletion
+                                  </button>
+                                </>
+                              ) : (
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleApproveDeletion?.(post.id);
+                                    handleCancelDeletionRequest?.(post.id, post.facebookDeletionRequested ? 'facebook' : 'hub');
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full px-4 py-2 text-left text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  Approve {post.facebookDeletionRequested ? 'FB' : ''} Deletion
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRejectDeletion?.(post.id);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                                  className="w-full px-4 py-2 text-left text-[10px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors border-t border-slate-50 dark:border-slate-800"
                                 >
                                   <X className="w-3.5 h-3.5" />
-                                  Reject Deletion
+                                  Cancel Request
                                 </button>
-                              </>
-                            )
+                              )}
+                            </div>
                           ) : canDelete && (
                             <>
                               <button 

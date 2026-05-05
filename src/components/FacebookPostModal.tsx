@@ -28,6 +28,7 @@ interface FacebookPostModalProps {
   post: Post | null;
   onSuccess?: (postId: string, fbStatus: 'posted' | 'scheduled') => void;
   handleDeleteFromFB?: (post: Post) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
+  handleCancelDeletionRequest?: (id: string, type: 'hub' | 'facebook') => Promise<void>;
   userRole?: string;
   governanceSettings?: {
     requireFacebookDeletionApproval: boolean;
@@ -36,7 +37,7 @@ interface FacebookPostModalProps {
 
 const FB_CHAR_LIMIT = 63206;
 
-export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDeleteFromFB, userRole, governanceSettings }: FacebookPostModalProps) {
+export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDeleteFromFB, handleCancelDeletionRequest, userRole, governanceSettings }: FacebookPostModalProps) {
   const [caption, setCaption] = useState(post?.caption || '');
   const [creatives, setCreatives] = useState<string[]>(post?.creatives || []);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -335,16 +336,28 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                   )}
 
                   {(isAlreadyPublished || isAlreadyScheduled) && (
-                    <button 
-                      onClick={() => setIsConfirmDeleteOpen(true)}
-                      disabled={isDeleting || post?.facebookDeletionRequested}
-                      className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl font-bold text-sm hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all border border-rose-200 dark:border-rose-800 disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' 
-                        ? (post?.facebookDeletionRequested ? 'Removal Pending Approval' : 'Request FB Removal') 
-                        : 'Delete from Facebook'}
-                    </button>
+                    <div className="flex flex-col gap-2 w-full">
+                      <button 
+                        onClick={() => setIsConfirmDeleteOpen(true)}
+                        disabled={isDeleting || (post?.facebookDeletionRequested && userRole !== 'marketing_supervisor')}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl font-bold text-sm hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all border border-rose-200 dark:border-rose-800 disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {governanceSettings?.requireFacebookDeletionApproval && userRole !== 'marketing_supervisor' 
+                          ? (post?.facebookDeletionRequested ? 'Removal Pending Approval' : 'Request FB Removal') 
+                          : 'Delete from Facebook'}
+                      </button>
+                      
+                      {post?.facebookDeletionRequested && userRole !== 'marketing_supervisor' && (
+                        <button 
+                          onClick={() => handleCancelDeletionRequest?.(post.id, 'facebook')}
+                          className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel Removal Request
+                        </button>
+                      )}
+                    </div>
                   )}
                   
                   <button 
