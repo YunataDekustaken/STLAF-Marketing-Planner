@@ -783,15 +783,33 @@ export const AdminView = ({
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">App Info</h3>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Application Name</p>
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Marketing Operations Portal</p>
+                <div className="space-y-8">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Application Name</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Marketing Operations Portal</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 transition-all group">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                        <p className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">Active Database</p>
+                      </div>
+                      <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">marketing-43c62</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                        The primary high-performance project used for real-time Firestore data, User Authentication, and application assets. This is the heart of the operational hub.
+                      </p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Firebase Project ID</p>
-                      <p className="text-sm font-mono text-slate-600 dark:text-slate-400">gen-lang-client-0116256991</p>
+
+                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500/30 transition-all group">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <p className="text-[10px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">Provisioned Runtime</p>
+                      </div>
+                      <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">gen-lang-client-0116256991</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                        The host project provisioned by AI Studio. It manages the runtime environment, deployment quotas, and secure access to Google GenAI capabilities.
+                      </p>
                     </div>
                   </div>
                   
