@@ -112,7 +112,7 @@ export const ProfileView = ({ profile, onLogout, onUpdateProfile }: ProfileViewP
                         setNewName(profile.displayName);
                         setIsEditingName(true);
                       }}
-                      className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>

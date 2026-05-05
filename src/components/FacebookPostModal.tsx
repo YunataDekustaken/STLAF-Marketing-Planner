@@ -421,7 +421,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                           />
                           <button 
                             onClick={() => removeCreative(idx)}
-                            className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-red-500 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md"
+                            className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-red-500 text-white rounded-lg flex items-center justify-center [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all backdrop-blur-md"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>

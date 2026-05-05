@@ -3,6 +3,7 @@ import {
   Plus, 
   Trash2, 
   UserPlus, 
+  Edit2,
   Shield, 
   User, 
   Users, 
@@ -221,61 +222,61 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
     <div className="space-y-6">
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-amber-200 transition-all">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-amber-200 dark:hover:border-amber-900 transition-all">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Users</p>
-            <p className="text-3xl font-black text-slate-900">{activeUsers.length}</p>
+            <p className="text-3xl font-black text-slate-900 dark:text-white">{activeUsers.length}</p>
           </div>
-          <div className="p-3 bg-emerald-50 rounded-2xl group-hover:scale-110 transition-transform">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl group-hover:scale-110 transition-transform">
             <UserCheck className="w-6 h-6 text-emerald-500" />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-amber-200 transition-all cursor-pointer" onClick={() => setActiveTab('pending')}>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-amber-200 dark:hover:border-amber-900 transition-all cursor-pointer" onClick={() => setActiveTab('pending')}>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Access Requests</p>
-            <p className={`text-3xl font-black ${pendingUsers.length > 0 ? 'text-rose-500' : 'text-slate-900'}`}>{pendingUsers.length}</p>
+            <p className={`text-3xl font-black ${pendingUsers.length > 0 ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>{pendingUsers.length}</p>
           </div>
-          <div className={`p-3 rounded-2xl group-hover:scale-110 transition-transform ${pendingUsers.length > 0 ? 'bg-rose-50' : 'bg-slate-50'}`}>
+          <div className={`p-3 rounded-2xl group-hover:scale-110 transition-transform ${pendingUsers.length > 0 ? 'bg-rose-50 dark:bg-rose-900/20' : 'bg-slate-50 dark:bg-slate-800'}`}>
             <AlertCircle className={`w-6 h-6 ${pendingUsers.length > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between group hover:border-amber-200 transition-all">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:border-amber-200 dark:hover:border-amber-900 transition-all">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pre-registered</p>
-            <p className="text-3xl font-black text-slate-900">{assignments.length}</p>
+            <p className="text-3xl font-black text-slate-900 dark:text-white">{assignments.length}</p>
           </div>
-          <div className="p-3 bg-amber-50 rounded-2xl group-hover:scale-110 transition-transform">
+          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl group-hover:scale-110 transition-transform">
             <Shield className="w-6 h-6 text-amber-500" />
           </div>
         </div>
       </div>
 
       {/* Tabs Header */}
-      <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 p-1.5 rounded-2xl w-fit backdrop-blur-sm border border-slate-200/50">
+      <div className="flex flex-wrap items-center gap-2 bg-slate-100/80 dark:bg-slate-800/80 p-1.5 rounded-2xl w-fit backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
         <button 
           onClick={() => setActiveTab('active')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'active' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'active' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-600/50' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/30'}`}
         >
           <Users className="w-4 h-4" />
           Directory
         </button>
         <button 
           onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-rose-600 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/30'}`}
         >
           <AlertCircle className={`w-4 h-4 ${pendingUsers.length > 0 ? 'text-rose-500 animate-pulse' : ''}`} />
           Pending
         </button>
         <button 
           onClick={() => setActiveTab('registered')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'registered' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'registered' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-600/50' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/30'}`}
         >
           <Plus className="w-4 h-4" />
           Whitelist
         </button>
       </div>
 
-      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-200">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
         <div className="p-8">
           <AnimatePresence mode="wait">
             {activeTab === 'active' && (
@@ -288,15 +289,15 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">Active Access</h3>
-                    <p className="text-xs text-slate-500">Users currently active in the portal.</p>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Active Access</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Users currently active in the portal.</p>
                   </div>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100">
+                      <tr className="border-b border-slate-100 dark:border-slate-800">
                         <th className="text-left py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">User</th>
                         <th className="text-left py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role</th>
                         <th className="text-left py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Department</th>
@@ -310,20 +311,20 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                         </tr>
                       ) : activeUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-20 text-center text-slate-400">No active users yet.</td>
+                          <td colSpan={4} className="py-20 text-center text-slate-400 dark:border-slate-800">No active users yet.</td>
                         </tr>
                       ) : (
                         activeUsers.map(user => (
-                          <tr key={user.uid} className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors group ${editingUserId === user.uid ? 'bg-amber-50/50' : ''}`}>
+                          <tr key={user.uid} className={`border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group ${editingUserId === user.uid ? 'bg-amber-50/50 dark:bg-amber-900/20' : ''}`}>
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-3">
                                 {user.photoURL ? (
                                   <img src={user.photoURL} alt={user.displayName} className="w-8 h-8 rounded-full shadow-sm" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-slate-400" /></div>
+                                  <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-slate-400" /></div>
                                 )}
                                 <div>
-                                  <p className="text-sm font-black text-slate-900 leading-tight">{user.displayName}</p>
+                                  <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user.displayName}</p>
                                   <p className="text-[10px] text-slate-400 font-bold">{user.email}</p>
                                 </div>
                               </div>
@@ -340,16 +341,16 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                                       department: newRole === 'department' ? DEPARTMENTS[0] : 'Marketing'
                                     } : null);
                                   }}
-                                  className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
+                                  className="w-full text-xs font-bold p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-amber-500"
                                 >
-                                  <option value="marketing_member">Marketing Member</option>
-                                  <option value="marketing_supervisor">Marketing Supervisor</option>
-                                  <option value="department">Department</option>
+                                  <option value="marketing_member" className="dark:bg-slate-900">Marketing Member</option>
+                                  <option value="marketing_supervisor" className="dark:bg-slate-900">Marketing Supervisor</option>
+                                  <option value="department" className="dark:bg-slate-900">Department</option>
                                 </select>
                               ) : (
                                 <div className="flex items-center gap-2">
                                   {getRoleIcon(user.role)}
-                                  <span className="text-xs font-semibold text-slate-600">{getRoleLabel(user.role)}</span>
+                                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{getRoleLabel(user.role)}</span>
                                 </div>
                               )}
                             </td>
@@ -359,18 +360,18 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                                    disabled={editValues?.role !== 'department'}
                                    value={editValues?.role === 'department' ? editValues?.department : 'Marketing'}
                                    onChange={(e) => setEditValues(prev => prev ? { ...prev, department: e.target.value as any } : null)}
-                                   className="w-full text-xs font-bold p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-slate-50 disabled:text-slate-400"
+                                   className="w-full text-xs font-bold p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-slate-50 dark:disabled:bg-slate-800/50 disabled:text-slate-400"
                                  >
                                    {editValues?.role !== 'department' ? (
-                                     <option value="Marketing">Marketing</option>
+                                     <option value="Marketing" className="dark:bg-slate-900">Marketing</option>
                                    ) : (
                                      DEPARTMENTS.map(dept => (
-                                       <option key={dept} value={dept}>{dept}</option>
+                                       <option key={dept} value={dept} className="dark:bg-slate-900">{dept}</option>
                                      ))
                                    )}
                                  </select>
                                ) : (
-                                <span className="px-2 py-1 bg-slate-100 rounded-md text-[10px] font-black text-slate-500 uppercase tracking-tighter italic">
+                                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter italic">
                                   {user.department}
                                 </span>
                               )}
@@ -382,14 +383,14 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                                     <button 
                                       onClick={() => handleUpdateUser(user.uid)}
                                       disabled={isUpdating}
-                                      className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
+                                      className="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-all"
                                       title="Save Changes"
                                     >
                                       {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                     </button>
                                     <button 
                                       onClick={() => { setEditingUserId(null); setEditValues(null); }}
-                                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
                                       title="Cancel Edit"
                                     >
                                       <XCircle className="w-4 h-4" />
@@ -402,14 +403,14 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                                         setEditingUserId(user.uid);
                                         setEditValues({ role: user.role, department: user.department });
                                       }}
-                                      className="p-2 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+                                      className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                                       title="Edit User"
                                     >
-                                      <UserPlus className="w-4 h-4" />
+                                      <Edit2 className="w-4 h-4" />
                                     </button>
                                     <button 
                                       onClick={() => handleDeleteUser(user.uid, user.email)}
-                                      className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                      className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                                       title="Delete User"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -436,27 +437,27 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                 className="space-y-6"
               >
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Access Requests</h3>
-                  <p className="text-xs text-slate-500">New sign-ins awaiting your verification.</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Access Requests</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">New sign-ins awaiting your verification.</p>
                 </div>
 
                 {pendingUsers.length === 0 ? (
-                  <div className="py-20 text-center bg-slate-50 rounded-2xl flex flex-col items-center gap-3">
-                    <UserCheck className="w-10 h-10 text-slate-200" />
-                    <p className="text-sm text-slate-400 font-medium">All caught up! No requests pending.</p>
+                  <div className="py-20 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl flex flex-col items-center gap-3">
+                    <UserCheck className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+                    <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">All caught up! No requests pending.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pendingUsers.map(user => (
-                      <div key={user.uid} className="p-5 bg-white border-2 border-amber-100 rounded-2xl shadow-sm space-y-4 hover:border-amber-200 transition-all">
+                      <div key={user.uid} className="p-5 bg-white dark:bg-slate-800 border-2 border-amber-100 dark:border-amber-900/30 rounded-2xl shadow-sm space-y-4 hover:border-amber-200 dark:hover:border-amber-800 transition-all">
                         <div className="flex items-center gap-3">
                           {user.photoURL ? (
                             <img src={user.photoURL} className="w-12 h-12 rounded-xl shadow-sm" referrerPolicy="no-referrer" />
                           ) : (
-                            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center"><User className="w-6 h-6 text-slate-400" /></div>
+                            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center"><User className="w-6 h-6 text-slate-400" /></div>
                           )}
                           <div className="min-w-0">
-                            <p className="text-sm font-black text-slate-900 truncate">{user.displayName}</p>
+                            <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.displayName}</p>
                             <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
                           </div>
                         </div>
@@ -469,7 +470,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                           </button>
                           <button 
                             onClick={() => handleRejectUser(user.uid, user.email)}
-                            className="flex-1 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 text-[10px] font-bold rounded-lg transition-all"
+                            className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
                           >
                             Reject
                           </button>
@@ -491,8 +492,8 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">Pre-registered Roles</h3>
-                    <p className="text-xs text-slate-500">Set permissions before a user even signs in.</p>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Pre-registered Roles</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Set permissions before a user even signs in.</p>
                   </div>
                   <button 
                     onClick={() => setIsAdding(!isAdding)}
@@ -510,13 +511,13 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       onSubmit={handleAdd} 
-                      className="p-6 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 items-end shadow-inner"
+                      className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 md:grid-cols-4 gap-4 items-end shadow-inner"
                     >
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-400 pl-1">Gmail</label>
                         <input 
                           type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
+                          className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
                         />
                       </div>
                       <div className="space-y-2">
@@ -532,11 +533,11 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                               setDepartment('Marketing');
                             }
                           }}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
+                          className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none"
                         >
-                          <option value="marketing_member">Member</option>
-                          <option value="marketing_supervisor">Supervisor</option>
-                          <option value="department">Department</option>
+                          <option value="marketing_member" className="dark:bg-slate-900">Member</option>
+                          <option value="marketing_supervisor" className="dark:bg-slate-900">Supervisor</option>
+                          <option value="department" className="dark:bg-slate-900">Department</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -545,20 +546,20 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                           disabled={role !== 'department'}
                           value={role === 'department' ? department : 'Marketing'} 
                           onChange={(e) => setDepartment(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                          className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
                         >
                           {role !== 'department' ? (
-                            <option value="Marketing">Marketing</option>
+                            <option value="Marketing" className="dark:bg-slate-900">Marketing</option>
                           ) : (
                             DEPARTMENTS.map(dept => (
-                              <option key={dept} value={dept}>{dept}</option>
+                              <option key={dept} value={dept} className="dark:bg-slate-900">{dept}</option>
                             ))
                           )}
                         </select>
                       </div>
                       <button 
                         disabled={isSubmitting}
-                        className="py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all disabled:opacity-50"
+                        className="py-2.5 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-xs font-bold hover:bg-black dark:hover:bg-slate-600 transition-all disabled:opacity-50"
                       >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirm Register'}
                       </button>
@@ -569,7 +570,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-100">
+                      <tr className="border-b border-slate-100 dark:border-slate-800">
                         <th className="text-left py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</th>
                         <th className="text-left py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role</th>
                         <th className="text-right py-4 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actions</th>
@@ -579,14 +580,19 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                       {loading ? (
                         <tr><td colSpan={3} className="py-12 text-center"><Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto" /></td></tr>
                       ) : assignments.length === 0 ? (
-                        <tr><td colSpan={3} className="py-20 text-center text-slate-400 italic">No pre-registrations yet.</td></tr>
+                        <tr><td colSpan={3} className="py-20 text-center text-slate-400 dark:text-slate-500 italic">No pre-registrations yet.</td></tr>
                       ) : (
                         assignments.map(item => (
-                          <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <td className="py-4 px-4"><p className="text-sm font-bold text-slate-900">{item.email}</p></td>
-                            <td className="py-4 px-4"><span className="text-xs font-medium text-slate-500">{getRoleLabel(item.role)} ({item.department})</span></td>
+                          <tr key={item.id} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                            <td className="py-4 px-4"><p className="text-sm font-bold text-slate-900 dark:text-white">{item.email}</p></td>
+                            <td className="py-4 px-4"><span className="text-xs font-medium text-slate-500 dark:text-slate-400">{getRoleLabel(item.role)} ({item.department})</span></td>
                             <td className="py-4 px-4 text-right">
-                              <button onClick={() => handleDelete(item.id, item.email)} className="p-2 text-slate-300 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                              <button 
+                                onClick={() => handleDelete(item.id, item.email)} 
+                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-colors [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -600,9 +606,9 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
         </div>
       </div>
           
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
-        <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-        <p className="text-[10px] text-blue-800 leading-relaxed">
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl flex gap-3">
+        <Info className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-[10px] text-blue-800 dark:text-blue-300 leading-relaxed">
           <strong>Tip:</strong> Users with pre-registered emails will automatically skip the "Pending" status and receive their assigned role on their first login. Use this to onboard your team faster.
         </p>
       </div>

@@ -78,6 +78,7 @@ export const AdminView = ({
   const [replyText, setReplyText] = useState('');
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [expandedConcernId, setExpandedConcernId] = useState<string | null>(null);
 
   const [isUpdatingLinks, setIsUpdatingLinks] = useState(false);
   const [showLinksConfirm, setShowLinksConfirm] = useState(false);
@@ -192,7 +193,7 @@ export const AdminView = ({
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   activeTab === tab.id 
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/5' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700 /50'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 }`}
               >
                 {tab.icon}
@@ -222,7 +223,7 @@ export const AdminView = ({
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
-              <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm overflow-hidden min-h-[600px] transition-colors duration-300">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden min-h-[600px] transition-colors duration-300">
                 <RoleManager addNotification={addNotification} />
               </div>
             </motion.div>
@@ -230,7 +231,7 @@ export const AdminView = ({
 
           {activeTab === 'concerns' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300 overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm transition-colors duration-300 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Recent User Concerns</h3>
@@ -250,159 +251,223 @@ export const AdminView = ({
                       <p className="text-slate-400 font-bold">No concerns reported yet.</p>
                     </div>
                   ) : (
-                    concerns.map(item => (
-                      <div key={item.id} className="p-8 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                        <div className="flex items-start justify-between gap-6">
-                          <div className="flex-1 space-y-4">
-                            <div className="flex items-center gap-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                item.status === 'resolved' 
-                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                              }`}>
-                                {item.status}
-                              </span>
-                              <span className="text-xs text-slate-400 font-bold italic">
-                                {item.timestamp?.toDate ? new Date(item.timestamp.toDate()).toLocaleString() : 'Just now'}
-                              </span>
-                            </div>
-                            
-                            <div>
-                              <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">{item.userName || item.userEmail}</p>
-                              {item.subject && <h4 className="text-lg font-black text-slate-900 dark:text-white mb-4 tracking-tight border-b border-slate-100 dark:border-slate-800 pb-2">{item.subject}</h4>}
-                              
-                              <div className="space-y-4 mb-6">
-                                {!item.messages && item.message && (
-                                  <div className="flex justify-start">
-                                    <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <User className="w-3 h-3 text-slate-400" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">User</span>
-                                      </div>
-                                      <p className="text-sm font-medium leading-relaxed">{item.message}</p>
-                                    </div>
-                                  </div>
-                                )}
-                                {(item.messages || []).map((msg: any, idx: number) => (
-                                  <div key={idx} className={`flex ${msg.role === 'supervisor' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                                      msg.role === 'supervisor' 
-                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-100 border border-indigo-100 dark:border-indigo-800' 
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                                    }`}>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                          {msg.role === 'supervisor' ? 'Supervisor (You)' : 'User'}
-                                        </span>
-                                        <span className="text-[10px] opacity-40 ml-auto">
-                                          {msg.timestamp ? new Date(msg.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                                        </span>
-                                      </div>
-                                      <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                    concerns.map(item => {
+                      const userInitial = (item.userName || item.userEmail || 'U').charAt(0).toUpperCase();
+                      const isExpanded = expandedConcernId === item.id;
+                      const hasMessages = item.messages && item.messages.length > 0;
+                      const lastMessagePreview = hasMessages 
+                        ? item.messages[item.messages.length - 1].text 
+                        : (item.message || 'No messages yet');
 
-                              {replyingTo === item.id ? (
-                                <div className="mt-4 space-y-3">
-                                  <textarea
-                                    value={replyText}
-                                    onChange={(e) => setReplyText(e.target.value)}
-                                    placeholder="Write your response..."
-                                    className="w-full h-32 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-400 text-sm outline-none transition-all resize-none"
-                                  />
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => handleSendReply(item.id)}
-                                      disabled={isSubmittingReply || !replyText.trim()}
-                                      className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                      {isSubmittingReply ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                                      Send Response
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setReplyingTo(null);
-                                        setReplyText('');
-                                      }}
-                                      className="px-6 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold transition-all"
-                                    >
-                                      Cancel
-                                    </button>
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={`border-b last:border-0 border-slate-100 dark:border-slate-800 transition-all ${
+                            isExpanded ? 'bg-slate-50/50 dark:bg-slate-800/40 shadow-inner' : 'hover:bg-slate-50/30 dark:hover:bg-slate-800/20'
+                          }`}
+                        >
+                          {/* Minimized Header / Toggle */}
+                          <div 
+                            onClick={() => setExpandedConcernId(isExpanded ? null : item.id)}
+                            className="p-6 cursor-pointer flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-lg shadow-sm shrink-0">
+                                {userInitial}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-sm font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                                    {item.userName || item.userEmail}
+                                  </h4>
+                                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                    item.status === 'resolved' 
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-md">
+                                    {item.subject ? <span className="font-bold text-indigo-600 dark:text-indigo-400 mr-2 italic">{item.subject}:</span> : ''}
+                                    {lastMessagePreview}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 shrink-0 self-end lg:self-center">
+                              <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                <Clock className="w-3 h-3" />
+                                {item.timestamp?.toDate ? new Date(item.timestamp.toDate()).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Now'}
+                              </div>
+                              <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                <Plus className={`w-4 h-4 transition-transform ${isExpanded ? 'active:rotate-45' : ''}`} />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Content */}
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-8 pb-8 pl-[72px]">
+                                  <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                    {/* Action Buttons Hub */}
+                                    <div className="flex items-center justify-between gap-4 py-2">
+                                       <div className="flex items-center gap-3">
+                                          {item.status !== 'resolved' && (
+                                            <button 
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  await updateDoc(doc(db, 'concerns', item.id), { status: 'resolved' });
+                                                  toast.success("Concern marked as resolved.");
+                                                } catch (err) {
+                                                  toast.error("Failed to update status.");
+                                                }
+                                              }}
+                                              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                                            >
+                                              <CheckCircle2 className="w-3.5 h-3.5" />
+                                              Mark Resolved
+                                            </button>
+                                          )}
+                                       </div>
+                                       
+                                       <div className="flex items-center gap-2">
+                                          {isDeleting === item.id ? (
+                                            <div className="flex items-center gap-1 p-1 bg-rose-50 dark:bg-rose-900/10 rounded-xl">
+                                              <button 
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  try {
+                                                    await deleteDoc(doc(db, 'concerns', item.id));
+                                                    toast.success("Record deleted.");
+                                                    setIsDeleting(null);
+                                                  } catch (err) {
+                                                    toast.error("Failed to delete.");
+                                                  }
+                                                }}
+                                                className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-sm"
+                                              >
+                                                Confirm Delete
+                                              </button>
+                                              <button 
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setIsDeleting(null);
+                                                }}
+                                                className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                              >
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <button 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsDeleting(item.id);
+                                              }}
+                                              className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"
+                                              title="Delete Thread"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                       </div>
+                                    </div>
+
+                                    {/* Message History */}
+                                    <div className="space-y-4">
+                                      {item.subject && (
+                                        <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                                          <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1 italic">Subject</p>
+                                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.subject}</p>
+                                        </div>
+                                      )}
+                                      
+                                      {!item.messages && item.message && (
+                                        <div className="flex justify-start">
+                                          <div className="max-w-[85%] rounded-2xl px-5 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 relative">
+                                            <div className="absolute -left-1.5 top-4 w-3 h-3 bg-slate-100 dark:bg-slate-800 rotate-45" />
+                                            <div className="flex items-center gap-2 mb-2">
+                                              <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Initial Request</span>
+                                            </div>
+                                            <p className="text-sm font-medium leading-relaxed">{item.message}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {(item.messages || []).map((msg: any, idx: number) => (
+                                        <div key={idx} className={`flex ${msg.role === 'supervisor' ? 'justify-end' : 'justify-start'}`}>
+                                          <div className={`max-w-[85%] rounded-2xl px-5 py-3.5 relative ${
+                                            msg.role === 'supervisor' 
+                                              ? 'bg-indigo-600 text-white shadow-md' 
+                                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
+                                          }`}>
+                                            {msg.role === 'supervisor' ? (
+                                              <div className="absolute -right-1.5 top-4 w-3 h-3 bg-indigo-600 rotate-45" />
+                                            ) : (
+                                              <div className="absolute -left-1.5 top-4 w-3 h-3 bg-white dark:bg-slate-800 border-l border-t border-slate-100 dark:border-slate-700 rotate-45" />
+                                            )}
+                                            <div className="flex items-center gap-4 mb-2">
+                                              <span className={`text-[9px] font-black uppercase tracking-widest ${msg.role === 'supervisor' ? 'text-white/70' : 'text-slate-400'}`}>
+                                                {msg.role === 'supervisor' ? 'You (Supervisor)' : (msg.senderName || item.userName || 'User')}
+                                              </span>
+                                              <span className={`text-[9px] ml-auto ${msg.role === 'supervisor' ? 'text-white/50' : 'text-slate-400/50'}`}>
+                                                {msg.timestamp ? new Date(msg.timestamp).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                              </span>
+                                            </div>
+                                            <p className="text-sm font-medium leading-relaxed tracking-tight break-words">{msg.text}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Reply Area */}
+                                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                      {item.status !== 'resolved' ? (
+                                        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-indigo-500/10 p-4 shadow-sm space-y-4">
+                                          <textarea
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            placeholder={`Message ${item.userName || 'user'}...`}
+                                            className="w-full h-24 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none text-sm outline-none transition-all resize-none font-medium text-slate-900 dark:text-slate-100"
+                                          />
+                                          <div className="flex justify-end">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSendReply(item.id);
+                                              }}
+                                              disabled={isSubmittingReply || !replyText.trim()}
+                                              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                                            >
+                                              {isSubmittingReply ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                              Send Message
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-4 px-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Thread Resolved</p>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              ) : (
-                                item.status !== 'resolved' && (
-                                  <button
-                                    onClick={() => {
-                                      setReplyingTo(item.id);
-                                      setReplyText('');
-                                    }}
-                                    className="mt-4 flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                                  >
-                                    <MessageSquare className="w-3.5 h-3.5" />
-                                    {item.messages && item.messages.length > 1 ? 'Reply to Thread' : 'Reply to Concern'}
-                                  </button>
-                                )
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            {item.status !== 'resolved' && (
-                              <button 
-                                onClick={async () => {
-                                  try {
-                                    await updateDoc(doc(db, 'concerns', item.id), { status: 'resolved' });
-                                    toast.success("Concern marked as resolved.");
-                                  } catch (err) {
-                                    toast.error("Failed to update status.");
-                                  }
-                                }}
-                                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Mark Resolved
-                              </button>
+                              </motion.div>
                             )}
-                            
-                            {isDeleting === item.id ? (
-                              <div className="flex items-center gap-1">
-                                <button 
-                                  onClick={async () => {
-                                    try {
-                                      await deleteDoc(doc(db, 'concerns', item.id));
-                                      toast.success("Record deleted.");
-                                      setIsDeleting(null);
-                                    } catch (err) {
-                                      toast.error("Failed to delete.");
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all"
-                                >
-                                  Confirm
-                                </button>
-                                <button 
-                                  onClick={() => setIsDeleting(null)}
-                                  className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 dark:hover:bg-slate-700 transition-all"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button 
-                                onClick={() => setIsDeleting(item.id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 transition-colors self-end"
-                                title="Delete Record"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
+                          </AnimatePresence>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -430,7 +495,9 @@ export const AdminView = ({
                         { key: 'onNewTask', label: 'New Task Created', desc: 'Notify when a new content task is added' },
                         { key: 'onTaskDeleted', label: 'Task Deleted', desc: 'Notify when a task is permanently removed' },
                         { key: 'onNewConcern', label: 'Support Concerns', desc: 'Notify when a new user concern is submitted' },
-                        { key: 'onNewSupportMessage', label: 'Support Chats', desc: 'Notify on new messages in support threads' }
+                        { key: 'onNewSupportMessage', label: 'Support Chats', desc: 'Notify on new messages in support threads' },
+                        { key: 'onDeletionRequest', label: 'Deletion Requests', desc: 'Notify when users request to delete Hub or Facebook posts' },
+                        { key: 'onApprovalRequired', label: 'Approvals Required', desc: 'Notify when posts or AI content need supervisor approval' }
                       ].map(item => (
                         <div key={item.key} className="flex items-center justify-between group">
                           <div>

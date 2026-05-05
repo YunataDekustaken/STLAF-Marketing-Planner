@@ -306,7 +306,7 @@ const KanbanView: React.FC<KanbanViewProps> = ({ filteredPosts, setFormData, han
                       </span>
                       <FBStatusBadge post={post} />
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -400,7 +400,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                       const newPost = await handleCreateForDate(format(day, 'yyyy-MM-dd'));
                       if (newPost) handleOpenModal(newPost);
                     }}
-                    className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-300 dark:text-slate-700 hover:text-amber-600 dark:hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-300 dark:text-slate-700 hover:text-amber-600 dark:hover:text-amber-500 transition-colors [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
@@ -424,7 +424,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                           e.stopPropagation();
                           handleOpenFBModal(post);
                         }}
-                        className="opacity-0 group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
+                        className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
                       >
                         <Facebook className="w-2.5 h-2.5" />
                       </button>
@@ -591,7 +591,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               rows={1}
               className="w-full bg-transparent border-none text-xs text-slate-600 dark:text-slate-400 focus:ring-1 focus:ring-indigo-500 rounded px-2 py-1 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 resize-none min-h-[32px] overflow-hidden line-clamp-2 focus:line-clamp-none focus:min-h-[80px]"
             />
-            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
+            <div className="absolute top-1 right-1 flex gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/caption:opacity-100 transition-opacity">
               {post.caption && (
                 <button 
                   onClick={() => handleCopy(post.caption!, post.id)}
@@ -646,7 +646,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             )}
             <button 
               onClick={() => handleOpenModal(post)}
-              className="ml-2 p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg opacity-0 group-hover/images:opacity-100 transition-all"
+              className="ml-2 p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/images:opacity-100 transition-all"
             >
               <Upload className="w-4 h-4" />
             </button>
@@ -895,7 +895,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                         </td>
                       ))}
                       <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        <div className="flex items-center justify-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all transform [@media(hover:hover)]:translate-x-2 [@media(hover:hover)]:group-hover:translate-x-0">
                           <button 
                             onClick={() => handleOpenFBModal(post)}
                             className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-[#1877F2] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -1032,7 +1032,7 @@ function AppContent() {
   const [isColumnsLocked, setIsColumnsLocked] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
-    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    return saved === 'dark';
   });
 
   useEffect(() => {
@@ -1109,6 +1109,8 @@ function AppContent() {
     onPostApproved: true,
     onNewConcern: true,
     onNewSupportMessage: true,
+    onDeletionRequest: true,
+    onApprovalRequired: true,
   });
   const [governanceSettings, setGovernanceSettings] = useState({
     restrictDeletionToSupervisor: false,
@@ -1271,12 +1273,14 @@ function AppContent() {
     const unsubscribeReady = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data.notifSettings) setNotifSettings(prev => ({ 
-          ...prev, 
-          ...data.notifSettings,
-          onNewConcern: data.notifSettings.onNewConcern ?? true,
-          onNewSupportMessage: data.notifSettings.onNewSupportMessage ?? true
-        }));
+        if (data.notifSettings) {
+          setNotifSettings(prev => ({ 
+            ...prev, 
+            ...data.notifSettings,
+            onDeletionRequest: data.notifSettings.onDeletionRequest ?? true,
+            onApprovalRequired: data.notifSettings.onApprovalRequired ?? true
+          }));
+        }
         if (data.exportSettings) setExportSettings(prev => ({ ...prev, ...data.exportSettings }));
         if (data.governanceSettings) setGovernanceSettings(prev => ({ 
           restrictDeletionToSupervisor: false,
@@ -1365,6 +1369,58 @@ function AppContent() {
 
     return () => unsubscribeMessages();
   }, [user, profile?.role, notifSettings.onNewSupportMessage]);
+
+  // Listener for Deletion and Approval Requests for Supervisors
+  useEffect(() => {
+    if (!user || profile?.role !== 'marketing_supervisor') return;
+
+    const startTime = new Date();
+
+    const qRequests = query(
+      collection(db, 'posts')
+    );
+
+    const unsubscribeRequests = onSnapshot(qRequests, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified') {
+          const data = change.doc.data();
+          const oldData = change.doc.data(); // Note: snapshot listener docChanges doesn't give 'before' easily without cache comparisons
+          // But we can check if the current state is 'true' and was likely just set
+          
+          if (notifSettings.onDeletionRequest) {
+            if (data.deletionRequested && !data.deletionRequestNotified) {
+              addNotificationSimple(
+                'Hub Deletion Request',
+                `User ${data.createdBy || 'Member'} is requesting to remove a post from the Hub: "${data.title || 'Untitled'}"`,
+                'warning'
+              );
+              // Mark as notified in background to prevent repeat triggers (optional but good practice)
+              updateDoc(doc(db, 'posts', change.doc.id), { deletionRequestNotified: true });
+            }
+            if (data.facebookDeletionRequested && !data.fbDeletionRequestNotified) {
+              addNotificationSimple(
+                'Facebook Removal Request',
+                `User ${data.createdBy || 'Member'} is requesting to delete a post from Facebook: "${data.title || 'Untitled'}"`,
+                'warning'
+              );
+              updateDoc(doc(db, 'posts', change.doc.id), { fbDeletionRequestNotified: true });
+            }
+          }
+          
+          if (notifSettings.onApprovalRequired && data.status === 'pending_approval' && !data.approvalNotified) {
+            addNotificationSimple(
+              'Approval Required',
+              `A new post/update requires your approval: "${data.title || 'Untitled'}"`,
+              'info'
+            );
+            updateDoc(doc(db, 'posts', change.doc.id), { approvalNotified: true });
+          }
+        }
+      });
+    });
+
+    return () => unsubscribeRequests();
+  }, [user, profile?.role, notifSettings.onDeletionRequest, notifSettings.onApprovalRequired]);
 
   const addNotificationSimple = async (title: string, message: string, type: 'info' | 'success' | 'warning' = 'info') => {
     const targetUserId = user?.uid || 'guest_user';
@@ -1891,7 +1947,7 @@ function AppContent() {
             notifySupervisors('onStatusScheduled', 'Task Scheduled', 'A task has been marked as Scheduled.', id);
           } else if (newStatus === 'Ready for Review') {
             addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
-            notifySupervisors('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
+            notifySupervisors('onApprovalRequired', 'Approval Required', 'A task is now ready for your review and approval.', id);
           }
         }
       }
@@ -1920,8 +1976,8 @@ function AppContent() {
           requestedBy: profile?.displayName || profile?.email || 'Unknown User',
           requestDate: new Date().toISOString()
         });
-        addNotification('onTaskUpdated', 'Deletion Requested', `A deletion request for task ${id} has been submitted.`);
-        notifySupervisors('onTaskUpdated', 'New Deletion Request', `User ${profile?.displayName || profile?.email} requested to delete a task.`, id);
+        addNotification('onDeletionRequest', 'Deletion Requested', `A deletion request for task ${id} has been submitted.`);
+        notifySupervisors('onDeletionRequest', 'New Deletion Request', `User ${profile?.displayName || profile?.email} requested to delete a task.`, id);
         toast.success("Deletion request submitted for supervisor approval.");
         if (editingPost?.id === id) setIsModalOpen(false);
         return 'requested';
@@ -2036,7 +2092,7 @@ function AppContent() {
           updatedAt: serverTimestamp()
         });
         
-        notifySupervisors('onTaskUpdated', 'FB Deletion Requested', `User ${profile?.displayName || profile?.email} requested to delete a post from Facebook.`, post.id);
+        notifySupervisors('onDeletionRequest', 'FB Deletion Requested', `User ${profile?.displayName || profile?.email} requested to delete a post from Facebook.`, post.id);
         toast.success("Facebook deletion request submitted for approval.");
         return 'requested';
       } catch (err) {
@@ -3201,7 +3257,7 @@ function AppContent() {
                         />
                         <button 
                           onClick={() => removeCreative(idx)}
-                          className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                          className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity shadow-sm"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -3577,7 +3633,7 @@ function AppContent() {
                             setCopiedId('caption');
                             setTimeout(() => setCopiedId(null), 2000);
                           }}
-                          className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-slate-200 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-50"
+                          className="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-slate-200 rounded-md [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-slate-50"
                           title="Copy Caption"
                         >
                           {copiedId === 'caption' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-slate-400" />}
@@ -3757,7 +3813,7 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({ col, isLocked }) => {
       className={`${col.width} px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider ${isLocked ? '' : 'cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-800'} transition-colors relative group`}
     >
       <div className="flex items-center gap-2">
-        {!isLocked && <GripVertical className="w-3 h-3 text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity" />}
+        {!isLocked && <GripVertical className="w-3 h-3 text-slate-300 dark:text-slate-700 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity" />}
         {col.label}
       </div>
     </th>
@@ -3813,7 +3869,7 @@ const SortableColumnItem: React.FC<SortableColumnItemProps> = ({
         />
         <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{col.label}</span>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
         <select 
           value={col.width}
           onChange={(e) => setTableColumns(prev => prev.map(c => c.id === col.id ? { ...c, width: e.target.value } : c))}

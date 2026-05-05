@@ -221,7 +221,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-medium">
                   {section.content}
                 </p>
-                <div className="mt-6 flex items-center gap-2 text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-6 flex items-center gap-2 text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
                   Learn More <ChevronRight className="w-3 h-3" />
                 </div>
               </div>
@@ -466,7 +466,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                         ) : (
                           <button 
                             onClick={() => setIsDeleting(item.id)}
-                            className="p-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all font-bold"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
