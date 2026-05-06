@@ -40,7 +40,7 @@ interface RoleAssignment {
   assignedAt: any;
 }
 
-const DEPARTMENTS = ['Sales', 'Marketing', 'HR', 'IT', 'Finance', 'Operations', 'Corporate'];
+const DEPARTMENTS = ['HR', 'Litigation', 'Corpo', 'Accounting', 'IT', 'Operations'];
 
 export const RoleManager = ({ addNotification }: { addNotification: any }) => {
   const [assignments, setAssignments] = useState<RoleAssignment[]>([]);
@@ -116,12 +116,19 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
     };
   }, []);
 
-  const handleApproveUser = async (uid: string, userEmail: string) => {
+  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
+  const [approveValues, setApproveValues] = useState<{ role: UserRole, department: string } | null>(null);
+
+  const handleApproveUser = async (uid: string, userEmail: string, assignedRole: UserRole, assignedDept: string) => {
     try {
       await updateDoc(doc(db, 'users', uid), {
-        status: 'active'
+        status: 'active',
+        role: assignedRole,
+        department: assignedDept
       });
       addNotification('User Approved', `${userEmail} has been granted access.`, 'success');
+      setApprovingUserId(null);
+      setApproveValues(null);
     } catch (err: any) {
       addNotification('Error', `Failed to approve user: ${err.message}`, 'warning');
     }
@@ -482,37 +489,92 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
                             <p className="text-[10px] font-medium text-slate-400 truncate">{user.email}</p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleApproveUser(user.uid, user.email)}
-                            className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all"
-                          >
-                            Approve
-                          </button>
-                          {isRejectingUserId === user.uid ? (
-                            <div className="flex-1 flex items-center gap-1">
+                        {approvingUserId === user.uid ? (
+                          <div className="space-y-3">
+                            <select
+                              value={approveValues?.role || 'department'}
+                              onChange={(e) => {
+                                const newRole = e.target.value as UserRole;
+                                setApproveValues(prev => ({
+                                  ...prev,
+                                  role: newRole,
+                                  department: newRole === 'department' ? DEPARTMENTS[0] : 'Marketing'
+                                }));
+                              }}
+                              className="w-full text-xs font-bold p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="marketing_member">Marketing Member</option>
+                              <option value="marketing_supervisor">Marketing Supervisor</option>
+                              <option value="department">Department</option>
+                            </select>
+                            <select
+                              disabled={approveValues?.role !== 'department'}
+                              value={approveValues?.role === 'department' ? (approveValues?.department || DEPARTMENTS[0]) : 'Marketing'}
+                              onChange={(e) => setApproveValues(prev => prev ? { ...prev, department: e.target.value as any } : { role: 'department', department: e.target.value as any })}
+                              className="w-full text-xs font-bold p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:dark:bg-slate-800 disabled:text-slate-400"
+                            >
+                              {approveValues?.role !== 'department' ? (
+                                <option value="Marketing">Marketing</option>
+                              ) : (
+                                DEPARTMENTS.map(dept => (
+                                  <option key={dept} value={dept}>{dept}</option>
+                                ))
+                              )}
+                            </select>
+                            <div className="flex gap-2">
                               <button 
-                                onClick={() => handleRejectUser(user.uid, user.email)}
-                                className="flex-1 py-2 bg-rose-600 text-white text-[10px] font-bold rounded-lg transition-all"
+                                onClick={() => handleApproveUser(user.uid, user.email, approveValues?.role || 'department', approveValues?.department || DEPARTMENTS[0])}
+                                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all"
                               >
-                                Confirm
+                                Confirm Approve
                               </button>
                               <button 
-                                onClick={() => setIsRejectingUserId(null)}
-                                className="px-2 py-2 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
+                                onClick={() => {
+                                  setApprovingUserId(null);
+                                  setApproveValues(null);
+                                }}
+                                className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
                               >
-                                <XCircle className="w-3.5 h-3.5" />
+                                Cancel
                               </button>
                             </div>
-                          ) : (
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
                             <button 
-                              onClick={() => setIsRejectingUserId(user.uid)}
-                              className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
+                              onClick={() => {
+                                setApprovingUserId(user.uid);
+                                setApproveValues({ role: 'department', department: DEPARTMENTS[0] });
+                              }}
+                              className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-all"
                             >
-                              Reject
+                              Approve
                             </button>
-                          )}
-                        </div>
+                            {isRejectingUserId === user.uid ? (
+                              <div className="flex-1 flex items-center gap-1">
+                                <button 
+                                  onClick={() => handleRejectUser(user.uid, user.email)}
+                                  className="flex-1 py-2 bg-rose-600 text-white text-[10px] font-bold rounded-lg transition-all"
+                                >
+                                  Confirm
+                                </button>
+                                <button 
+                                  onClick={() => setIsRejectingUserId(null)}
+                                  className="px-2 py-2 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setIsRejectingUserId(user.uid)}
+                                className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-lg transition-all"
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

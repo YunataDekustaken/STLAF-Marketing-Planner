@@ -103,7 +103,7 @@ export interface SocialHistoryEntry {
 
 export type UserRole = 'marketing_supervisor' | 'marketing_member' | 'department';
 
-export type Department = 'Sales' | 'Marketing' | 'HR' | 'IT' | 'Finance' | 'Operations' | 'Corporate';
+export type Department = 'Marketing' | 'HR' | 'Litigation' | 'Corpo' | 'Accounting' | 'IT' | 'Operations';
 
 export type UserStatus = 'active' | 'pending' | 'blocked';
 
@@ -115,4 +115,5 @@ export interface UserProfile {
   department: Department;
   photoURL?: string;
   status: UserStatus;
+  columnPreferences?: any[];
 }

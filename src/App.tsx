@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   MoreVertical,
+  MoreHorizontal,
   FileText,
   Layout,
   X,
@@ -519,6 +520,9 @@ interface MonthlyTableViewProps {
   handleApproveDeletion: (id: string) => Promise<void>;
   handleRejectDeletion: (id: string) => Promise<void>;
   handleCancelDeletionRequest: (id: string, type: 'hub' | 'facebook') => Promise<void>;
+  actionMenuOpenId: string | null;
+  setActionMenuOpenId: Dispatch<SetStateAction<string | null>>;
+  handleDuplicatePost: (post: Post) => Promise<void>;
   searchQuery?: string;
   columnSettingsRef: React.RefObject<HTMLDivElement>;
   highlightedPostId: string | null;
@@ -556,6 +560,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   handleApproveDeletion,
   handleRejectDeletion,
   handleCancelDeletionRequest,
+  actionMenuOpenId,
+  setActionMenuOpenId,
+  handleDuplicatePost,
   searchQuery = '',
   columnSettingsRef,
   highlightedPostId,
@@ -814,21 +821,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Manage Columns</span>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => setTableColumns([
-                        { id: 'date', label: 'Date', width: 'w-32', visible: true },
-                        { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
-                        { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
-                        { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
-                        { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
-                        { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
-                        { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
-                        { id: 'format', label: 'Format', width: 'w-40', visible: true },
-                        { id: 'status', label: 'Status', width: 'w-44', visible: true },
-                        { id: 'approvalStatus', label: 'Approval', width: 'w-44', visible: true },
-                        { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
-                        { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
-                        { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
-                      ])}
+                      onClick={() => setTableColumns(DEFAULT_TABLE_COLUMNS)}
                       className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
                       Reset
@@ -897,7 +890,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     {visibleColumns.map((col) => (
                       <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
                     ))}
-                    <th className="w-40 px-4 py-3 sticky right-0 bg-slate-50/50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 backdrop-blur-sm z-[25]">
+                    <th className="w-[120px] px-2 py-3 sticky right-0 bg-slate-50/50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 backdrop-blur-sm z-[25]">
                       <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 text-center">Actions</div>
                     </th>
                   </tr>
@@ -929,7 +922,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                             ) : null}
                           </td>
                         ))}
-                        <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40"></td>
+                        <td className="px-2 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-[120px]"></td>
                       </tr>
                     );
                   }
@@ -938,22 +931,15 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <tr 
                       key={post.id} 
                       id={`post-${post.id}`}
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01] z-10' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01]' : ''}`}
                     >
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
                           {renderCell(post, col.id, day, pIdx)}
                         </td>
                       ))}
-                      <td className="px-4 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] z-20 w-40">
-                        <div className="flex items-center justify-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all transform [@media(hover:hover)]:translate-x-2 [@media(hover:hover)]:group-hover:translate-x-0">
-                          <button 
-                            onClick={() => handleOpenFBModal(post)}
-                            className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-[#1877F2] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                            title="Post to Facebook"
-                          >
-                            <Facebook className="w-4 h-4" />
-                          </button>
+                      <td className={`px-2 py-3 align-middle sticky right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors border-l border-slate-100 dark:border-slate-800 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] ${actionMenuOpenId === post.id ? 'z-[60]' : 'z-20'} w-[120px]`}>
+                        <div className={`flex items-center justify-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all transform [@media(hover:hover)]:translate-x-2 [@media(hover:hover)]:group-hover:translate-x-0 ${actionMenuOpenId === post.id ? '!opacity-100 !translate-x-0' : ''}`}>
                           <button 
                             onClick={() => handleOpenModal(post)}
                             className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
@@ -968,49 +954,107 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                           >
                             <Share className="w-4 h-4" />
                           </button>
-                          {post.deletionRequested ? (
-                            <div className="flex items-center gap-1">
-                              {userRole === 'marketing_supervisor' ? (
-                                <>
-                                  <button 
-                                    onClick={() => handleApproveDeletion?.(post.id)}
-                                    className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                                    title="Approve Deletion"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleRejectDeletion?.(post.id)}
-                                    className="p-1.5 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors"
-                                    title="Reject Deletion Request"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <div className="px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-bold rounded-lg border border-rose-200 dark:border-rose-800 animate-pulse">
-                                    Pending Deletion
-                                  </div>
-                                  <button 
-                                    onClick={() => handleCancelDeletionRequest?.(post.id, 'hub')}
-                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg transition-colors"
-                                    title="Cancel Deletion Request"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ) : canDelete && (
-                            <button 
-                              onClick={() => handleDeletePost(post.id)}
-                              className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg text-rose-600 dark:text-rose-400 transition-colors"
-                              title={governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? "Request Deletion" : "Delete Post"}
+                          
+                          <div className="relative action-menu-container">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActionMenuOpenId(actionMenuOpenId === post.id ? null : post.id);
+                              }}
+                              className={`p-1.5 rounded-lg transition-colors ${actionMenuOpenId === post.id ? 'bg-slate-200 dark:bg-slate-800 text-amber-600 dark:text-amber-400' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500'}`}
+                              title="More Actions"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <MoreHorizontal className="w-4 h-4" />
                             </button>
-                          )}
+                            <AnimatePresence>
+                              {actionMenuOpenId === post.id && (
+                                <motion.div
+                                   initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                   animate={{ opacity: 1, scale: 1, y: 0 }}
+                                   exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                   transition={{ duration: 0.1 }}
+                                   className="absolute right-full top-0 mr-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-[100] origin-top-right overflow-hidden flex flex-col"
+                                >
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDuplicatePost(post);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2 transition-colors"
+                                  >
+                                    <Copy className="w-4 h-4 text-slate-400" />
+                                    Duplicate
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenFBModal(post);
+                                      setActionMenuOpenId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2 transition-colors"
+                                  >
+                                    <Facebook className="w-4 h-4" />
+                                    Publish
+                                  </button>
+                                  {(post.deletionRequested || canDelete) && <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2" />}
+                                  {post.deletionRequested ? (
+                                    <div className="px-3 py-1 flex flex-col gap-1.5">
+                                      {userRole === 'marketing_supervisor' ? (
+                                        <>
+                                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Deletion Request</div>
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleApproveDeletion?.(post.id);
+                                            }}
+                                            className="w-full py-1.5 bg-emerald-500 text-white text-xs font-bold rounded hover:bg-emerald-600 transition-colors flex items-center justify-center gap-1.5"
+                                          >
+                                            <Check className="w-3.5 h-3.5" /> Approve
+                                          </button>
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRejectDeletion?.(post.id);
+                                            }}
+                                            className="w-full py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-1.5"
+                                          >
+                                            <X className="w-3.5 h-3.5" /> Reject
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="px-2 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-[10px] font-bold rounded border border-rose-200 dark:border-rose-800 animate-pulse text-center">
+                                            Pending Deletion
+                                          </div>
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCancelDeletionRequest?.(post.id, 'hub');
+                                            }}
+                                            className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-bold rounded transition-colors flex items-center justify-center gap-1.5 mt-1"
+                                          >
+                                            <X className="w-3.5 h-3.5" /> Cancel Request
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : canDelete && (
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeletePost(post.id);
+                                        setActionMenuOpenId(null);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      {governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? "Request Deletion" : "Delete"}
+                                    </button>
+                                  )}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -1039,6 +1083,22 @@ const DetailItem = ({ label, value, fullWidth = false, isLink = false }: { label
     )}
   </div>
 );
+
+export const DEFAULT_TABLE_COLUMNS: TableColumn[] = [
+  { id: 'date', label: 'Date', width: 'w-32', visible: true },
+  { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
+  { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
+  { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
+  { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
+  { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
+  { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
+  { id: 'format', label: 'Format', width: 'w-40', visible: true },
+  { id: 'status', label: 'Status', width: 'w-44', visible: true },
+  { id: 'approvalStatus', label: 'Approval', width: 'w-44', visible: true },
+  { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
+  { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
+  { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
+];
 
 export default function App() {
   return (
@@ -1104,21 +1164,34 @@ function AppContent() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
-  const [tableColumns, setTableColumns] = useState<TableColumn[]>([
-    { id: 'date', label: 'Date', width: 'w-32', visible: true },
-    { id: 'creatives', label: 'Creatives', width: 'w-32', visible: true },
-    { id: 'contentTitle', label: 'Content Title', width: 'w-40', visible: true },
-    { id: 'contentType', label: 'Type', width: 'w-40', visible: true },
-    { id: 'topicTheme', label: 'Topic / Theme', width: 'w-64', visible: true },
-    { id: 'subtopic', label: 'Subtopic', width: 'w-48', visible: false },
-    { id: 'caption', label: 'Caption', width: 'w-64', visible: true },
-    { id: 'format', label: 'Format', width: 'w-40', visible: true },
-    { id: 'status', label: 'Status', width: 'w-44', visible: true },
-    { id: 'approvalStatus', label: 'Approval', width: 'w-44', visible: true },
-    { id: 'funnelStatus', label: 'Funnel', width: 'w-40', visible: false },
-    { id: 'visualIdeas', label: 'Visual Ideas', width: 'w-64', visible: false },
-    { id: 'notes', label: 'Notes', width: 'w-64', visible: false },
-  ]);
+  const [tableColumns, setTableColumns] = useState<TableColumn[]>(DEFAULT_TABLE_COLUMNS);
+  const [hasLoadedProfileCols, setHasLoadedProfileCols] = useState(false);
+  const prevUidRef = useRef(profile?.uid);
+
+  useEffect(() => {
+    if (profile?.uid !== prevUidRef.current) {
+      setHasLoadedProfileCols(false);
+      prevUidRef.current = profile?.uid;
+    }
+  }, [profile?.uid]);
+
+  useEffect(() => {
+    if (profile?.columnPreferences && !hasLoadedProfileCols) {
+      setTableColumns(profile.columnPreferences);
+      setHasLoadedProfileCols(true);
+    } else if (profile && !profile.columnPreferences && !hasLoadedProfileCols) {
+      setHasLoadedProfileCols(true);
+    }
+  }, [profile, hasLoadedProfileCols]);
+
+  useEffect(() => {
+    if (hasLoadedProfileCols && profile?.uid) {
+      const timer = setTimeout(() => {
+        updateProfile({ columnPreferences: tableColumns });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [tableColumns, hasLoadedProfileCols, profile?.uid, updateProfile]);
 
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1946,9 +2019,48 @@ function AppContent() {
     ]);
   };
 
+  const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionMenuOpenId && !(event.target as Element).closest('.action-menu-container')) {
+        setActionMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [actionMenuOpenId]);
+
   const handleOpenFBModal = (post: Post) => {
     setSelectedFBPost(post);
     setIsFBModalOpen(true);
+    setActionMenuOpenId(null);
+  };
+
+  const handleDuplicatePost = async (post: Post) => {
+    const newId = Math.random().toString(36).substr(2, 9);
+    const postData = {
+      ...post,
+      id: newId,
+      contentTitle: `${post.contentTitle} (Copy)`,
+      userId: user?.uid || 'guest_user',
+    } as Post;
+    if (postData.deletionRequested) {
+      delete postData.deletionRequested;
+      delete postData.requestedBy;
+      delete postData.requestDate;
+    }
+    
+    try {
+      await setDoc(doc(db, 'posts', newId), postData);
+      addNotification('onNewTask', 'Task Duplicated', `"${postData.contentTitle || 'Untitled'}" has been duplicated.`, newId);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to duplicate post');
+    }
+    setActionMenuOpenId(null);
   };
 
   const handleOpenModal = (post?: Post) => {
@@ -3220,6 +3332,9 @@ function AppContent() {
                       handleApproveDeletion={handleApproveDeletion}
                       handleRejectDeletion={handleRejectDeletion}
                       handleCancelDeletionRequest={handleCancelDeletionRequest}
+                      actionMenuOpenId={actionMenuOpenId}
+                      setActionMenuOpenId={setActionMenuOpenId}
+                      handleDuplicatePost={handleDuplicatePost}
                       userRole={profile?.role}
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
