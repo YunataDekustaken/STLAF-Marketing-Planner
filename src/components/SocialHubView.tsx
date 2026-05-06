@@ -360,6 +360,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           {entry.platform === 'facebook' && <Facebook className="w-3 h-3 text-[#1877F2]" />}
+                          {entry.platform === 'instagram' && <Instagram className="w-3 h-3 text-pink-500" />}
+                          {entry.platform === 'meta' && <div className="flex -space-x-1"><Facebook className="w-3 h-3 text-[#1877F2] relative z-10" /><Instagram className="w-3 h-3 text-pink-500 relative z-0" /></div>}
                           {entry.platform === 'system' && <Activity className="w-3 h-3 text-slate-400 dark:text-slate-600" />}
                           <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-sm">{entry.contentTitle}</h4>
                           <span className={`static px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${getActionStyles(entry.action)}`}>
@@ -402,17 +404,20 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-2xl opacity-40 grayscale">
+                <div className="flex items-center justify-between p-3 bg-white/10 rounded-2xl border border-white/5">
                   <div className="flex items-center gap-3">
                     <Instagram className="w-5 h-5 text-pink-500" />
-                    <span className="text-sm font-semibold">Instagram</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">Instagram Business</span>
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Synchronized via Meta</span>
+                    </div>
                   </div>
-                  <span className="text-[8px] font-black uppercase text-slate-500">Not Connected</span>
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 </div>
               </div>
               <div className="mt-8 pt-8 border-t border-white/5">
                 <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
-                  Your Facebook Page API is active. Posting from the hub will update your Planner Table automatically without leaving the app.
+                  Your Meta APIs are active. Posting from the hub will update your Planner Table automatically without leaving the app. Instagram is connected via your linked Facebook Page.
                 </p>
               </div>
             </div>

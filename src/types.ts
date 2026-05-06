@@ -25,6 +25,7 @@ export interface Post {
   updatedAt?: any;
   fbStatus?: 'posted' | 'scheduled' | 'idle';
   fbPostId?: string;
+  igPostId?: string;
   fbScheduledTime?: string;
   fbPublishedTime?: string;
   approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
@@ -93,7 +94,7 @@ export interface SocialHistoryEntry {
   postId: string;
   contentTitle: string;
   action: 'manual_publish' | 'schedule' | 'auto_publish' | 'delete';
-  platform: 'facebook' | 'instagram' | 'linkedin' | 'system';
+  platform: 'facebook' | 'instagram' | 'meta' | 'linkedin' | 'system';
   timestamp: any; // Firestore timestamp
   userEmail: string;
   userName: string;

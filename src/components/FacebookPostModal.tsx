@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
+import { useInstagramPost } from '../hooks/useInstagramPost';
 import { Post } from '../types';
 import { db } from '../firebase';
 import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
@@ -45,10 +46,19 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const [scheduleTime, setScheduleTime] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   
+  const [postToFB, setPostToFB] = useState(true);
+  const [postToIG, setPostToIG] = useState(false);
+
   const isAlreadyPublished = post?.status === 'Published' && post?.fbPostId;
   const isAlreadyScheduled = post?.status === 'Scheduled' && post?.fbPostId;
   
-  const { postToFacebook, deleteFacebookPost, isLoading, error, success, postId, resetStatus } = useFacebookPost();
+  const { postToFacebook, deleteFacebookPost, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
+  const { postToInstagram, isLoading: isIGLoading, error: igError, success: igSuccess, postId: igPostIdRes, resetStatus: resetIGStatus } = useInstagramPost();
+
+  const isLoading = isFBLoading || isIGLoading;
+  const error = fbError || igError;
+  const success = (postToFB ? fbSuccess : true) && (postToIG ? igSuccess : true) && (postToFB || postToIG);
+  const postId = fbPostIdRes || igPostIdRes; // Just for UI linking, preferring FB if both
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -63,28 +73,33 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
     if (isOpen && post) {
       setCaption(post.caption || '');
       setCreatives(post.creatives || []);
-      resetStatus();
+      resetFBStatus();
+      resetIGStatus();
       setValidationError(null);
       setShowScheduler(false);
       setScheduleDate('');
       setScheduleTime('');
       setIsDeleting(false);
       setIsConfirmDeleteOpen(false);
+      setPostToFB(!post.fbPostId); // Default true if not already posted
+      setPostToIG(false); // Default false initially
     }
   }, [isOpen, post]);
 
-  const updatePostStatus = async (fbPostId: string, fbStatus: 'posted' | 'scheduled', timeStr?: string) => {
+  const updatePostStatus = async (fbPostId: string | null, igPostId: string | null, fbStatus: 'posted' | 'scheduled', timeStr?: string) => {
     if (!post) return;
     try {
       const postRef = doc(db, 'posts', post.id);
       const updateData: any = {
         fbStatus,
-        fbPostId,
         caption,
         creatives,
         status: fbStatus === 'scheduled' ? 'Scheduled' : 'Published',
         updatedAt: serverTimestamp()
       };
+
+      if (fbPostId) updateData.fbPostId = fbPostId;
+      if (igPostId) updateData.igPostId = igPostId;
 
       if (fbStatus === 'scheduled') {
         updateData.fbScheduledTime = timeStr || null;
@@ -99,7 +114,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
         postId: post.id,
         contentTitle: post.contentTitle,
         action: fbStatus === 'scheduled' ? 'schedule' : 'manual_publish',
-        platform: 'facebook',
+        platform: postToFB && postToIG ? 'meta' : (postToFB ? 'facebook' : 'instagram'),
         timestamp: serverTimestamp(),
         userEmail: auth.currentUser?.email || 'unknown',
         userName: auth.currentUser?.displayName || 'Unknown User',
@@ -112,10 +127,28 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
 
   const handlePostNow = async () => {
     setValidationError(null);
-    await postToFacebook({
-      message: caption,
-      mediaUrls: creatives
-    });
+    if (!postToFB && !postToIG) {
+      setValidationError("Please select at least one platform to post to.");
+      return;
+    }
+    if (postToIG && creatives.length === 0) {
+      setValidationError("Instagram requires at least one image or video.");
+      return;
+    }
+
+    if (postToFB) {
+      await postToFacebook({
+        message: caption,
+        mediaUrls: creatives
+      });
+    }
+
+    if (postToIG) {
+      await postToInstagram({
+        message: caption,
+        mediaUrls: creatives
+      });
+    }
   };
 
   const handleDeleteFromFacebook = async () => {
@@ -177,7 +210,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
         });
         
         setTimeout(() => {
-          resetStatus();
+          resetFBStatus();
           onClose();
         }, 1500);
       } catch (err) {
@@ -197,6 +230,18 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
 
   const handleSchedule = async () => {
     setValidationError(null);
+    if (!postToFB && !postToIG) {
+      setValidationError("Please select at least one platform to post to.");
+      return;
+    }
+    if (postToIG && creatives.length === 0) {
+      setValidationError("Instagram requires at least one image or video.");
+      return;
+    }
+    if (postToIG) {
+      setValidationError("Sorry, scheduling for Instagram is not currently supported via this Graph API workflow. Please post now, or schedule only for Facebook.");
+      return;
+    }
     if (!scheduleDate || !scheduleTime) {
       setValidationError("Please select both date and time for scheduling.");
       return;
@@ -214,23 +259,25 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       return;
     }
 
-    await postToFacebook({
-      message: caption,
-      mediaUrls: creatives,
-      scheduleTime: unixTimestamp
-    });
+    if (postToFB) {
+      await postToFacebook({
+        message: caption,
+        mediaUrls: creatives,
+        scheduleTime: unixTimestamp
+      });
+    }
   };
 
   useEffect(() => {
-    if (success && postId && post) {
+    if (success && (fbPostIdRes || igPostIdRes) && post) {
       const fbStatus = showScheduler ? 'scheduled' : 'posted';
       const fbScheduledTime = showScheduler ? `${scheduleDate}T${scheduleTime}` : undefined;
-      updatePostStatus(postId, fbStatus, fbScheduledTime);
+      updatePostStatus(fbPostIdRes, igPostIdRes, fbStatus, fbScheduledTime);
       if (onSuccess) {
-        onSuccess(postId, fbStatus);
+        onSuccess(postId || '', fbStatus); // Hack: only returning one postId, but good enough for UI refresh
       }
     }
-  }, [success, postId]);
+  }, [success, fbPostIdRes, igPostIdRes]);
 
   const removeCreative = (index: number) => {
     setCreatives(prev => prev.filter((_, i) => i !== index));
@@ -370,6 +417,34 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
               </div>
             ) : (
               <>
+                {/* Platform Selection */}
+                <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Publish To</label>
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${postToFB ? 'bg-[#1877F2] border-[#1877F2]' : 'bg-transparent border-slate-300 dark:border-slate-600 group-hover:border-[#1877F2]/50'}`}>
+                        {postToFB && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <input type="checkbox" className="hidden" checked={postToFB} onChange={(e) => setPostToFB(e.target.checked)} />
+                      <div className="flex items-center gap-2">
+                        <Facebook className="w-4 h-4 text-[#1877F2]" />
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Facebook Page</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${postToIG ? 'bg-pink-500 border-pink-500' : 'bg-transparent border-slate-300 dark:border-slate-600 group-hover:border-pink-500/50'}`}>
+                        {postToIG && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <input type="checkbox" className="hidden" checked={postToIG} onChange={(e) => setPostToIG(e.target.checked)} />
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white flex items-center justify-center font-serif font-black text-[10px] leading-none shrink-0" style={{fontFamily: 'Instagram Sans, sans-serif'}}>Ig</div>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Instagram Business</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Caption Input */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">

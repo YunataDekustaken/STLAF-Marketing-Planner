@@ -83,6 +83,37 @@ export const AdminView = ({
   const [isUpdatingLinks, setIsUpdatingLinks] = useState(false);
   const [showLinksConfirm, setShowLinksConfirm] = useState(false);
   const [linksUpdateSuccess, setLinksUpdateSuccess] = useState(false);
+  const [fbPageInfo, setFbPageInfo] = useState<{
+    name: string, 
+    link: string, 
+    picture?: {data: {url: string}},
+    instagram_business_account?: {
+      id: string,
+      username: string,
+      name: string,
+      profile_picture_url: string
+    }
+  } | null>(null);
+  const [isLoadingFBInfo, setIsLoadingFBInfo] = useState(false);
+
+  useEffect(() => {
+    const fetchFBPageInfo = async () => {
+      setIsLoadingFBInfo(true);
+      try {
+        const response = await fetch('/api/facebook-page-info');
+        const data = await response.json();
+        if (data.success) {
+          setFbPageInfo(data.pageInfo);
+        }
+      } catch (err) {
+        console.error("Failed to fetch FB Page info:", err);
+      } finally {
+        setIsLoadingFBInfo(false);
+      }
+    };
+
+    fetchFBPageInfo();
+  }, []);
 
   useEffect(() => {
     setLocalSettings(notificationSettings);
@@ -693,6 +724,72 @@ export const AdminView = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="col-span-1 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 mb-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#1877F2]/10 rounded-xl flex items-center justify-center">
+                          {fbPageInfo?.picture?.data?.url ? (
+                            <img src={fbPageInfo.picture.data.url} alt="FB" className="w-10 h-10 rounded-lg object-cover" />
+                          ) : (
+                            <Facebook className="w-6 h-6 text-[#1877F2]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Meta Connections</p>
+                          {isLoadingFBInfo ? (
+                            <div className="flex items-center gap-2">
+                              <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
+                              <span className="text-sm font-bold text-slate-500">Syncing with Meta...</span>
+                            </div>
+                          ) : fbPageInfo ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-slate-900 dark:text-white">{fbPageInfo.name}</span>
+                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-widest rounded-full">Facebook</span>
+                              </div>
+                              {fbPageInfo.instagram_business_account && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-black text-slate-900 dark:text-white">@{fbPageInfo.instagram_business_account.username}</span>
+                                  <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 text-[8px] font-black uppercase tracking-widest rounded-full">Instagram Business</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-rose-500 italic">Meta Integration required</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={async () => {
+                          setIsLoadingFBInfo(true);
+                          try {
+                            const response = await fetch('/api/facebook-page-info');
+                            const data = await response.json();
+                            if (data.success) {
+                              setFbPageInfo(data.pageInfo);
+                              toast.success("Facebook status refreshed.");
+                            } else {
+                              setFbPageInfo(null);
+                              toast.error(data.error || "Connection failed.");
+                            }
+                          } catch (err) {
+                            toast.error("Failed to refresh status.");
+                          } finally {
+                            setIsLoadingFBInfo(false);
+                          }
+                        }}
+                        disabled={isLoadingFBInfo}
+                        className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all text-slate-400 hover:text-indigo-500 shadow-sm border border-slate-100 dark:border-slate-800"
+                        title="Refresh Connection"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isLoadingFBInfo ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                       <Facebook className="w-3 h-3 text-[#1877F2]" />
@@ -809,6 +906,36 @@ export const AdminView = ({
                       <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">gen-lang-client-0116256991</p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                         The host project provisioned by AI Studio. It manages the runtime environment, deployment quotas, and secure access to Google GenAI capabilities.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-[#1877F2]/30 transition-all group">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-1.5 h-1.5 rounded-full ${fbPageInfo ? 'bg-[#1877F2] animate-pulse' : 'bg-slate-300'}`} />
+                        <p className="text-[10px] font-black text-[#1877F2] uppercase tracking-widest">Meta Integration</p>
+                      </div>
+                      <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">
+                        {isLoadingFBInfo ? 'Loading...' : fbPageInfo?.name || 'Not Connected'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                        {fbPageInfo 
+                          ? `Linked to Facebook Page "${fbPageInfo.name}". This connection enables automated publishing and scheduling of social content.`
+                          : 'No Facebook Page is currently linked. Connect a page in the Social Redirection Links section to enable automated publishing.'}
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-pink-500/30 transition-all group">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-1.5 h-1.5 rounded-full ${fbPageInfo?.instagram_business_account ? 'bg-pink-500 animate-pulse' : 'bg-slate-300'}`} />
+                        <p className="text-[10px] font-black text-pink-500 uppercase tracking-widest">Instagram Business</p>
+                      </div>
+                      <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">
+                        {isLoadingFBInfo ? 'Loading...' : fbPageInfo?.instagram_business_account?.username ? `@${fbPageInfo.instagram_business_account.username}` : 'Not Linked'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                        {fbPageInfo?.instagram_business_account
+                          ? `Connected to Instagram Business account "${fbPageInfo.instagram_business_account.name}". Publishing to IG is managed through your linked FB Page.`
+                          : 'No Instagram Business account detected for the linked Facebook Page. Ensure your IG account is set to Business and linked in Meta Business Suite.'}
                       </p>
                     </div>
                   </div>

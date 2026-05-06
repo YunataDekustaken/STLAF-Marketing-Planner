@@ -5,11 +5,16 @@ interface FacebookPostData {
   mediaUrl?: string;
   mediaUrls?: string[];
   scheduleTime?: string | number;
+  platforms?: ('facebook' | 'instagram')[];
 }
 
 interface FacebookPostResponse {
   success: boolean;
-  postId?: string;
+  postId?: string; // Legacy fallback or main id
+  results?: {
+    facebook?: string;
+    instagram?: string;
+  };
   error?: string;
   fbError?: {
     message?: string;
@@ -33,7 +38,7 @@ export function useFacebookPost() {
     setPostId(null);
 
     try {
-      const response = await fetch('/api/facebook-post', {
+      const response = await fetch('/api/meta-post', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +50,8 @@ export function useFacebookPost() {
 
       if (result.success) {
         setSuccess(true);
-        setPostId(result.postId || null);
+        // Store both IDs if available, or fallback to the single postId, or the facebook one
+        setPostId(result.results?.facebook || result.results?.instagram || result.postId || null);
       } else {
         const detail = result.fbError ? ` (${result.fbError.type}: ${result.fbError.message})` : '';
         setError((result.error || 'Failed to post to Facebook') + detail);

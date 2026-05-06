@@ -25,8 +25,54 @@ export const ProfileView = ({ profile, onLogout, onUpdateProfile }: ProfileViewP
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(profile?.displayName || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   if (!profile) return null;
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        try {
+          await onUpdateProfile({ photoURL: dataUrl });
+        } catch (error) {
+          console.error("Failed to update profile photo:", error);
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveName = async () => {
     if (!newName.trim() || newName === profile.displayName) {
@@ -63,8 +109,19 @@ export const ProfileView = ({ profile, onLogout, onUpdateProfile }: ProfileViewP
                 <User className="w-12 h-12 text-slate-300 dark:text-slate-700" />
               </div>
             )}
-            <button className="absolute bottom-0 right-0 p-2 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all border-2 border-white dark:border-slate-900">
-              <Camera className="w-4 h-4" />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handlePhotoUpload} 
+            />
+            <button 
+              className="absolute bottom-0 right-0 p-2 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all border-2 border-white dark:border-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingPhoto}
+            >
+              {isUploadingPhoto ? <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Camera className="w-4 h-4" />}
             </button>
           </div>
         </div>

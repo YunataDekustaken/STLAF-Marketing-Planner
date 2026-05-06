@@ -23,6 +23,9 @@ import { addDoc, collection, serverTimestamp, query, where, orderBy, onSnapshot,
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
 
+import captionImg from '../img/CAPTION.png';
+import editPoImg from '../img/EditPo.png';
+
 interface HelpViewProps {
   userEmail: string | null;
   displayName: string | null;
@@ -137,15 +140,86 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
     {
       title: "AI Generation",
       icon: <Sparkles className="w-5 h-5 text-amber-500" />,
-      content: "When editing a post, use the 'AI Magic' sidebar to generate catchy captions. You can provide a topic and select the desired tone (e.g., Professional, Playful, Urgent) to get AI-powered results.",
-      longContent: "Powered by Gemini, the AI Magic engine understands your campaign's context. By providing a core topic or theme, you can generate multiple variations of social media captions. The 'Tone' selector adjusts the linguistic style—choose 'FOMO' for sales-driven posts or 'Educational' for value-based content. You can directly copy these suggestions into your post's caption field, significantly reducing brainstorming time.",
+      content: "When editing a post, use the 'AI Magic' sidebar to generate catchy captions. You can provide a topic and select the desired tone to get AI-powered results.",
+      longContent: "Powered by Gemini, the AI Magic engine understands your campaign's context to generate multiple variations of social media captions based on your topic and chosen tone.",
+      topics: [
+        {
+          title: "Overview",
+          content: "The AI Magic engine, powered by Gemini, helps you brainstorm and generate high-quality captions tailored to your audience. It takes the heavy lifting out of copywriting by offering variations based on your chosen tone and topic."
+        },
+        {
+          title: "How to use it?",
+          content: "There are two ways to access the AI Magic tool from the Planner:\n\n1. From the Captions Column: Hover over the caption cell of any post and click the 'Sparkles' (✨) icon to instantly open the AI Generation sidebar.\n2. From the Actions Column: Click the 'Edit' (pencil) icon to open the post editor, then locate the 'AI Magic' section in the right sidebar.\n\nOnce open:\n3. Type your main topic or idea into the 'Topic' text field.\n4. Select a preferred 'Tone' (e.g., Professional, Playful, FOMO, Educational) to set the mood.\n5. Click the 'Click to generate' button.\n6. The AI will provide several caption options. You can easily click on one to insert it into your post's caption field.",
+          images: [
+            { url: captionImg, alt: "Accessing from the Captions Column", caption: "Accessing from the Captions Column" },
+            { url: editPoImg, alt: "Accessing from the Actions Column", caption: "Accessing from the Actions Column" }
+          ]
+        },
+        {
+          title: "Usage Limits",
+          content: "To ensure fair usage and maintain system performance, there is a global limit of 20 AI generations per day across the entire application. This limit automatically resets at midnight every day. If the application reaches this limit, you will need to wait until the next day to generate more captions."
+        }
+      ],
       color: "bg-amber-50 dark:bg-amber-900/20"
     },
     {
       title: "Facebook Integration",
       icon: <Facebook className="w-5 h-5 text-blue-500" />,
-      content: "Connect your Facebook Page through the Meta Settings in the Dashboard. Once connected, you can publish or schedule posts directly to your Page from the Planner.",
-      longContent: "Direct Meta API integration allows you to sync your marketing efforts seamlessly. After authorizing your account in the Meta Settings, you'll be able to see a list of Pages you manage. When a post is marked as 'Published' or 'Scheduled', the system communicates with Facebook to post immediately or at a designated future time. The portal also tracks 'Linked Content', identifying which Hub posts correspond to live Facebook content.",
+      content: "Connect your Facebook Page and Instagram Business account through the Meta Settings in the Dashboard. Once connected, you can publish or schedule posts directly to your social pages from the Planner.",
+      longContent: `Direct Meta API integration allows you to sync your marketing efforts across Facebook and Instagram seamlessly.`,
+      topics: [
+        {
+          title: "Overview",
+          content: "Direct Meta API integration allows you to sync your marketing efforts across Facebook and Instagram seamlessly. When a post is marked as 'Published' or 'Scheduled', the system communicates with Meta's Graph API to post to the appropriate channels. The portal also tracks 'Linked Content', helping you maintain a consistent brand voice across all platforms."
+        },
+        {
+          title: "How does it work?",
+          content: "The system connects directly to Meta's Graph API using a Long-Lived Page Access Token. When you trigger an action in the application, such as publishing or scheduling a post, the app translates those actions into API calls.\n\nFor Facebook: Posts and attachments are formatted and sent to the Facebook Page's feed endpoints.\nFor Instagram: Posts are assembled first into \"Media Containers\" which Meta validates, then these containers are \"published\" to the connected Instagram Business account.\n\nAuthentication happens server-side, meaning once set up, no ongoing user authentication prompts are required to post."
+        },
+        {
+          title: "How to use it?",
+          content: "1. Create a Post in the Planner\n2. Add your captions and media (note: Instagram requires at least one image or video).\n3. Click 'Publish Now' or 'Schedule' in the post details panel.\n4. Select 'Facebook Page', 'Instagram Business', or both to publish the content.\n5. Wait for the success response. The Social Hub will also track its history."
+        },
+        {
+          title: "Setup Guide",
+          content: `Here is a step-by-step guide to connect this web app to your Facebook Page and Instagram Business Account:
+
+1. Create a Meta Developer App
+   - Go to developers.facebook.com and log in with your Facebook account.
+   - Click "My Apps" -> "Create App".
+   - Select "Other" -> "Business" (or whatever corresponds to API access) as the app type.
+   - Enter your App Name and contact email, and click "Create App".
+
+2. Set Up Permissions & Graph API
+   - In your app dashboard, add the "Facebook Login for Business" product if prompted, or directly use the Graph API Explorer (Tools -> Graph API Explorer).
+   - Select your Facebook App. Under "Permissions", add the following:
+     • pages_show_list
+     • pages_read_engagement
+     • pages_manage_posts
+     • instagram_basic
+     • instagram_content_publish
+   - Click "Generate Access Token" and log in to authorize your account. Ensure you select the specific Page(s) and Instagram account(s) you want to manage.
+
+3. Obtain a Long-Lived Page Access Token
+   - Click the "i" (info) icon next to your access token in the Graph API Explorer and click "Open in Access Token Tool" -> "Extend Access Token" to get a 60-day token.
+   - Go back to the Graph API Explorer, paste the 60-day token, and run the query: \`me/accounts\`
+   - Find your target page in the response. Copy its \`access_token\` (this is a never-expiring Page Access Token) and its \`id\` (your Page ID).
+
+4. Configure the Web App Environment Variables
+   - Go to your hosting environment settings (AI Studio or Vercel, etc).
+   - Add the following environment variables:
+     • FACEBOOK_PAGE_ACCESS_TOKEN = Your_Never_Expiring_Page_Token
+     • FACEBOOK_PAGE_ID = Your_Page_ID
+   - Restart the server if necessary.
+
+5. Linking Instagram Business
+   - To post to Instagram, you MUST have an Instagram account converted to a professional Business Account, AND it must be linked to your Facebook Page.
+   - Go to your Facebook Page Settings -> Linked Accounts, and connect your Instagram account.
+   - No separate Instagram token or ID is needed! The app will automatically discover the connected Instagram Business account via the Page Access Token.
+
+After completing these steps, go back to the "Admin" tab in this application and click the refresh button in the Meta Integration section to verify your connection. You should now be able to schedule and publish correctly.`
+        }
+      ],
       color: "bg-blue-50 dark:bg-blue-900/20"
     },
     {
@@ -164,7 +238,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
     }
   ];
 
-  const [selectedGuide, setSelectedGuide] = useState<typeof guideSections[0] | null>(null);  return (
+  const [selectedGuide, setSelectedGuide] = useState<typeof guideSections[0] | null>(null);
+  const [selectedTopicIndex, setSelectedTopicIndex] = useState(0);
+
+  return (
     <div className="max-w-5xl mx-auto py-8 px-6">
       <AnimatePresence mode="wait">
         {selectedGuide ? (
@@ -200,10 +277,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                   {React.cloneElement(selectedGuide.icon as React.ReactElement, { className: "w-10 h-10" })}
                 </div>
                 <div>
-                  <h3 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter mb-6 leading-tight">
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-3 leading-tight">
                     {selectedGuide.title}
                   </h3>
-                  <p className="text-xl text-slate-600 dark:text-slate-300 font-medium max-w-3xl leading-relaxed">
+                  <p className="text-base text-slate-600 dark:text-slate-300 font-medium max-w-3xl leading-relaxed">
                     {selectedGuide.content}
                   </p>
                 </div>
@@ -217,11 +294,72 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                     <div className="w-6 h-1 rounded-full bg-indigo-500" />
                     In-depth Guide
                   </h4>
-                  <div className="prose prose-slate dark:prose-invert max-w-none">
-                    <p className="text-xl text-slate-700 dark:text-slate-200 leading-relaxed font-normal whitespace-pre-wrap">
-                      {selectedGuide.longContent}
-                    </p>
-                  </div>
+                  
+                  {/* @ts-ignore */}
+                  {selectedGuide.topics && selectedGuide.topics.length > 0 ? (
+                    <div className="flex flex-col gap-6">
+                      <div className="flex flex-wrap gap-2 mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                        {/* @ts-ignore */}
+                        {selectedGuide.topics.map((topic, idx) => (
+                           <button
+                             key={idx}
+                             onClick={() => setSelectedTopicIndex(idx)}
+                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                               selectedTopicIndex === idx 
+                               ? 'bg-indigo-600 text-white shadow-md' 
+                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                             }`}
+                           >
+                             {topic.title}
+                           </button>
+                        ))}
+                      </div>
+                      <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-normal whitespace-pre-wrap">
+                          {/* @ts-ignore */}
+                          {selectedGuide.topics[selectedTopicIndex].content}
+                        </p>
+                        {/* @ts-ignore */}
+                        {selectedGuide.topics[selectedTopicIndex].imageUrl && (
+                          <div className="mt-6 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <img 
+                              /* @ts-ignore */
+                              src={selectedGuide.topics[selectedTopicIndex].imageUrl} 
+                              /* @ts-ignore */
+                              alt={selectedGuide.topics[selectedTopicIndex].title}
+                              className="w-full object-cover" 
+                            />
+                          </div>
+                        )}
+                        {/* @ts-ignore */}
+                        {selectedGuide.topics[selectedTopicIndex].images && (
+                          <div className="mt-6 flex flex-col gap-6">
+                            {/* @ts-ignore */}
+                            {selectedGuide.topics[selectedTopicIndex].images.map((img, i) => (
+                              <div key={i} className="flex flex-col gap-2">
+                                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
+                                  <img 
+                                    src={img.url} 
+                                    alt={img.alt}
+                                    className="w-full object-cover" 
+                                  />
+                                </div>
+                                {img.caption && (
+                                  <p className="text-xs text-center text-slate-500 font-medium">{img.caption}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-normal whitespace-pre-wrap">
+                        {selectedGuide.longContent}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-12 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800/50">
                     <h5 className="font-bold text-slate-900 dark:text-white mb-2">Need more help with this?</h5>
@@ -247,7 +385,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                     {guideSections.filter(s => s.title !== selectedGuide.title).slice(0, 3).map((item, idx) => (
                       <button 
                         key={idx}
-                        onClick={() => setSelectedGuide(item)}
+                        onClick={() => {
+                          setSelectedGuide(item);
+                          setSelectedTopicIndex(0);
+                        }}
                         className="w-full text-left p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 rounded-2xl transition-all group/rel"
                       >
                         <div className="flex items-center gap-3">
@@ -338,7 +479,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
                         {section.content}
                       </p>
                       <button 
-                        onClick={() => setSelectedGuide(section)}
+                        onClick={() => {
+                          setSelectedGuide(section);
+                          setSelectedTopicIndex(0);
+                        }}
                         className="mt-6 flex items-center gap-2 text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:text-indigo-700 dark:hover:text-indigo-300 transition-all group/btn"
                       >
                         Learn More 

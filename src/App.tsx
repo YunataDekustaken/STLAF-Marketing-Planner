@@ -109,7 +109,8 @@ import {
   addDoc,
   serverTimestamp,
   getDocs,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore';
 
 enum OperationType {
@@ -1282,40 +1283,50 @@ function AppContent() {
 
   // Automation for scheduled posts
   useEffect(() => {
-    if (!posts.length || profile?.role !== 'marketing_supervisor') return;
+    if (profile?.role !== 'marketing_supervisor') return;
 
     const checkScheduledPosts = async () => {
-      const now = new Date();
-      const updates = posts.filter(post => {
-        if (post.status !== 'Scheduled') return false;
-        const postDate = new Date(post.date);
-        return postDate <= now;
-      });
+      try {
+        const now = new Date();
+        const scheduledQuery = query(collection(db, 'posts'), where('status', '==', 'Scheduled'));
+        const snap = await getDocs(scheduledQuery);
+        
+        let updatesCount = 0;
 
-      if (updates.length === 0) return;
+        for (const docSnap of snap.docs) {
+          const postDate = new Date(docSnap.data().date);
+          if (postDate <= now) {
+            const postRef = doc(db, 'posts', docSnap.id);
+            const historyRef = doc(collection(db, 'history'));
 
-      for (const post of updates) {
-        try {
-          await updateDoc(doc(db, 'posts', post.id), { status: 'Published' });
-          
-          // Log to history
-          await addDoc(collection(db, 'history'), {
-            postId: post.id,
-            contentTitle: post.contentTitle,
-            action: 'auto_publish',
-            platform: 'system',
-            timestamp: serverTimestamp(),
-            userEmail: 'system-automation@gemini.ai',
-            userName: 'System Auto-Publish',
-            details: `Scheduled date ${post.date} reached.`
-          });
-        } catch (err) {
-          console.error(`Failed to auto-publish post ${post.id}:`, err);
+            await runTransaction(db, async (transaction) => {
+              const freshSnap = await transaction.get(postRef);
+              if (!freshSnap.exists()) return;
+              
+              const freshData = freshSnap.data();
+              if (freshData.status !== 'Scheduled') return; // already updated by another client/process
+
+              transaction.update(postRef, { status: 'Published' });
+              transaction.set(historyRef, {
+                postId: docSnap.id,
+                contentTitle: freshData.contentTitle,
+                action: 'auto_publish',
+                platform: 'system',
+                timestamp: serverTimestamp(),
+                userEmail: 'system-automation@gemini.ai',
+                userName: 'System Auto-Publish',
+                details: `Scheduled date ${freshData.date} reached.`
+              });
+            });
+            updatesCount++;
+          }
         }
-      }
 
-      if (updates.length > 0) {
-        addNotification('System Update', `${updates.length} scheduled posts have been automatically marked as Published.`, 'info');
+        if (updatesCount > 0) {
+          addNotification('System Update', `${updatesCount} scheduled post(s) auto-published.`, 'info');
+        }
+      } catch (err) {
+        console.error("Failed to check/auto-publish scheduled posts:", err);
       }
     };
 
@@ -1323,7 +1334,7 @@ function AppContent() {
     checkScheduledPosts();
     const interval = setInterval(checkScheduledPosts, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [posts.length, profile?.role]);
+  }, [profile?.role]);
 
   // Persistence for settings
   useEffect(() => {
