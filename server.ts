@@ -4,6 +4,7 @@ import path from "path";
 import axios from "axios";
 import dotenv from "dotenv";
 import FormData from "form-data";
+import cors from "cors";
 
 dotenv.config();
 
@@ -11,7 +12,14 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors()); // Allow all origins for easier debugging in iframe
   app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
+
+  // Request logging middleware
+  app.use((req, res, next) => {
+    console.log(`[SERVER] ${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
 
   // In-memory store for temporary public images to serve to Instagram Graph API
   const tempMediaStore = new Map<string, { buffer: Buffer, mimeType: string }>();

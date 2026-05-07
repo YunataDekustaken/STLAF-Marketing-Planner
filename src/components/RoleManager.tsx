@@ -28,7 +28,8 @@ import {
   orderBy,
   serverTimestamp,
   where,
-  updateDoc
+  updateDoc,
+  limit
 } from 'firebase/firestore';
 import { UserRole, UserProfile } from '../types';
 
@@ -77,7 +78,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
 
   useEffect(() => {
     // 1. Fetch pre-registered assignments
-    const q1 = query(collection(db, 'roleAssignments'), orderBy('email', 'asc'));
+    const q1 = query(collection(db, 'roleAssignments'), orderBy('email', 'asc'), limit(100));
     const unsubscribe1 = onSnapshot(q1, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -88,7 +89,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
     });
 
     // 2. Fetch pending users
-    const q2 = query(collection(db, 'users'), where('status', '==', 'pending'));
+    const q2 = query(collection(db, 'users'), where('status', '==', 'pending'), limit(100));
     const unsubscribe2 = onSnapshot(q2, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         uid: doc.id,
@@ -99,7 +100,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
     });
 
     // 3. Fetch active users
-    const q3 = query(collection(db, 'users'), where('status', '==', 'active'));
+    const q3 = query(collection(db, 'users'), where('status', '==', 'active'), limit(200));
     const unsubscribe3 = onSnapshot(q3, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         uid: doc.id,

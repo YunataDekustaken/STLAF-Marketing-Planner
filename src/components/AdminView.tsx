@@ -30,7 +30,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Cloud, RefreshCw, Users as UsersIcon, UserCog, Upload, Mail as MailIcon } from 'lucide-react';
 import { RoleManager } from './RoleManager';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, arrayUnion, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
 
@@ -138,7 +138,8 @@ export const AdminView = ({
   useEffect(() => {
     const q = query(
       collection(db, 'concerns'),
-      orderBy('timestamp', 'desc')
+      orderBy('timestamp', 'desc'),
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

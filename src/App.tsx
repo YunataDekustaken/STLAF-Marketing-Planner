@@ -1184,14 +1184,19 @@ function AppContent() {
     }
   }, [profile, hasLoadedProfileCols]);
 
+  const updateProfileRef = useRef(updateProfile);
+  useEffect(() => {
+    updateProfileRef.current = updateProfile;
+  }, [updateProfile]);
+
   useEffect(() => {
     if (hasLoadedProfileCols && profile?.uid) {
       const timer = setTimeout(() => {
-        updateProfile({ columnPreferences: tableColumns });
+        updateProfileRef.current({ columnPreferences: tableColumns });
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [tableColumns, hasLoadedProfileCols, profile?.uid, updateProfile]);
+  }, [tableColumns, hasLoadedProfileCols, profile?.uid]);
 
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1517,52 +1522,42 @@ function AppContent() {
   useEffect(() => {
     if (!user || profile?.role !== 'marketing_supervisor') return;
 
-    const startTime = new Date();
+    // Optimize: Only listen for NEW active requests instead of historical ones
+    const qDeletion = query(collection(db, 'posts'), where('deletionRequested', '==', true));
+    const qApproval = query(collection(db, 'posts'), where('status', '==', 'pending_approval'));
+    const qFBDeletion = query(collection(db, 'posts'), where('facebookDeletionRequested', '==', true));
 
-    const qRequests = query(
-      collection(db, 'posts')
-    );
-
-    const unsubscribeRequests = onSnapshot(qRequests, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'modified') {
+    const handleChanges = (snapshot: any, type: 'hub' | 'fb' | 'approval') => {
+      snapshot.docChanges().forEach((change: any) => {
+        // Only process if added/modified AND it's a recent change or we want to catch missed ones
+        if (change.type === 'added' || change.type === 'modified') {
           const data = change.doc.data();
-          const oldData = change.doc.data(); // Note: snapshot listener docChanges doesn't give 'before' easily without cache comparisons
-          // But we can check if the current state is 'true' and was likely just set
           
-          if (notifSettings.onDeletionRequest) {
-            if (data.deletionRequested && !data.deletionRequestNotified) {
-              addNotificationSimple(
-                'Hub Deletion Request',
-                `User ${data.createdBy || 'Member'} is requesting to remove a post from the Hub: "${data.title || 'Untitled'}"`,
-                'warning'
-              );
-              // Mark as notified in background to prevent repeat triggers (optional but good practice)
-              updateDoc(doc(db, 'posts', change.doc.id), { deletionRequestNotified: true });
-            }
-            if (data.facebookDeletionRequested && !data.fbDeletionRequestNotified) {
-              addNotificationSimple(
-                'Facebook Removal Request',
-                `User ${data.createdBy || 'Member'} is requesting to delete a post from Facebook: "${data.title || 'Untitled'}"`,
-                'warning'
-              );
-              updateDoc(doc(db, 'posts', change.doc.id), { fbDeletionRequestNotified: true });
-            }
+          if (type === 'hub' && data.deletionRequested && !data.deletionRequestNotified) {
+            addNotificationSimple('Hub Deletion Request', `User ${data.createdBy || 'Member'} is requesting to remove a post from the Hub: "${data.title || 'Untitled'}"`, 'warning');
+            updateDoc(doc(db, 'posts', change.doc.id), { deletionRequestNotified: true });
           }
-          
-          if (notifSettings.onApprovalRequired && data.status === 'pending_approval' && !data.approvalNotified) {
-            addNotificationSimple(
-              'Approval Required',
-              `A new post/update requires your approval: "${data.title || 'Untitled'}"`,
-              'info'
-            );
+          if (type === 'fb' && data.facebookDeletionRequested && !data.fbDeletionRequestNotified) {
+            addNotificationSimple('Facebook Removal Request', `User ${data.createdBy || 'Member'} is requesting to delete a post from Facebook: "${data.title || 'Untitled'}"`, 'warning');
+            updateDoc(doc(db, 'posts', change.doc.id), { fbDeletionRequestNotified: true });
+          }
+          if (type === 'approval' && data.status === 'pending_approval' && !data.approvalNotified) {
+            addNotificationSimple('Approval Required', `A new post/update requires your approval: "${data.title || 'Untitled'}"`, 'info');
             updateDoc(doc(db, 'posts', change.doc.id), { approvalNotified: true });
           }
         }
       });
-    });
+    };
 
-    return () => unsubscribeRequests();
+    const unsub1 = onSnapshot(qDeletion, (snap) => handleChanges(snap, 'hub'));
+    const unsub2 = onSnapshot(qApproval, (snap) => handleChanges(snap, 'approval'));
+    const unsub3 = onSnapshot(qFBDeletion, (snap) => handleChanges(snap, 'fb'));
+
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
   }, [user, profile?.role, notifSettings.onDeletionRequest, notifSettings.onApprovalRequired]);
 
   const addNotificationSimple = async (title: string, message: string, type: 'info' | 'success' | 'warning' = 'info') => {
@@ -1781,7 +1776,8 @@ function AppContent() {
     const targetUserId = user.uid;
     const q = query(
       collection(db, 'notifications'),
-      where('userId', '==', targetUserId)
+      where('userId', '==', targetUserId),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -1863,7 +1859,7 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthReady || !user) return;
 
-    // Test connection
+    // Test connection once on mount or auth change
     const testConnection = async () => {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
@@ -1875,22 +1871,35 @@ function AppContent() {
     };
     testConnection();
 
-    // If no user, we show all posts or guest posts. 
+    // Optimize: Fetch only current month's posts to stay within quota
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const startStr = format(monthStart, 'yyyy-MM-dd');
+    const endStr = format(monthEnd, 'yyyy-MM-dd');
+
     const postsRef = collection(db, 'posts');
-    const q = query(postsRef);
+    const q = query(
+      postsRef, 
+      where('date', '>=', startStr),
+      where('date', '<=', endStr)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
       })) as Post[];
+      
+      // Because onSnapshot only gives us current month, we keep existing posts from OTHER months
+      // to avoid flickering if we have them, OR we just trust the month-scoped view.
+      // Since the app uses currentMonth to filter locally too, this is safe.
       setPosts(postsData);
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'posts');
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, user, profile?.role]);
+  }, [isAuthReady, user, profile?.role, currentMonth]);
 
   const filteredPosts = posts.filter(post => {
     const postDate = new Date(post.date);
