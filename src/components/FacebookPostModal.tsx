@@ -349,7 +349,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                   </h4>
                   <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
                     {isAlreadyPublished 
-                      ? 'This content has been published to your Facebook Page.' 
+                      ? `This content was published to your Facebook Page on ${post?.fbPublishedTime ? new Date(post.fbPublishedTime).toLocaleString() : 'an unknown date'}.` 
                       : isAlreadyScheduled 
                         ? `This post is scheduled for ${post?.fbScheduledTime ? new Date(post.fbScheduledTime).toLocaleString() : 'the future'}.`
                         : `Your content has been ${showScheduler ? 'scheduled' : 'published'} successfully.`

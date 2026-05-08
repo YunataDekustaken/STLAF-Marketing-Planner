@@ -24,10 +24,10 @@ export interface Post {
   createdAt?: any;
   updatedAt?: any;
   fbStatus?: 'posted' | 'scheduled' | 'idle';
-  fbPostId?: string;
-  igPostId?: string;
-  fbScheduledTime?: string;
-  fbPublishedTime?: string;
+  fbPostId?: string | null;
+  igPostId?: string | null;
+  fbScheduledTime?: string | null;
+  fbPublishedTime?: string | null;
   approvalStatus?: 'Approved' | 'For Revision' | 'Pending';
   isDirectPost?: boolean;
   deletionRequested?: boolean;

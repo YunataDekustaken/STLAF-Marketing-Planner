@@ -59,7 +59,8 @@ import {
   Music2,
   Sun,
   Moon,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -1111,6 +1112,16 @@ export default function App() {
 function AppContent() {
   const { user, profile, loading: authLoading, login, logout, updateProfile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleManualRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    setRefreshing(true);
+    toast.success('Synchronizing data...', { icon: '🔄', duration: 1500 });
+    setTimeout(() => setRefreshing(false), 600);
+  };
   const isAuthReady = !authLoading;
   const [showSplash, setShowSplash] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -1144,7 +1155,7 @@ function AppContent() {
     });
 
     return () => unsubscribe();
-  }, [auth.currentUser]);
+  }, [auth.currentUser, refreshKey]);
   
   // Facebook Post State
   const [isFBModalOpen, setIsFBModalOpen] = useState(false);
@@ -1558,7 +1569,7 @@ function AppContent() {
       unsub2();
       unsub3();
     };
-  }, [user, profile?.role, notifSettings.onDeletionRequest, notifSettings.onApprovalRequired]);
+  }, [user, profile?.role, notifSettings.onDeletionRequest, notifSettings.onApprovalRequired, refreshKey]);
 
   const addNotificationSimple = async (title: string, message: string, type: 'info' | 'success' | 'warning' = 'info') => {
     const targetUserId = user?.uid || 'guest_user';
@@ -1899,7 +1910,7 @@ function AppContent() {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, user, profile?.role, currentMonth]);
+  }, [isAuthReady, user, profile?.role, currentMonth, refreshKey]);
 
   const filteredPosts = posts.filter(post => {
     const postDate = new Date(post.date);
@@ -2050,20 +2061,32 @@ function AppContent() {
 
   const handleDuplicatePost = async (post: Post) => {
     const newId = Math.random().toString(36).substr(2, 9);
-    const postData = {
+    const postData: Post = {
       ...post,
       id: newId,
       contentTitle: `${post.contentTitle} (Copy)`,
       userId: user?.uid || 'guest_user',
-    } as Post;
-    if (postData.deletionRequested) {
-      delete postData.deletionRequested;
-      delete postData.requestedBy;
-      delete postData.requestDate;
-    }
+      status: 'Not Started',
+      fbStatus: 'idle',
+      fbPostId: null,
+      igPostId: null,
+      fbScheduledTime: null,
+      fbPublishedTime: null,
+      facebookDeletionRequested: false,
+      deletionRequested: false,
+      requestedBy: null,
+      requestDate: null,
+      approvalStatus: 'Pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
     
     try {
-      await setDoc(doc(db, 'posts', newId), postData);
+      // Remove any undefined fields that would crash Firestore
+      const cleanData = Object.fromEntries(
+        Object.entries(postData).filter(([_, v]) => v !== undefined)
+      );
+      await setDoc(doc(db, 'posts', newId), cleanData);
       addNotification('onNewTask', 'Task Duplicated', `"${postData.contentTitle || 'Untitled'}" has been duplicated.`, newId);
     } catch (err) {
       console.error(err);
@@ -2126,7 +2149,11 @@ function AppContent() {
     }
 
     try {
-      await setDoc(doc(db, 'posts', id), postData);
+      // Remove any undefined fields that would crash Firestore
+      const cleanData = Object.fromEntries(
+        Object.entries(postData).filter(([_, v]) => v !== undefined)
+      );
+      await setDoc(doc(db, 'posts', id), cleanData);
       
       if (!editingPost) {
         addNotification('onNewTask', 'New Task Created', `"${formData.topicTheme || 'Untitled'}" has been added to the plan.`, id);
@@ -2993,6 +3020,18 @@ function AppContent() {
                 <PanelLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
               )}
             </button>
+
+            <button 
+              onClick={handleManualRefresh}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-500 transition-all duration-300 group flex items-center gap-2"
+              title="Refresh Data"
+            >
+              <RefreshCw className={`w-5 h-5 transition-transform duration-500 ${refreshing ? 'animate-spin-once' : 'group-hover:rotate-180'}`} />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Sync Data</span>
+            </button>
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 pt-0 pl-0">
               {viewMode === 'social' ? 'Social Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
@@ -3224,6 +3263,7 @@ function AppContent() {
                 isSeeding={isSeeding}
                 profile={profile}
                 pendingConcernsCount={activeConcernsCount}
+                refreshKey={refreshKey}
               />
             ) : viewMode === 'help' ? (
               <HelpView 

@@ -641,8 +641,14 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
                 <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">Date</span>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{format(new Date(post.date), 'MMM dd')}</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">
+                      {post.status === 'Published' ? 'Published' : 'Planned Date'}
+                    </span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {post.status === 'Published' && post.fbPublishedTime 
+                        ? format(new Date(post.fbPublishedTime), 'MMM dd, HH:mm')
+                        : format(new Date(post.date), 'MMM dd')}
+                    </span>
                   </div>
                   <button 
                     onClick={() => handleOpenFBModal(post)}

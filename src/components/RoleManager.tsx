@@ -43,7 +43,7 @@ interface RoleAssignment {
 
 const DEPARTMENTS = ['HR', 'Litigation', 'Corpo', 'Accounting', 'IT', 'Operations'];
 
-export const RoleManager = ({ addNotification }: { addNotification: any }) => {
+export const RoleManager = ({ addNotification, refreshKey }: { addNotification: any, refreshKey?: number }) => {
   const [assignments, setAssignments] = useState<RoleAssignment[]>([]);
   const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
   const [activeUsers, setActiveUsers] = useState<UserProfile[]>([]);
@@ -115,7 +115,7 @@ export const RoleManager = ({ addNotification }: { addNotification: any }) => {
       unsubscribe2();
       unsubscribe3();
     };
-  }, []);
+  }, [refreshKey]);
 
   const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
   const [approveValues, setApproveValues] = useState<{ role: UserRole, department: string } | null>(null);

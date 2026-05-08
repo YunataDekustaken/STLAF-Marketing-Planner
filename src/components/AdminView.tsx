@@ -49,7 +49,8 @@ export const AdminView = ({
   governanceSettings,
   onUpdateGovernanceSettings,
   profile,
-  pendingConcernsCount
+  pendingConcernsCount,
+  refreshKey
 }: { 
   notificationSettings: any,
   onUpdateNotificationSettings: (settings: any) => void,
@@ -65,7 +66,8 @@ export const AdminView = ({
   onRestore: () => void,
   isSeeding: boolean,
   profile: any,
-  pendingConcernsCount?: number
+  pendingConcernsCount?: number,
+  refreshKey?: number
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'concerns' | 'links' | 'settings'>('users');
   const [localSettings, setLocalSettings] = useState(notificationSettings);
@@ -151,7 +153,7 @@ export const AdminView = ({
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [refreshKey]);
 
   const handleUpdateQuickLinks = async () => {
     setIsUpdatingLinks(true);
@@ -256,7 +258,7 @@ export const AdminView = ({
               className="space-y-6"
             >
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden min-h-[600px] transition-colors duration-300">
-                <RoleManager addNotification={addNotification} />
+                <RoleManager addNotification={addNotification} refreshKey={refreshKey} />
               </div>
             </motion.div>
           )}
