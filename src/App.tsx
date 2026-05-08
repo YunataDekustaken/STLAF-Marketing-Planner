@@ -97,6 +97,8 @@ import { ProfileView } from './components/ProfileView';
 import { FacebookPostModal } from './components/FacebookPostModal';
 import { HelpView } from './components/HelpView';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfService } from './components/TermsOfService';
+import { DataDeletion } from './components/DataDeletion';
 import { 
   collection, 
   onSnapshot, 
@@ -2774,6 +2776,24 @@ function AppContent() {
       <>
         <Toaster position="top-right" reverseOrder={false} />
         <PrivacyPolicy />
+      </>
+    );
+  }
+
+  if (currentPath === '/terms') {
+    return (
+      <>
+        <Toaster position="top-right" reverseOrder={false} />
+        <TermsOfService />
+      </>
+    );
+  }
+
+  if (currentPath === '/deletion') {
+    return (
+      <>
+        <Toaster position="top-right" reverseOrder={false} />
+        <DataDeletion />
       </>
     );
   }

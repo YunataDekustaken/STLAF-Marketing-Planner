@@ -747,6 +747,48 @@ After completing these steps, go back to the "Admin" tab in this application and
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Legal Footer */}
+      <div className="mt-16 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-4">
+        <div className="flex items-center gap-6">
+          <a 
+            href="/privacy" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState(null, '', '/privacy');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+          >
+            Privacy Policy
+          </a>
+          <a 
+            href="/terms" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState(null, '', '/terms');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+          >
+            Terms of Service
+          </a>
+          <a 
+            href="/deletion" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState(null, '', '/deletion');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+          >
+            Data Deletion
+          </a>
+        </div>
+        <p className="text-[10px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-[0.2em]">
+          Marketing Operations Portal © 2026
+        </p>
+      </div>
     </div>
   );
 };

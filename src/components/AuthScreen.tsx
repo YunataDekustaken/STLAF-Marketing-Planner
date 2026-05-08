@@ -90,17 +90,43 @@ export default function AuthScreen() {
           <p className="text-[11px] text-center text-slate-300 font-medium px-4">
             Authorized access only. All actions are logged for security and compliance.
           </p>
-          <a 
-            href="/privacy" 
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState(null, '', '/privacy');
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-            className="text-[10px] text-slate-300 hover:text-amber-500 transition-colors uppercase tracking-widest font-bold mt-2 underline underline-offset-4 decoration-slate-200"
-          >
-            Privacy Policy
-          </a>
+          <div className="flex items-center gap-4 mt-2">
+            <a 
+              href="/privacy" 
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/privacy');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[10px] text-slate-300 hover:text-amber-500 transition-colors uppercase tracking-widest font-bold underline underline-offset-4 decoration-slate-200"
+            >
+              Privacy Policy
+            </a>
+            <span className="text-slate-200 text-[10px]">•</span>
+            <a 
+              href="/terms" 
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/terms');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[10px] text-slate-300 hover:text-amber-500 transition-colors uppercase tracking-widest font-bold underline underline-offset-4 decoration-slate-200"
+            >
+              Terms of Service
+            </a>
+            <span className="text-slate-200 text-[10px]">•</span>
+            <a 
+              href="/deletion" 
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/deletion');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-[10px] text-slate-300 hover:text-amber-500 transition-colors uppercase tracking-widest font-bold underline underline-offset-4 decoration-slate-200"
+            >
+              Data Deletion
+            </a>
+          </div>
         </div>
       </motion.div>
     </div>

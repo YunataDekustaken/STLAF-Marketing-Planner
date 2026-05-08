@@ -86,7 +86,7 @@ export const PrivacyPolicy = () => {
               className="flex items-center gap-2 text-sm font-medium text-amber-500 hover:text-amber-600 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Back to Login
+              Go Back
             </button>
           </div>
         </div>
