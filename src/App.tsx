@@ -96,6 +96,7 @@ import { SocialHubView } from './components/SocialHubView';
 import { ProfileView } from './components/ProfileView';
 import { FacebookPostModal } from './components/FacebookPostModal';
 import { HelpView } from './components/HelpView';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { 
   collection, 
   onSnapshot, 
@@ -1111,6 +1112,17 @@ export default function App() {
 
 function AppContent() {
   const { user, profile, loading: authLoading, login, logout, updateProfile } = useAuth();
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  // Sync state with URL manually (since we're not using a router)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -2754,6 +2766,15 @@ function AppContent() {
           Powered by Gemini AI
         </motion.div>
       </div>
+    );
+  }
+
+  if (currentPath === '/privacy') {
+    return (
+      <>
+        <Toaster position="top-right" reverseOrder={false} />
+        <PrivacyPolicy />
+      </>
     );
   }
 

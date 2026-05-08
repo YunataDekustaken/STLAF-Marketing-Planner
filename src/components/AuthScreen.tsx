@@ -80,7 +80,7 @@ export default function AuthScreen() {
           )}
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-50 flex flex-col items-center gap-4">
+        <div className="mt-12 pt-8 border-t border-slate-50 flex flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full">
             <Lock className="w-3 h-3 text-slate-400" />
             <span className="text-[10px] text-slate-400 uppercase tracking-[0.15em] font-bold">
@@ -90,6 +90,17 @@ export default function AuthScreen() {
           <p className="text-[11px] text-center text-slate-300 font-medium px-4">
             Authorized access only. All actions are logged for security and compliance.
           </p>
+          <a 
+            href="/privacy" 
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState(null, '', '/privacy');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-[10px] text-slate-300 hover:text-amber-500 transition-colors uppercase tracking-widest font-bold mt-2 underline underline-offset-4 decoration-slate-200"
+          >
+            Privacy Policy
+          </a>
         </div>
       </motion.div>
     </div>
