@@ -197,12 +197,14 @@ async function startServer() {
         const isBase64 = url.startsWith('data:');
         let endpoint = `https://graph.facebook.com/v19.0/${PAGE_ID}/photos`;
         let fbPhotoId: string;
+        let localTempUrl: string | null = null;
         
         if (isBase64) {
           const [header, base64Data] = url.split(',');
           const buffer = Buffer.from(base64Data, 'base64');
           const mimeType = header.split(';')[0].split(':')[1] || 'image/jpeg';
           
+          // Strategy for Facebook: Upload as source
           const form = new FormData();
           form.append('access_token', PAGE_ACCESS_TOKEN);
           form.append('source', buffer, { filename: `image_${idx}.jpg`, contentType: mimeType });
@@ -210,24 +212,39 @@ async function startServer() {
           
           const response = await axios.post(endpoint, form, { headers: form.getHeaders() });
           fbPhotoId = response.data.id;
+
+          // Strategy for Instagram: Store locally to serve a guaranteed public URL
+          const mediaIdForIG = `${Date.now()}_${idx}_${Math.random().toString().slice(2)}`;
+          tempMediaStore.set(mediaIdForIG, { buffer, mimeType });
+          
+          const host = req.headers['x-forwarded-host'] || req.get('host');
+          const protocol = req.headers['x-forwarded-proto'] || 'https';
+          localTempUrl = `${protocol}://${host}/public-media/${mediaIdForIG}`;
+
+          // Cleanup local media after 2 minutes
+          setTimeout(() => tempMediaStore.delete(mediaIdForIG), 120000);
         } else {
           const response = await axios.post(endpoint, {
             access_token: PAGE_ACCESS_TOKEN,
             url: url,
-            published: 'false'
+            published: false
           });
           fbPhotoId = response.data.id;
+          localTempUrl = url;
         }
 
-        // Get public URL of the uploaded image
+        // Get public URL of the uploaded image for Facebook's own reference if needed
         const photoDetails = await axios.get(`https://graph.facebook.com/v19.0/${fbPhotoId}`, {
           params: { fields: 'images', access_token: PAGE_ACCESS_TOKEN }
         });
-        // Facebook returns an array of images of different sizes. first is the largest.
-        const publicUrl = photoDetails.data.images[0]?.source;
+        const fbPublicUrl = photoDetails.data.images[0]?.source;
 
-        return { fbPhotoId, publicUrl };
+        return { fbPhotoId, fbPublicUrl, localTempUrl };
       }));
+
+      // Small delay to allow Meta CDN to propagate media before publishing the main post
+      // This often prevents subcode 4854002 (item not ready/sharable)
+      await new Promise(resolve => setTimeout(resolve, 3500));
 
       // 2. Post to Facebook
       if (targetPlatforms.includes('facebook')) {
@@ -262,58 +279,100 @@ async function startServer() {
              throw new Error("Instagram requires at least one image or video.");
          }
 
-         if (uploadedMedia.length === 1) {
-             // Single image post
-             const creationResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
-                 params: {
-                     image_url: uploadedMedia[0].publicUrl,
-                     caption: message || '',
-                     access_token: PAGE_ACCESS_TOKEN
+             // Polling function for Instagram Media Container Status
+             const waitForContainer = async (containerId: string, maxTries = 10): Promise<boolean> => {
+                 for (let i = 0; i < maxTries; i++) {
+                     try {
+                         const statusRes = await axios.get(`https://graph.facebook.com/v19.0/${containerId}`, {
+                             params: { fields: 'status_code', access_token: PAGE_ACCESS_TOKEN }
+                         });
+                         const status = statusRes.data.status_code;
+                         if (status === 'FINISHED') return true;
+                         if (status === 'ERROR') {
+                             const errorMsg = statusRes.data.status_description || 'Unknown error during IG processing';
+                             throw new Error(`Instagram processing failed: ${errorMsg}`);
+                         }
+                         console.log(`[IG Polling] Container ${containerId} status: ${status}. Attempt ${i + 1}/${maxTries}`);
+                     } catch (e: any) {
+                         console.error(`[IG Polling] Error checking status: ${e.message}`);
+                     }
+                     await new Promise(resolve => setTimeout(resolve, 3000));
                  }
-             });
-             const creationId = creationResponse.data.id;
+                 return false;
+             };
 
-             // Publish
-             const publishResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media_publish`, null, {
-                 params: {
-                     creation_id: creationId,
-                     access_token: PAGE_ACCESS_TOKEN
+             if (uploadedMedia.length === 1) {
+                 // Single image post - Use localTempUrl which is guaranteed public for crawler
+                 const mediaUrlForIG = uploadedMedia[0].localTempUrl || uploadedMedia[0].fbPublicUrl;
+                 
+                 const creationResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
+                     params: {
+                         image_url: mediaUrlForIG,
+                         caption: message || '',
+                         access_token: PAGE_ACCESS_TOKEN
+                     }
+                 });
+                 const creationId = creationResponse.data.id;
+    
+                 // Wait for IG processing via polling
+                 const isReady = await waitForContainer(creationId);
+                 if (isReady) {
+                     // Even after FINISHED, Meta sometimes needs a moment to propagate
+                     await new Promise(resolve => setTimeout(resolve, 2000));
+                 } else {
+                     console.warn(`[IG] Container ${creationId} still not ready after polling, attempting publish anyway...`);
                  }
-             });
-             results.instagram = publishResponse.data.id;
-         } else {
-             // Carousel post
-             const carouselItemIds = await Promise.all(uploadedMedia.map(async (media) => {
-                  const itemResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
-                      params: {
-                          image_url: media.publicUrl,
-                          is_carousel_item: 'true',
-                          access_token: PAGE_ACCESS_TOKEN
-                      }
-                  });
-                  return itemResponse.data.id;
-             }));
-
-             const carouselCreateResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
-                 params: {
-                     media_type: 'CAROUSEL',
-                     children: carouselItemIds.join(','),
-                     caption: message || '',
-                     access_token: PAGE_ACCESS_TOKEN
+    
+                 // Publish
+                 const publishResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media_publish`, null, {
+                     params: {
+                         creation_id: creationId,
+                         access_token: PAGE_ACCESS_TOKEN
+                     }
+                 });
+                 results.instagram = publishResponse.data.id;
+             } else {
+                 // Carousel post
+                 const carouselItemIds = await Promise.all(uploadedMedia.map(async (media) => {
+                      const mediaUrlForIG = media.localTempUrl || media.fbPublicUrl;
+                      const itemResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
+                          params: {
+                              image_url: mediaUrlForIG,
+                              is_carousel_item: 'true',
+                              access_token: PAGE_ACCESS_TOKEN
+                          }
+                      });
+                      const itemId = itemResponse.data.id;
+                      // Poll for individual item
+                      await waitForContainer(itemId, 5); 
+                      return itemId;
+                 }));
+    
+                 const carouselCreateResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media`, null, {
+                     params: {
+                         media_type: 'CAROUSEL',
+                         children: carouselItemIds.join(','),
+                         caption: message || '',
+                         access_token: PAGE_ACCESS_TOKEN
+                     }
+                 });
+                 const carouselCreationId = carouselCreateResponse.data.id;
+    
+                 // Final wait for carousel container
+                 const carouselReady = await waitForContainer(carouselCreationId);
+                 if (carouselReady) {
+                     await new Promise(resolve => setTimeout(resolve, 2000));
                  }
-             });
-             const carouselCreationId = carouselCreateResponse.data.id;
-
-             const publishResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media_publish`, null, {
-                 params: {
-                     creation_id: carouselCreationId,
-                     access_token: PAGE_ACCESS_TOKEN
-                 }
-             });
-             results.instagram = publishResponse.data.id;
-         }
+    
+                 const publishResponse = await axios.post(`https://graph.facebook.com/v19.0/${igUserId}/media_publish`, null, {
+                     params: {
+                         creation_id: carouselCreationId,
+                         access_token: PAGE_ACCESS_TOKEN
+                     }
+                 });
+                 results.instagram = publishResponse.data.id;
+             }
       }
-
       return res.json({ 
         success: true, 
         results 
@@ -326,7 +385,12 @@ async function startServer() {
       let friendlyMessage = "Failed to post to Meta properties";
       
       if (errorData.type === 'OAuthException') {
-        friendlyMessage = `Meta Authentication Error: ${errorData.message || "Invalid or expired token"}. Please check your FACEBOOK_PAGE_ACCESS_TOKEN and FACEBOOK_PAGE_ID.`;
+        const subcode = errorData.error_subcode ? ` (Subcode: ${errorData.error_subcode})` : '';
+        if (errorData.error_subcode === 4854002) {
+          friendlyMessage = `Meta Security Check: Meta requires you to confirm your identity or Page permissions before publishing. Please open the Facebook app on your phone, check your notifications for "Action Needed", and follow the instructions there. Also ensure your Instagram account is fully linked and set to "Business".`;
+        } else {
+          friendlyMessage = `Meta Authentication/Permission Error: ${errorData.message || "Invalid or expired token"}${subcode}. Please check your FACEBOOK_PAGE_ACCESS_TOKEN and FACEBOOK_PAGE_ID.`;
+        }
       } else if (errorData.message) {
         friendlyMessage = errorData.message;
       } else if (error.message) {
