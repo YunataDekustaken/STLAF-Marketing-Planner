@@ -13,6 +13,7 @@ import {
   Clock, 
   AlertCircle, 
   Sparkles, 
+  Pencil,
   Send,
   Edit2, 
   Trash2, 
@@ -60,7 +61,10 @@ import {
   Sun,
   Moon,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  Database,
+  Archive,
+  UploadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -95,6 +99,7 @@ import { AdminView } from './components/AdminView';
 import { SocialHubView } from './components/SocialHubView';
 import { ProfileView } from './components/ProfileView';
 import { FacebookPostModal } from './components/FacebookPostModal';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import { HelpView } from './components/HelpView';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsOfService } from './components/TermsOfService';
@@ -274,6 +279,12 @@ interface KanbanViewProps {
     requireDeletionApproval: boolean;
   };
   canDelete: boolean;
+  socialLinks: {
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    tiktok: string;
+  };
 }
 
 const KanbanView: React.FC<KanbanViewProps> = ({ 
@@ -288,7 +299,8 @@ const KanbanView: React.FC<KanbanViewProps> = ({
   handleCancelDeletionRequest,
   userRole,
   governanceSettings,
-  canDelete
+  canDelete,
+  socialLinks
 }) => {
   const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled', 'Published'];
   
@@ -337,6 +349,18 @@ const KanbanView: React.FC<KanbanViewProps> = ({
                       <FBStatusBadge post={post} />
                     </div>
                     <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
+                      {socialLinks.facebook && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenFBModal(post);
+                          }}
+                          className="p-1 text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                          title="Post to Facebook"
+                        >
+                          <Facebook className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {(post.deletionRequested || post.facebookDeletionRequested) && userRole !== 'marketing_supervisor' && (
                         <button 
                           onClick={(e) => {
@@ -349,16 +373,6 @@ const KanbanView: React.FC<KanbanViewProps> = ({
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenFBModal(post);
-                        }}
-                        className="p-1 text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                        title="Post to Facebook"
-                      >
-                        <Facebook className="w-3.5 h-3.5" />
-                      </button>
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                         {format(new Date(post.date), 'MMM d')}
                       </div>
@@ -413,9 +427,15 @@ interface CalendarViewProps {
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
   handleOpenFBModal: (post: Post) => void;
+  socialLinks: {
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    tiktok: string;
+  };
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal, handleOpenFBModal }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal, handleOpenFBModal, socialLinks }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -473,15 +493,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenFBModal(post);
-                        }}
-                        className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
-                      >
-                        <Facebook className="w-2.5 h-2.5" />
-                      </button>
+                      {socialLinks.facebook && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenFBModal(post);
+                          }}
+                          className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
+                        >
+                          <Facebook className="w-2.5 h-2.5" />
+                        </button>
+                      )}
                     </div>
                     {post.fbStatus && post.fbStatus !== 'idle' && (
                       <div className="scale-75 origin-left -mt-1 -mb-1">
@@ -531,6 +553,12 @@ interface MonthlyTableViewProps {
   columnSettingsRef: React.RefObject<HTMLDivElement>;
   highlightedPostId: string | null;
   canDelete?: boolean;
+  socialLinks: {
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    tiktok: string;
+  };
   governanceSettings: {
     restrictDeletionToSupervisor: boolean;
     requireDeletionApproval: boolean;
@@ -571,6 +599,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   columnSettingsRef,
   highlightedPostId,
   canDelete = true,
+  socialLinks,
   governanceSettings,
   profile,
   userRole
@@ -664,11 +693,11 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                 </button>
               )}
               <button 
-                onClick={() => handleOpenFBModal(post)}
-                className="p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-[#1877F2] transition-colors text-slate-400"
-                title="Post to Facebook"
+                onClick={() => handleOpenShareModal(post)}
+                className="p-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors text-slate-400"
+                title="Preview Details"
               >
-                <Facebook className="w-3 h-3" />
+                <Eye className="w-3 h-3" />
               </button>
               <button 
                 onClick={() => handleOpenModal(post)}
@@ -954,9 +983,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                           <button 
                             onClick={() => handleOpenShareModal(post)}
                             className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                            title="Share Details"
+                            title="Preview Row"
                           >
-                            <Share className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
                           
                           <div className="relative action-menu-container">
@@ -992,14 +1021,27 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                                   <button 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleOpenFBModal(post);
+                                      handleOpenShareModal(post);
                                       setActionMenuOpenId(null);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-sm text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2 transition-colors"
+                                    className="w-full px-3 py-2 text-left text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2 transition-colors"
                                   >
-                                    <Facebook className="w-4 h-4" />
-                                    Publish
+                                    <Eye className="w-4 h-4" />
+                                    Preview
                                   </button>
+                                  {socialLinks.facebook && (
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenFBModal(post);
+                                        setActionMenuOpenId(null);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-[#1877F2] hover:bg-[#1877F2]/5 flex items-center gap-2 transition-colors"
+                                    >
+                                      <Facebook className="w-4 h-4" />
+                                      Post to FB
+                                    </button>
+                                  )}
                                   {(post.deletionRequested || canDelete) && <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2" />}
                                   {post.deletionRequested ? (
                                     <div className="px-3 py-1 flex flex-col gap-1.5">
@@ -1128,7 +1170,68 @@ function AppContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Undo/Redo state for post deletions
+  const [postUndoStack, setPostUndoStack] = useState<Post[]>([]);
+  const [postRedoStack, setPostRedoStack] = useState<Post[]>([]);
+
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleUndoDelete = async () => {
+    if (postUndoStack.length === 0) return;
+    
+    const lastDeleted = postUndoStack[postUndoStack.length - 1];
+    const newUndoStack = postUndoStack.slice(0, -1);
+    
+    try {
+      // Re-create the post in Firestore
+      const { id, ...cleanData } = lastDeleted;
+      await setDoc(doc(db, 'posts', id), {
+        ...cleanData,
+        updatedAt: serverTimestamp()
+      });
+      
+      setPostUndoStack(newUndoStack);
+      setPostRedoStack(prev => [...prev, lastDeleted]);
+      toast.success('Successfully restored the deleted post!', { icon: '↩️' });
+    } catch (err) {
+      console.error("Undo error:", err);
+      toast.error("Failed to restore the post.");
+    }
+  };
+
+  const handleRedoDelete = async () => {
+    if (postRedoStack.length === 0) return;
+    
+    const postToReDelete = postRedoStack[postRedoStack.length - 1];
+    const newRedoStack = postRedoStack.slice(0, -1);
+    
+    try {
+      await deleteDoc(doc(db, 'posts', postToReDelete.id));
+      setPostRedoStack(newRedoStack);
+      setPostUndoStack(prev => [...prev, postToReDelete]);
+      toast.success('Post deleted again (Redo).', { icon: '↪️' });
+    } catch (err) {
+      console.error("Redo error:", err);
+      toast.error("Failed to redo the deletion.");
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          handleRedoDelete();
+        } else {
+          handleUndoDelete();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        handleRedoDelete();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [postUndoStack, postRedoStack]);
 
   const handleManualRefresh = () => {
     setRefreshKey(prev => prev + 1);
@@ -1247,6 +1350,7 @@ function AppContent() {
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const [sidebarMode, setSidebarMode] = useState<'full' | 'mini-hover' | 'mini-fixed'>('full');
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSocialChannelsExpanded, setIsSocialChannelsExpanded] = useState(true);
   
   // Derived helper for rendering logic
   const isSidebarExpanded = sidebarMode === 'full' || (sidebarMode === 'mini-hover' && isSidebarHovered);
@@ -1294,6 +1398,8 @@ function AppContent() {
     notes: true,
     approvalStatus: true,
   });
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
 
   const addNotification = async (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
@@ -1321,6 +1427,23 @@ function AppContent() {
       );
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'notifications');
+    }
+  };
+
+  const notifyUser = async (targetUserId: string, type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
+    if (!notifSettings[type] || !targetUserId) return;
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        title,
+        message,
+        createdAt: serverTimestamp(),
+        read: false,
+        postId: postId || null,
+        userId: targetUserId,
+        type
+      });
+    } catch (err) {
+      console.error("Failed to notify user:", targetUserId, err);
     }
   };
 
@@ -1959,11 +2082,18 @@ function AppContent() {
       }
 
       if (field === 'approvalStatus') {
+        const post = posts.find(p => p.id === id);
         if (value === 'Approved') {
           addNotification('onPostApproved', 'Post Approved', 'Your post has been approved.', id);
+          if (post?.userId && post.userId !== user?.uid) {
+            notifyUser(post.userId, 'onPostApproved', 'Post Approved', `Your post "${post.contentTitle}" has been approved.`, id);
+          }
           notifyAll('onPostApproved', 'Post Approved', 'A post has been approved and is ready for the next step.', id);
         } else if (value === 'For Revision') {
           addNotification('onNewTask', 'Revision Required', 'A post requires revision.', id);
+          if (post?.userId && post.userId !== user?.uid) {
+            notifyUser(post.userId, 'onNewTask', 'Revision Required', `Your post "${post.contentTitle}" requires revision.`, id);
+          }
         }
       }
     } catch (err) {
@@ -2190,19 +2320,20 @@ function AppContent() {
     }
   };
 
-  const handleDeletePost = async (id: string): Promise<'deleted' | 'requested' | 'denied' | 'error'> => {
-    if (governanceSettings.restrictDeletionToSupervisor && profile?.role !== 'marketing_supervisor') {
-      toast.error(
-        <div className="flex flex-col gap-1">
-          <div className="font-bold">Access Denied</div>
-          <div className="text-xs opacity-80">Deletion is restricted to Marketing Supervisors only.</div>
-        </div>
-      );
-      return 'denied';
-    }
+  const executeDeletePost = async (id: string): Promise<'deleted' | 'requested' | 'denied' | 'error'> => {
+    setIsDeleting(true);
+    try {
+      if (governanceSettings.restrictDeletionToSupervisor && profile?.role !== 'marketing_supervisor') {
+        toast.error(
+          <div className="flex flex-col gap-1">
+            <div className="font-bold">Access Denied</div>
+            <div className="text-xs opacity-80">Deletion is restricted to Marketing Supervisors only.</div>
+          </div>
+        );
+        return 'denied';
+      }
 
-    if (governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor') {
-      try {
+      if (governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor') {
         await updateDoc(doc(db, 'posts', id), {
           deletionRequested: true,
           requestedBy: profile?.displayName || profile?.email || 'Unknown User',
@@ -2212,26 +2343,39 @@ function AppContent() {
         notifySupervisors('onDeletionRequest', 'New Deletion Request', `User ${profile?.displayName || profile?.email} requested to delete a task.`, id);
         toast.success("Deletion request submitted for supervisor approval.");
         if (editingPost?.id === id) setIsModalOpen(false);
+        setDeletingPostId(null);
         return 'requested';
-      } catch (err) {
-        console.error("Error requesting deletion:", err);
-        toast.error("Failed to submit deletion request.");
-        return 'error';
       }
-    }
 
-    try {
+      // Find post to save to undo stack
+      const postToDelete = posts.find(p => p.id === id);
+      if (postToDelete) {
+        setPostUndoStack(prev => {
+          const next = [...prev, postToDelete];
+          if (next.length > 20) return next.slice(1);
+          return next;
+        });
+        setPostRedoStack([]); // Clear redo stack on new deletion
+      }
+
       await deleteDoc(doc(db, 'posts', id));
       addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
       }
       toast.success("Content deleted successfully.");
+      setDeletingPostId(null);
       return 'deleted';
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `posts/${id}`);
       return 'error';
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleDeletePost = (id: string) => {
+    setDeletingPostId(id);
   };
 
   const handleApproveDeletion = async (id: string) => {
@@ -2638,6 +2782,105 @@ function AppContent() {
     reader.readAsText(file);
   };
 
+  const handleBackupData = async () => {
+    try {
+      const backupData: any = {};
+      const collections = [
+        'posts', 
+        'users', 
+        'notifications', 
+        'concerns', 
+        'roleAssignments', 
+        'settings', 
+        'comments', 
+        'activityLogs', 
+        'pinnedAssets'
+      ];
+      
+      toast.loading('Preparing backup...', { id: 'backup-toast' });
+      
+      for (const colName of collections) {
+        try {
+          const snapshot = await getDocs(collection(db, colName));
+          backupData[colName] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (e) {
+          console.error(`Error backing up collection ${colName}:`, e);
+          // If a collection fails due to permissions, we still want the others
+        }
+      }
+
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const exportFileDefaultName = `marketing_portal_full_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', url);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      URL.revokeObjectURL(url);
+      toast.success('Backup generated and download started', { id: 'backup-toast' });
+    } catch (error) {
+      console.error('Backup failed:', error);
+      toast.error('Failed to generate backup', { id: 'backup-toast' });
+    }
+  };
+
+  const handleRestoreData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('IMPORTANT: Restoring data will attempt to overwrite existing records with matching IDs. This action cannot be easily undone. Proceed?')) {
+       e.target.value = '';
+       return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const toastId = toast.loading('Initializing restore...');
+      try {
+        const backupData = JSON.parse(event.target?.result as string);
+        let restoredCount = 0;
+        let failedCount = 0;
+
+        for (const [colName, docs] of Object.entries(backupData)) {
+          if (!Array.isArray(docs)) continue;
+          
+          toast.loading(`Restoring ${colName}...`, { id: toastId });
+          
+          for (const docData of docs) {
+            try {
+              const { id, ...data } = docData;
+              if (!id) continue;
+              
+              // Clean up data for Firestore (remove any nested serverTimestamps that might have been serialized)
+              // In this case, we just upload as is.
+              await setDoc(doc(db, colName, id), data);
+              restoredCount++;
+            } catch (err) {
+              console.error(`Error restoring doc in ${colName}:`, err);
+              failedCount++;
+            }
+          }
+        }
+
+        toast.success(`Restoration complete! ${restoredCount} records restored. ${failedCount > 0 ? failedCount + ' errors.' : ''}`, { id: toastId });
+        setRefreshKey(prev => prev + 1);
+      } catch (error) {
+        console.error('Restore failed:', error);
+        toast.error('Failed to restore data. The file might be corrupted or in an invalid format.', { id: toastId });
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleRestoreOldData = async () => {
     if (isSeeding) return;
     
@@ -2955,6 +3198,80 @@ function AppContent() {
             </div>
           )}
 
+          {/* Social Channels Section */}
+          {isSidebarExpanded && (socialLinks.facebook || socialLinks.instagram || socialLinks.linkedin || socialLinks.tiktok) && (
+            <div className="px-4 pt-4 pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-0">Social Channels</p>
+                <button 
+                  onClick={() => setIsSocialChannelsExpanded(!isSocialChannelsExpanded)}
+                  className="p-1 hover:bg-slate-700/50 rounded transition-colors text-slate-500 hover:text-white"
+                >
+                  {isSocialChannelsExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <AnimatePresence>
+                {isSocialChannelsExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    {socialLinks.facebook && (
+                      <a 
+                        href={socialLinks.facebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-slate-400 hover:text-[#1877F2] transition-colors group"
+                      >
+                        <Facebook className="w-4 h-4 text-slate-500 group-hover:text-[#1877F2] transition-colors" />
+                        <span className="text-sm font-medium truncate">Facebook</span>
+                      </a>
+                    )}
+                    {socialLinks.instagram && (
+                      <a 
+                        href={socialLinks.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-slate-400 hover:text-[#E4405F] transition-colors group"
+                      >
+                        <Instagram className="w-4 h-4 text-slate-500 group-hover:text-[#E4405F] transition-colors" />
+                        <span className="text-sm font-medium truncate">Instagram</span>
+                      </a>
+                    )}
+                    {socialLinks.linkedin && (
+                      <a 
+                        href={socialLinks.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-slate-400 hover:text-[#0A66C2] transition-colors group"
+                      >
+                        <Linkedin className="w-4 h-4 text-slate-500 group-hover:text-[#0A66C2] transition-colors" />
+                        <span className="text-sm font-medium truncate">LinkedIn</span>
+                      </a>
+                    )}
+                    {socialLinks.tiktok && (
+                      <a 
+                        href={socialLinks.tiktok}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
+                      >
+                        <div className="w-4 h-4 flex items-center justify-center text-slate-500 group-hover:text-white transition-colors">
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                            <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.59-1.01V15.5c0 1.28-.18 2.58-.73 3.74-.72 1.42-2.02 2.59-3.5 3.12-1.35.5-2.87.57-4.25.26-1.38-.32-2.65-1.12-3.52-2.22-1.01-1.28-1.53-2.92-1.48-4.56.05-1.92.83-3.83 2.25-5.13 1.4-1.28 3.32-2.02 5.22-2 1.19.03 2.38.31 3.44.88.01-1.37.01-2.75.01-4.12-.92-.35-1.91-.49-2.88-.42-1.02.05-2.02.32-2.92.81-1.01.56-1.85 1.39-2.43 2.39-.59 1.01-.89 2.15-.9 3.31.01 2.34 1.13 4.6 3.02 5.96 1.44 1.03 3.25 1.48 5.02 1.34 1.78-.14 3.44-1.05 4.41-2.58.55-.86.82-1.87.82-2.89V0z"/>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium truncate">TikTok</span>
+                      </a>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
         </nav>
 
         <div className="mt-auto p-4 pt-2 border-t border-slate-700/50 flex flex-col gap-3">
@@ -3064,11 +3381,13 @@ function AppContent() {
 
             <button 
               onClick={handleManualRefresh}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-500 transition-all duration-300 group flex items-center gap-2"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-500 transition-all duration-300 group flex items-center"
               title="Refresh Data"
             >
               <RefreshCw className={`w-5 h-5 transition-transform duration-500 ${refreshing ? 'animate-spin-once' : 'group-hover:rotate-180'}`} />
-              <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Sync Data</span>
+              <div className="w-0 overflow-hidden group-hover:w-auto transition-all duration-300">
+                <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ml-2">Sync Data</span>
+              </div>
             </button>
 
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
@@ -3077,7 +3396,30 @@ function AppContent() {
               {viewMode === 'social' ? 'Social Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            {/* Undo/Redo Buttons */}
+            <button
+              onClick={handleUndoDelete}
+              disabled={postUndoStack.length === 0}
+              className={`p-2 rounded-lg transition-all flex items-center relative ${postUndoStack.length > 0 ? 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-200 dark:text-slate-800 cursor-not-allowed'}`}
+              title="Undo Delete"
+            >
+              <Undo2 className="w-5 h-5" />
+              {postUndoStack.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-amber-500 text-white rounded-full text-[8px] font-black border border-white dark:border-slate-900 shadow-sm">{postUndoStack.length}</span>
+              )}
+            </button>
+            <button
+              onClick={handleRedoDelete}
+              disabled={postRedoStack.length === 0}
+              className={`p-2 rounded-lg transition-all flex items-center ${postRedoStack.length > 0 ? 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-200 dark:text-slate-800 cursor-not-allowed'}`}
+              title="Redo Delete"
+            >
+              <Redo2 className="w-5 h-5" />
+            </button>
+
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -3301,6 +3643,8 @@ function AppContent() {
                 socialLinks={socialLinks}
                 onUpdateSocialLinks={handleUpdateSocialLinks}
                 onRestore={handleRestoreOldData}
+                onBackupData={handleBackupData}
+                onRestoreData={handleRestoreData}
                 isSeeding={isSeeding}
                 profile={profile}
                 pendingConcernsCount={activeConcernsCount}
@@ -3432,6 +3776,7 @@ function AppContent() {
                       governanceSettings={governanceSettings}
                       profile={profile}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
+                      socialLinks={socialLinks}
                     />
                   )}
                   {viewMode === 'social' && (
@@ -3445,6 +3790,7 @@ function AppContent() {
                       userRole={profile?.role}
                       governanceSettings={governanceSettings}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
+                      socialLinks={socialLinks}
                       handleCreateForDate={(date) => {
                         const dateStr = format(date, 'yyyy-MM-dd');
                         handleCreateForDate(dateStr, true).then(p => {
@@ -3469,6 +3815,7 @@ function AppContent() {
                       userRole={profile?.role}
                       governanceSettings={governanceSettings}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
+                      socialLinks={socialLinks}
                     />
                   )}
                   {viewMode === 'calendar' && (
@@ -3479,6 +3826,7 @@ function AppContent() {
                       handleOpenModal={handleOpenModal}
                       handleOpenShareModal={handleOpenShareModal}
                       handleOpenFBModal={handleOpenFBModal}
+                      socialLinks={socialLinks}
                     />
                   )}
                 </div>
@@ -3491,26 +3839,41 @@ function AppContent() {
       {/* Modal / Form */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div 
+            className={`fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isSidebarMini ? 'left-20' : 'left-64'}`}
+            onClick={() => setIsModalOpen(false)}
+          >
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  {editingPost ? 'Edit Post' : 'Create New Post'}
-                </h2>
+              <div className="flex-none px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-amber-50 rounded-2xl">
+                    {editingPost ? <Pencil className="w-6 h-6 text-amber-600" /> : <Plus className="w-6 h-6 text-amber-600" />}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                      {editingPost ? 'Edit Post Content' : 'Create New Post'}
+                    </h2>
+                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+                      {editingPost ? 'Update details & assets' : 'Plan your social content'}
+                    </p>
+                  </div>
+                </div>
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                  className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all group"
+                  title="Close Modal"
                 >
-                  <X className="w-5 h-5 text-slate-500" />
+                  <X className="w-6 h-6 transition-transform group-hover:rotate-90" />
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto space-y-6">
+              <div className="p-8 overflow-y-auto space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Date</label>
@@ -3732,125 +4095,154 @@ function AppContent() {
                 </div>
 
                 {/* Social Media Redirection */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <label className="text-xs font-medium text-slate-500 uppercase">Publish & Preview</label>
-                  <div className="flex flex-wrap gap-3">
+                <div className="space-y-4 pt-6 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Publish & Preview</label>
+                    <div className="h-px flex-1 bg-slate-100 ml-4"></div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {socialLinks.facebook && (
-                      <div className="flex flex-col gap-2">
+                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 space-y-3 transition-all hover:border-slate-200 hover:bg-white active:scale-[0.98]">
                         <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-[#1877F2]">
+                            <Facebook className="w-5 h-5" />
+                            <span className="text-xs font-black uppercase tracking-wider">Facebook</span>
+                          </div>
+                          {editingPost && <FBStatusBadge post={editingPost} />}
+                        </div>
+                        <div className="flex flex-col gap-2">
                           <a 
                             href={socialLinks.facebook} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#1877F2]/20"
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#1877F2] hover:bg-[#1877F2]/10 rounded-xl text-[11px] font-bold transition-all border border-[#1877F2]/20"
                           >
-                            <Facebook className="w-4 h-4" />
                             View Page
                           </a>
-                          {editingPost && <FBStatusBadge post={editingPost} />}
+                          <button 
+                            onClick={() => {
+                              if (editingPost) {
+                                handleOpenFBModal({
+                                  ...editingPost,
+                                  caption: formData.caption || editingPost.caption,
+                                  creatives: formData.creatives || editingPost.creatives
+                                });
+                              }
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1877F2] text-white hover:bg-[#166fe5] rounded-xl text-[11px] font-bold transition-all shadow-md shadow-[#1877F2]/20"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Post / Schedule
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => {
-                            if (editingPost) {
-                              handleOpenFBModal({
-                                ...editingPost,
-                                caption: formData.caption || editingPost.caption,
-                                creatives: formData.creatives || editingPost.creatives
-                              });
-                            }
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-[#1877F2] text-white hover:bg-[#0e63d1] rounded-xl text-xs font-bold transition-all shadow-sm"
-                        >
-                          <Send className="w-4 h-4" />
-                          Post/Schedule to FB
-                        </button>
                       </div>
                     )}
+
                     {socialLinks.instagram && (
-                      <a 
-                        href={socialLinks.instagram} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#E4405F]/10 text-[#E4405F] hover:bg-[#E4405F] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#E4405F]/20"
-                      >
-                        <Instagram className="w-4 h-4" />
-                        Instagram
-                      </a>
+                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 space-y-3 transition-all hover:border-slate-200 hover:bg-white active:scale-[0.98]">
+                        <div className="flex items-center gap-2 text-[#E4405F]">
+                          <Instagram className="w-5 h-5" />
+                          <span className="text-xs font-black uppercase tracking-wider">Instagram</span>
+                        </div>
+                        <a 
+                          href={socialLinks.instagram} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#E4405F] hover:bg-[#E4405F]/10 rounded-xl text-[11px] font-bold transition-all border border-[#E4405F]/20"
+                        >
+                          View Profile
+                        </a>
+                      </div>
                     )}
+
                     {socialLinks.linkedin && (
-                      <a 
-                        href={socialLinks.linkedin} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#0A66C2]/10 text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white rounded-xl text-xs font-bold transition-all border border-[#0A66C2]/20"
-                      >
-                        <Linkedin className="w-4 h-4" />
-                        LinkedIn
-                      </a>
-                    )}
-                    {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
-                      <p className="text-[10px] text-slate-400 italic">No social links configured in Settings.</p>
+                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 space-y-3 transition-all hover:border-slate-200 hover:bg-white active:scale-[0.98]">
+                        <div className="flex items-center gap-2 text-[#0A66C2]">
+                          <Linkedin className="w-5 h-5" />
+                          <span className="text-xs font-black uppercase tracking-wider">LinkedIn</span>
+                        </div>
+                        <a 
+                          href={socialLinks.linkedin} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#0A66C2] hover:bg-[#0A66C2]/10 rounded-xl text-[11px] font-bold transition-all border border-[#0A66C2]/20"
+                        >
+                          View Page
+                        </a>
+                      </div>
                     )}
                   </div>
+                  {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
+                    <div className="py-6 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest italic">No social links configured</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
+              <div className="px-8 py-5 bg-slate-50/80 backdrop-blur-md border-t border-slate-100 flex items-center justify-end gap-4 min-h-[80px]">
                 {editingPost && (
                   editingPost.deletionRequested ? (
                     profile?.role === 'marketing_supervisor' ? (
                       <div className="flex items-center gap-2 mr-auto">
                         <button 
                           onClick={() => handleApproveDeletion(editingPost.id)}
-                          className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1"
+                          className="px-5 py-2.5 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20 flex items-center gap-2"
                         >
-                          <Check className="w-3 h-3" />
+                          <Check className="w-4 h-4" />
                           Approve
                         </button>
                         <button 
                           onClick={() => handleRejectDeletion(editingPost.id)}
-                          className="px-4 py-2 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+                          className="px-5 py-2.5 bg-white text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all border border-slate-200 flex items-center gap-2"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-4 h-4" />
                           Deny
                         </button>
                       </div>
                   ) : (
-                    <div className="mr-auto flex items-center gap-2">
-                      <div className="flex items-center gap-2 px-3 py-1 bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-100 dark:border-rose-800 transition-colors">
-                        <Clock className="w-3 h-3 animate-pulse" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Deletion Pending Approval</span>
+                    <div className="mr-auto flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 transition-all">
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-nowrap">Deletion Pending Approval</span>
                       </div>
                       <button 
                         onClick={() => handleCancelDeletionRequest(editingPost.id, 'hub')}
-                        className="px-3 py-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-[10px] font-bold uppercase tracking-wider transition-colors"
+                        className="px-4 py-2 text-slate-400 hover:text-rose-600 text-[10px] font-bold uppercase tracking-widest transition-colors"
                       >
-                        Cancel Request
+                        Cancel
                       </button>
                     </div>
                   )
                 ) : (!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor') && (
                     <button 
-                      onClick={() => handleDeletePost(editingPost.id)}
-                      className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors mr-auto flex items-center gap-2"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this post?')) {
+                          handleDeletePost(editingPost.id);
+                        }
+                      }}
+                      className="px-5 py-2.5 text-sm font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all mr-auto flex items-center gap-2 group"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      {governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? 'Request Deletion' : 'Delete Post'}
+                      <Trash2 className="w-4 h-4 group-hover:scale-110" />
+                      {governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? 'Request Deletion' : 'Delete'}
                     </button>
                   )
                 )}
-                <button 
-                  onClick={handleSavePost}
-                  className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold rounded-lg transition-colors shadow-sm"
-                >
-                  Save Post
-                </button>
+                
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSavePost}
+                    className="px-10 py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-black rounded-2xl transition-all shadow-xl shadow-amber-500/20 active:scale-95"
+                  >
+                    {editingPost ? 'Update Post' : 'Create Post'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -3860,65 +4252,57 @@ function AppContent() {
       {/* Share Details Panel */}
       <AnimatePresence>
         {isShareModalOpen && sharingPost && (
-          <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsShareModalOpen(false)}>
+          <div 
+            className={`fixed inset-y-0 right-0 z-[110] flex justify-end bg-slate-900/40 backdrop-blur-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${isSidebarMini ? 'left-20' : 'left-64'}`} 
+            onClick={() => setIsShareModalOpen(false)}
+          >
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col"
+              className="bg-white w-full max-w-4xl h-full shadow-2xl flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 rounded-lg">
-                    <Share className="w-5 h-5 text-indigo-600" />
+              <div className="flex-none px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white z-10 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-50 rounded-2xl">
+                    <Eye className="w-6 h-6 text-indigo-600" />
                   </div>
-                  <h2 className="text-lg font-bold text-slate-900">Post Details</h2>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Content Preview</h2>
+                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Row Details & Media</p>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setIsShareModalOpen(false)}
-                  className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"
+                  className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all group"
+                  title="Close Panel"
                 >
-                  <X className="w-5 h-5 text-slate-500" />
+                  <X className="w-6 h-6 transition-transform group-hover:rotate-90" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                {/* Social Links Section */}
-                <div className="space-y-3">
-                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Social Media Redirection</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {socialLinks.facebook && (
-                      <div className="flex flex-col gap-2 w-full">
-                        <div className="flex items-center justify-between">
-                          <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-lg text-xs font-bold hover:bg-[#1877F2]/20 transition-colors">
-                            <Facebook className="w-4 h-4" /> Facebook Page
-                          </a>
-                          {sharingPost && <FBStatusBadge post={sharingPost} />}
+              <div className="flex-1 overflow-y-auto p-8 space-y-10">
+                {/* Media Assets Section */}
+                {sharingPost.creatives && sharingPost.creatives.length > 0 && (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Media Assets</p>
+                    <div className="grid grid-cols-1 gap-6">
+                      {sharingPost.creatives.map((url, idx) => (
+                        <div key={idx} className="relative group rounded-3xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 transition-all hover:shadow-xl hover:shadow-indigo-500/10">
+                          <img 
+                            src={url} 
+                            alt={`Creative ${idx}`} 
+                            className="w-full h-auto object-contain cursor-pointer transition-transform duration-700"
+                            onClick={() => setPreviewImageIndex({ post: sharingPost, index: idx })}
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
-                      </div>
-                    )}
-                    {socialLinks.instagram && (
-                      <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#E4405F]/10 text-[#E4405F] rounded-lg text-xs font-bold hover:bg-[#E4405F]/20 transition-colors">
-                        <Instagram className="w-4 h-4" /> Instagram
-                      </a>
-                    )}
-                    {socialLinks.linkedin && (
-                      <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-[#0A66C2]/10 text-[#0A66C2] rounded-lg text-xs font-bold hover:bg-[#0A66C2]/20 transition-colors">
-                        <Linkedin className="w-4 h-4" /> LinkedIn
-                      </a>
-                    )}
-                    {socialLinks.tiktok && (
-                      <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-black/10 text-black rounded-lg text-xs font-bold hover:bg-black/20 transition-colors">
-                        <Music2 className="w-4 h-4" /> TikTok
-                      </a>
-                    )}
-                    {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && !socialLinks.tiktok && (
-                      <p className="text-[10px] text-slate-400 italic">No social links configured.</p>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Post Details Section */}
                 <div className="space-y-6">
@@ -3954,37 +4338,67 @@ function AppContent() {
                     </div>
                   </div>
 
-                  {sharingPost.creatives && sharingPost.creatives.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Creatives</p>
-                      <div className="flex flex-wrap gap-2">
-                        {sharingPost.creatives.map((url, idx) => (
-                          <img 
-                            key={idx} 
-                            src={url} 
-                            alt={`Creative ${idx}`} 
-                            className="w-20 h-20 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => setPreviewImageIndex({ post: sharingPost, index: idx })}
-                            referrerPolicy="no-referrer"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <DetailItem label="Visual Ideas" value={sharingPost.visualIdeas} fullWidth isLink />
                   <DetailItem label="Notes" value={sharingPost.notes} fullWidth />
                 </div>
+
+                {/* Publishing Tools section in Preview Panel */}
+                <div className="space-y-4 pt-10 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Publishing & External Links</label>
+                    <div className="h-px flex-1 bg-slate-100 ml-4"></div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {socialLinks.facebook && (
+                      <div className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-4 transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-[#1877F2]">
+                            <Facebook className="w-6 h-6" />
+                            <span className="text-sm font-black uppercase tracking-wider">Facebook</span>
+                          </div>
+                          {sharingPost && <FBStatusBadge post={sharingPost} />}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <a 
+                            href={socialLinks.facebook} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#1877F2] hover:bg-[#1877F2]/5 rounded-2xl text-xs font-bold transition-all border border-[#1877F2]/10"
+                          >
+                            View Live Page
+                          </a>
+                          <button 
+                            onClick={() => handleOpenFBModal(sharingPost)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1877F2] text-white hover:bg-[#166fe5] rounded-2xl text-xs font-black transition-all shadow-lg shadow-[#1877F2]/20 active:scale-95"
+                          >
+                            <Send className="w-4 h-4" />
+                            Post Content
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {socialLinks.instagram && (
+                      <div className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-4 transition-all hover:bg-white hover:shadow-xl hover:shadow-pink-500/5">
+                        <div className="flex items-center gap-3 text-[#E4405F]">
+                          <Instagram className="w-6 h-6" />
+                          <span className="text-sm font-black uppercase tracking-wider">Instagram</span>
+                        </div>
+                        <a 
+                          href={socialLinks.instagram} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#E4405F] hover:bg-[#E4405F]/5 rounded-2xl text-xs font-bold transition-all border border-[#E4405F]/10"
+                        >
+                          View Profile
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-                <button 
-                  onClick={() => setIsShareModalOpen(false)}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm"
-                >
-                  Close Panel
-                </button>
-              </div>
+
             </motion.div>
           </div>
         )}
@@ -4091,6 +4505,18 @@ function AppContent() {
             notifyAll('onPostPublished', title, msg, selectedFBPost.id);
           }
         }}
+      />
+
+      <ConfirmationModal 
+        isOpen={!!deletingPostId}
+        onClose={() => setDeletingPostId(null)}
+        onConfirm={() => deletingPostId && executeDeletePost(deletingPostId)}
+        title={governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? "Confirm Deletion Request" : "Confirm Permanent Deletion"}
+        message={governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? 
+          "Are you sure you want to request the deletion of this content? This will be sent to your supervisor for final approval." : 
+          "This action is irreversible. All associated data will be purged from the system. Do you wish to continue?"}
+        confirmText={governanceSettings.requireDeletionApproval && profile?.role !== 'marketing_supervisor' ? "Request Deletion" : "Delete Content"}
+        isLoading={isDeleting}
       />
     </div>
   );

@@ -28,7 +28,7 @@ interface SocialHubViewProps {
   posts: Post[];
   handleOpenFBModal: (post: Post) => void;
   handleCreateForDate: (date: Date) => void;
-  handleDeletePost: (id: string) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
+  handleDeletePost: (id: string) => void;
   handleDeletePostFromFB?: (post: Post) => Promise<'deleted' | 'requested' | 'denied' | 'error'>;
   canDelete?: boolean;
   governanceSettings?: {
@@ -192,34 +192,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     setConfirmModal({ isOpen: false, type: null, post: null });
   };
 
-  const handleRemoveFromHub = async (post: Post) => {
-    try {
-      const result = await handleDeletePost(post.id);
-      
-      if (result === 'deleted') {
-        setNotification({
-          isOpen: true,
-          title: 'Removed from Hub',
-          message: 'The post was removed from the local planner hub.',
-          type: 'success'
-        });
-      } else if (result === 'requested') {
-        setNotification({
-          isOpen: true,
-          title: 'Removal Requested',
-          message: 'Your removal request has been submitted for supervisor approval.',
-          type: 'success'
-        });
-      }
-    } catch (err) {
-      console.error("Error removing post:", err);
-      setNotification({
-        isOpen: true,
-        title: 'Error',
-        message: 'Failed to remove post from hub.',
-        type: 'error'
-      });
-    }
+  const handleRemoveFromHub = (post: Post) => {
+    handleDeletePost(post.id);
     setConfirmModal({ isOpen: false, type: null, post: null });
   };
 
