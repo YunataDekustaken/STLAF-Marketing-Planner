@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, ChangeEvent, Dispatch, SetStateAction } from 'react';
+import React, { useState, useEffect, useRef, useMemo, ChangeEvent, Dispatch, SetStateAction } from 'react';
 import { 
   Plus, 
   Search, 
@@ -624,14 +624,36 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
 }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
-  const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const allDays = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart, monthEnd]);
+  
+  // Optimization: Pre-filter posts for the current month once
+  const monthPosts = useMemo(() => {
+    const currentMonthStr = format(currentMonth, 'yyyy-MM');
+    return posts.filter(p => p.date && p.date.startsWith(currentMonthStr));
+  }, [posts, currentMonth]);
+
   const visibleColumns = tableColumns.filter(c => c.visible);
 
   // If searching, only show days that have matching posts.
   // Otherwise show all days of the month.
-  const days = searchQuery.trim() 
-    ? allDays.filter(day => posts.some(p => p.date === format(day, 'yyyy-MM-dd')))
-    : allDays;
+  const days = useMemo(() => {
+    if (!searchQuery.trim()) return allDays;
+    return allDays.filter(day => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      return monthPosts.some(p => p.date === dateStr);
+    });
+  }, [allDays, searchQuery, monthPosts]);
+
+  // Pre-group posts for each visible day to avoid filtering in the loop
+  const groupedPosts = useMemo(() => {
+    const map = new Map<string, Post[]>();
+    monthPosts.forEach(p => {
+      if (!p.date) return;
+      if (!map.has(p.date)) map.set(p.date, []);
+      map.get(p.date)!.push(p);
+    });
+    return map;
+  }, [monthPosts]);
 
   const renderCell = (post: Post, colId: ColumnId, day: Date, pIdx: number) => {
     const isToday = isSameDay(day, new Date());
@@ -959,7 +981,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {days.map((day) => {
                   const dateStr = format(day, 'yyyy-MM-dd');
-                  const dayPosts = posts.filter(p => p.date === dateStr);
+                  const dayPosts = groupedPosts.get(dateStr) || [];
                   const isToday = isSameDay(day, new Date());
  
                   if (dayPosts.length === 0) {
@@ -1436,11 +1458,17 @@ function AppContent() {
     const post = posts.find(p => p.id === postId);
     
     if (post && post.date) {
-      // Clear filters that might hide the post
+      const toastId = 'scroll-toast';
+      
+      // Step 1: Switch View if in social hub
+      const wasInSocial = viewMode === 'social';
+      if (wasInSocial) setViewMode('list');
+
+      // Step 2: Clear filters that might hide the post
       if (statusFilter !== 'All') setStatusFilter('All');
       if (searchQuery !== '') setSearchQuery('');
 
-      // Robust date parsing to avoid timezone shifts
+      // Step 3: Switch Month if necessary
       const [year, month, day] = post.date.split('-').map(Number);
       const targetMonthDate = new Date(year, month - 1, 1);
       
@@ -1451,20 +1479,18 @@ function AppContent() {
         setCurrentMonth(targetMonthDate);
       }
       
-      // If we are in social hub, we might want to switch back to a content view
-      if (viewMode === 'social') {
-        setViewMode('list');
-      }
-      
-      // Wait for DOM to update after state changes
+      // Step 4: Wait for DOM to update and scrolls
+      const waitTime = isDifferentMonth || wasInSocial ? 600 : 100;
       setTimeout(() => {
         const element = document.getElementById(`post-${postId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           setHighlightedPostId(postId);
           setTimeout(() => setHighlightedPostId(null), 3000);
+        } else {
+          console.warn(`Post element post-${postId} not found after month switch`);
         }
-      }, isDifferentMonth || viewMode === 'social' ? 500 : 100);
+      }, waitTime);
     }
   };
 
