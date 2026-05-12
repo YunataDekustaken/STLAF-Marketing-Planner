@@ -2491,10 +2491,8 @@ function AppContent() {
         // BUT wait, I can call the server API directly with fetch.
         
         try {
-          const response = await fetch('/api/facebook/delete-post', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ postId: post.fbPostId })
+          const response = await fetch(`/api/facebook-post/${post.fbPostId}`, {
+            method: 'DELETE',
           });
           
           if (!response.ok) throw new Error('Failed to delete from Facebook API');
