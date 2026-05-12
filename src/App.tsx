@@ -622,14 +622,6 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   userRole,
   newlyImportedIds
 }) => {
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  useEffect(() => {
-    setIsTransitioning(true);
-    const timer = setTimeout(() => setIsTransitioning(false), 750);
-    return () => clearTimeout(timer);
-  }, [currentMonth]);
-
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const allDays = useMemo(() => eachDayOfInterval({ start: monthStart, end: monthEnd }), [monthStart, monthEnd]);
@@ -969,29 +961,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
         onDragEnd={handleDragEnd}
         modifiers={[restrictToHorizontalAxis]}
       >
-        <div className="overflow-x-auto no-scrollbar relative min-h-[400px]">
-          <AnimatePresence>
-            {isTransitioning && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-40 flex items-center justify-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] transition-all"
-              >
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 border-4 border-amber-500/10 border-t-amber-500 rounded-full animate-spin"></div>
-                    <Loader2 className="w-6 h-6 text-amber-500 animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-[0.2em] animate-pulse">Switching Month</span>
-                    <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Optimizing Content...</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+        <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
               <thead className="sticky top-0 z-30 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-300">
                 <SortableContext 
