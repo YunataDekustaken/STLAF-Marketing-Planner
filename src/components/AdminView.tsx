@@ -105,16 +105,35 @@ export const AdminView = ({
   const [isLoadingFBInfo, setIsLoadingFBInfo] = useState(false);
 
   useEffect(() => {
-    const fetchFBPageInfo = async () => {
+    const fetchFBPageInfo = async (isRetry = false) => {
       setIsLoadingFBInfo(true);
       try {
-        const response = await fetch('/api/facebook-page-info');
+        const response = await fetch('/api/facebook-page-info', {
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          const text = await response.text();
+          console.warn(`FB API returned ${response.status}: ${text}`);
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setFbPageInfo(data.pageInfo);
+        } else {
+          console.info("FB Page info fetch returned success:false", data.error);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch FB Page info:", err);
+        // If it's a transient network error, try once after a delay
+        if (!isRetry && err.message === 'Failed to fetch') {
+          console.log("Retrying FB Page info fetch in 2 seconds...");
+          setTimeout(() => fetchFBPageInfo(true), 2000);
+        }
       } finally {
         setIsLoadingFBInfo(false);
       }
@@ -775,7 +794,19 @@ export const AdminView = ({
                         onClick={async () => {
                           setIsLoadingFBInfo(true);
                           try {
-                            const response = await fetch('/api/facebook-page-info');
+                            const response = await fetch('/api/facebook-page-info', {
+                              headers: {
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
+                              }
+                            });
+                            
+                            if (!response.ok) {
+                              const text = await response.text();
+                              toast.error(`Server Error (${response.status})`);
+                              return;
+                            }
+
                             const data = await response.json();
                             if (data.success) {
                               setFbPageInfo(data.pageInfo);
@@ -784,8 +815,9 @@ export const AdminView = ({
                               setFbPageInfo(null);
                               toast.error(data.error || "Connection failed.");
                             }
-                          } catch (err) {
-                            toast.error("Failed to refresh status.");
+                          } catch (err: any) {
+                            console.error("Refresh fetch error:", err);
+                            toast.error(err.message === 'Failed to fetch' ? "Network error: Connection refused" : "Failed to refresh status.");
                           } finally {
                             setIsLoadingFBInfo(false);
                           }

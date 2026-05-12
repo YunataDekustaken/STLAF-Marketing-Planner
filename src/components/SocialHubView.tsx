@@ -16,6 +16,7 @@ import {
   Loader2,
   Check,
   X,
+  RefreshCcw,
   ArrowUpDown,
   ListFilter
 } from 'lucide-react';
@@ -330,10 +331,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               <div className="relative" ref={sortMenuRef}>
                 <button
                   onClick={() => setIsSortOpen(!isSortOpen)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all group ${
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all group ${
                     isSortOpen 
-                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500/50 text-amber-600 dark:text-amber-400 shadow-sm' 
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-sm'
+                      ? 'text-amber-600 dark:text-amber-400' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <ListFilter className={`w-3.5 h-3.5 transition-colors ${isSortOpen ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'}`} />
@@ -379,9 +380,9 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               </div>
             )}
 
-            <div className="flex items-center gap-2 px-4 py-2 bg-transparent rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-              <span className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide whitespace-nowrap">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+              <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                 {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
               </span>
             </div>
