@@ -98,6 +98,7 @@ import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
 import { SocialHubView } from './components/SocialHubView';
 import { ProfileView } from './components/ProfileView';
+import { ImportResolutionModal } from './components/ImportResolutionModal';
 import { FacebookPostModal } from './components/FacebookPostModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { HelpView } from './components/HelpView';
@@ -285,6 +286,7 @@ interface KanbanViewProps {
     linkedin: string;
     tiktok: string;
   };
+  newlyImportedIds: Set<string>;
 }
 
 const KanbanView: React.FC<KanbanViewProps> = ({ 
@@ -300,7 +302,8 @@ const KanbanView: React.FC<KanbanViewProps> = ({
   userRole,
   governanceSettings,
   canDelete,
-  socialLinks
+  socialLinks,
+  newlyImportedIds
 }) => {
   const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled', 'Published'];
   
@@ -334,13 +337,26 @@ const KanbanView: React.FC<KanbanViewProps> = ({
             </div>
             
             <div className="flex flex-col gap-3">
-              {statusPosts.map(post => (
+                  {statusPosts.map(post => (
                 <motion.div 
                   layout
+                  initial={newlyImportedIds.has(post.id) ? { scale: 0.9, opacity: 0 } : false}
+                  animate={{ scale: 1, opacity: 1 }}
                   key={post.id}
+                  id={`post-${post.id}`}
                   onClick={() => handleOpenModal(post)}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-500 transition-all cursor-pointer group"
+                  className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group ${
+                    newlyImportedIds.has(post.id)
+                      ? 'ring-2 ring-amber-500 border-amber-500 shadow-amber-100 dark:shadow-amber-900/20'
+                      : 'border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-500'
+                  }`}
                 >
+                  {newlyImportedIds.has(post.id) && (
+                    <div className="mb-2 text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest animate-pulse flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Newly Imported
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded">
@@ -565,6 +581,7 @@ interface MonthlyTableViewProps {
   };
   profile: UserProfile | null;
   userRole?: string;
+  newlyImportedIds: Set<string>;
 }
 
 const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
@@ -602,7 +619,8 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   socialLinks,
   governanceSettings,
   profile,
-  userRole
+  userRole,
+  newlyImportedIds
 }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -621,8 +639,17 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
     switch (colId) {
       case 'date':
         return pIdx === 0 ? (
-          <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}>
-            {format(day, 'EEE, MMM d')}
+          <div className="flex flex-col gap-1">
+            <div className={`text-xs font-bold ${isToday ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}>
+              {format(day, 'EEE, MMM d')}
+            </div>
+            {newlyImportedIds.has(post.id) && (
+              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest animate-pulse">Newly Imported</span>
+            )}
+          </div>
+        ) : newlyImportedIds.has(post.id) ? (
+          <div className="flex flex-col gap-1">
+             <span className="text-[9px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest animate-pulse">Newly Imported</span>
           </div>
         ) : null;
       case 'contentTitle':
@@ -964,7 +991,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <tr 
                       key={post.id} 
                       id={`post-${post.id}`}
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01]' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01]' : ''} ${newlyImportedIds.has(post.id) ? 'bg-amber-50/70 dark:bg-amber-900/20 ring-1 ring-amber-500/50' : ''}`}
                     >
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
@@ -1244,6 +1271,9 @@ function AppContent() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Initializing Workspace');
   const [isSeeding, setIsSeeding] = useState(false);
+  const [importItems, setImportItems] = useState<any[]>([]);
+  const [showImportResolution, setShowImportResolution] = useState(false);
+  const [newlyImportedIds, setNewlyImportedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -1401,6 +1431,42 @@ function AppContent() {
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
+
+  const scrollToPost = (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    
+    if (post && post.date) {
+      // Clear filters that might hide the post
+      if (statusFilter !== 'All') setStatusFilter('All');
+      if (searchQuery !== '') setSearchQuery('');
+
+      // Robust date parsing to avoid timezone shifts
+      const [year, month, day] = post.date.split('-').map(Number);
+      const targetMonthDate = new Date(year, month - 1, 1);
+      
+      const isDifferentMonth = targetMonthDate.getMonth() !== currentMonth.getMonth() || 
+                              targetMonthDate.getFullYear() !== currentMonth.getFullYear();
+      
+      if (isDifferentMonth) {
+        setCurrentMonth(targetMonthDate);
+      }
+      
+      // If we are in social hub, we might want to switch back to a content view
+      if (viewMode === 'social') {
+        setViewMode('list');
+      }
+      
+      // Wait for DOM to update after state changes
+      setTimeout(() => {
+        const element = document.getElementById(`post-${postId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedPostId(postId);
+          setTimeout(() => setHighlightedPostId(null), 3000);
+        }
+      }, isDifferentMonth || viewMode === 'social' ? 500 : 100);
+    }
+  };
 
   const addNotification = async (type: keyof typeof notifSettings, title: string, message: string, postId?: string) => {
     if (!notifSettings[type]) return;
@@ -2731,55 +2797,241 @@ function AppContent() {
       Papa.parse(csv, {
         header: true,
         skipEmptyLines: true,
-        complete: async (results) => {
+        complete: (results) => {
           const { data } = results;
-          if (data.length === 0) {
-            alert('CSV is empty');
+          if (!data || data.length === 0) {
+            toast.error('CSV is empty or invalid');
             return;
           }
 
-          setIsSeeding(true);
           try {
-            const batch = writeBatch(db);
-            const targetUserId = user?.uid || 'guest_user';
+            // Helper to normalize various CSV date formats into YYYY-MM-DD
+            const normalizeDate = (rawDate: string): string => {
+              if (!rawDate) return new Date().toISOString().split('T')[0];
+              const trimmed = String(rawDate).trim();
+              
+              // Try standard Date parsing
+              const d = new Date(trimmed);
+              if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+              }
 
-            data.forEach((row: any) => {
-              const id = Math.random().toString(36).substr(2, 9);
-              // Normalize data from CSV row
-              const postData: Post = {
-                id,
-                date: row.Date || row.date || new Date().toISOString().split('T')[0],
-                contentTitle: row.Title || row.contentTitle || CONTENT_TITLES[0],
-                contentType: row.Type || row.contentType || CONTENT_TYPES[0],
-                topicTheme: row.Theme || row.topicTheme || '',
-                subtopic: row.Subtopic || row.subtopic || '',
-                caption: row.Caption || row.caption || '',
-                format: row.Format || row.format || FORMATS[0],
-                status: (row.Status || row.status || 'Not Started') as PostStatus,
-                funnelStatus: row.Funnel || row.funnelStatus || FUNNEL_STATUSES[0],
-                visualIdeas: row['Visual Ideas'] || row.visualIdeas || '',
-                notes: row.Notes || row.notes || '',
-                userId: targetUserId,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              };
-              batch.set(doc(db, 'posts', id), postData);
+              // Handle "1-APR-26" or "01-APR-2026"
+              const parts = trimmed.split(/[-/ ]/);
+              if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const monthStr = parts[1].toUpperCase();
+                let year = parts[2];
+                
+                if (year.length === 2) year = '20' + year;
+                
+                const months: Record<string, string> = {
+                  'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+                  'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+                };
+                
+                const month = months[monthStr] || (parseInt(monthStr) ? monthStr.padStart(2, '0') : '01');
+                return `${year}-${month}-${day}`;
+              }
+              
+              return trimmed; // Fallback
+            };
+
+            // Strictly filter out empty or whitespace-only rows (Excel often adds these)
+            const validDataRows = (data as any[]).filter(row => {
+              return Object.values(row).some(val => 
+                val !== null && 
+                val !== undefined && 
+                String(val).trim() !== ''
+              );
             });
 
-            await batch.commit();
-            addNotification('onNewTask', 'Import Successful', `${data.length} tasks have been imported.`);
-            alert(`Successfully imported ${data.length} tasks.`);
-          } catch (err) {
-            console.error('Import Error:', err);
-            alert('Error during import. Check if your CSV format is correct.');
-          } finally {
-            setIsSeeding(false);
-            if (e.target) e.target.value = '';
+            if (validDataRows.length === 0) {
+              toast.error('No valid content found in CSV');
+              return;
+            }
+
+            // Pre-calculate maps for fast lookup O(N)
+            const exactMatchMap = new Map<string, Post>();
+            const dateMatchMap = new Map<string, Post>();
+            
+            posts.forEach(p => {
+              const pDate = p.date || '';
+              const exactKey = `${pDate}|${(p.contentTitle || '').toLowerCase()}|${(p.contentType || '').toLowerCase()}`;
+              exactMatchMap.set(exactKey, p);
+              if (pDate && !dateMatchMap.has(pDate)) {
+                dateMatchMap.set(pDate, p);
+              }
+            });
+
+            const analyzedItems = validDataRows.map((row: any) => {
+              const rawDate = row.Date || row.date || '';
+              const date = normalizeDate(rawDate);
+              const title = row.Title || row.contentTitle || row.title || '';
+              const type = row.Type || row.contentType || row.type || '';
+              
+              const exactKey = `${date}|${title.toLowerCase()}|${type.toLowerCase()}`;
+              const existingPost = exactMatchMap.get(exactKey);
+              
+              // Check for date conflicts (same date, different content)
+              const dateConflict = !existingPost ? dateMatchMap.get(date) : null;
+              
+              let status: 'new' | 'duplicate' | 'date_conflict' = 'new';
+              if (existingPost) status = 'duplicate';
+              else if (dateConflict) status = 'date_conflict';
+              
+              const id = Math.random().toString(36).substr(2, 9);
+              const post: Post = {
+                id,
+                date,
+                contentTitle: title || (CONTENT_TITLES && CONTENT_TITLES[0]) || 'Untitled',
+                contentType: type || (CONTENT_TYPES && CONTENT_TYPES[0]) || 'Post',
+                topicTheme: row.Theme || row.topicTheme || row.theme || '',
+                subtopic: row.Subtopic || row.subtopic || '',
+                caption: row.Caption || row.caption || row.text || '',
+                format: row.Format || row.format || (FORMATS && FORMATS[0]) || 'Post',
+                status: (row.Status || row.status || 'Not Started') as PostStatus,
+                funnelStatus: row.Funnel || row.funnelStatus || (FUNNEL_STATUSES && FUNNEL_STATUSES[0]) || '',
+                visualIdeas: row['Visual Ideas'] || row.visualIdeas || '',
+                notes: row.Notes || row.notes || '',
+                userId: user?.uid || 'guest_user',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              } as Post;
+
+              return {
+                id,
+                post,
+                status,
+                existingPost: (existingPost as Post) || (dateConflict as Post) || undefined,
+                resolution: status === 'new' ? 'add_as_new' : 'skip'
+              };
+            });
+
+            setImportItems(analyzedItems);
+            setShowImportResolution(true);
+          } catch (error) {
+            console.error('Import processing error:', error);
+            toast.error('Error processing CSV data');
           }
+        },
+        error: (err) => {
+          console.error('CSV Parse Error:', err);
+          toast.error('Failed to parse CSV file');
         }
       });
     };
+    reader.onerror = () => {
+      toast.error('Failed to read file');
+    };
     reader.readAsText(file);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleProcessImport = async () => {
+    setIsSeeding(true);
+    const toastId = toast.loading('Processing import...');
+    
+    try {
+      const itemsToProcess = importItems.filter(item => item.resolution !== 'skip');
+      
+      if (itemsToProcess.length === 0) {
+        toast.dismiss(toastId);
+        setShowImportResolution(false);
+        setIsSeeding(false);
+        return;
+      }
+
+      // Process in chunks of 450 to avoid Firestore batch limit (500)
+      const chunkSize = 450;
+      for (let i = 0; i < itemsToProcess.length; i += chunkSize) {
+        const chunk = itemsToProcess.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        
+        chunk.forEach(item => {
+          if (item.resolution === 'overwrite' && item.existingPost) {
+            // Merge with existing but prefer CSV data for main fields
+            const { id, createdAt, updatedAt, ...restPost } = item.post;
+            batch.set(doc(db, 'posts', item.existingPost.id), {
+              ...restPost,
+              id: item.existingPost.id,
+              // Keep original creator metadata if it exists
+              userId: item.existingPost.userId || restPost.userId,
+              createdAt: item.existingPost.createdAt || serverTimestamp(),
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          } else if (item.resolution === 'add_as_new') {
+            batch.set(doc(db, 'posts', item.id), item.post);
+          }
+        });
+        
+        await batch.commit();
+      }
+
+      const importedTitles = itemsToProcess.slice(0, 3).map(i => i.post.contentTitle).join(', ');
+      const moreCount = itemsToProcess.length > 3 ? ` and ${itemsToProcess.length - 3} more` : '';
+      
+      const importedIds = new Set<string>(itemsToProcess.map(item => item.resolution === 'overwrite' ? item.existingPost.id : item.id));
+      setNewlyImportedIds(importedIds);
+      
+      const firstId = Array.from(importedIds)[0] as string | undefined;
+
+      // Auto-clear highlight after 15 seconds
+      setTimeout(() => {
+        setNewlyImportedIds(prev => {
+          const next = new Set(prev);
+          importedIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 15000);
+
+      toast.success(
+        (t) => (
+          <div className="flex flex-col gap-1 pr-2">
+            <div className="font-bold">Import Successful!</div>
+            <div className="text-xs opacity-90">{importedTitles}{moreCount}</div>
+            <div className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mt-1">Items highlighted in gold</div>
+            {firstId && (
+              <button 
+                onClick={() => {
+                  scrollToPost(firstId);
+                  toast.dismiss(t.id);
+                }}
+                className="mt-2 px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-colors self-start"
+              >
+                Show Me
+              </button>
+            )}
+          </div>
+        ),
+        { id: toastId, duration: 6000 }
+      );
+      
+      addNotification('onNewTask', 'Import Successful', `Imported ${itemsToProcess.length} items: ${importedTitles}${moreCount}.`, firstId);
+      setShowImportResolution(false);
+      setImportItems([]);
+    } catch (err) {
+      console.error('Batch commit error:', err);
+      toast.error('Error during import process. Some items may not have been saved.', { id: toastId });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleBulkUpdateResolutions = (type: 'all_new' | 'all_overwrite' | 'all_skip' | 'all_keep_both') => {
+    setImportItems(prev => prev.map(item => {
+      if (type === 'all_new' && item.status === 'new') return { ...item, resolution: 'add_as_new' };
+      if (type === 'all_overwrite' && item.status !== 'new') return { ...item, resolution: 'overwrite' };
+      if (type === 'all_skip') return { ...item, resolution: 'skip' };
+      if (type === 'all_keep_both' && item.status !== 'new') return { ...item, resolution: 'add_as_new' };
+      return item;
+    }));
+  };
+
+  const handleUpdateImportItem = (id: string, resolution: any) => {
+    setImportItems(prev => prev.map(item => 
+      item.id === id ? { ...item, resolution } : item
+    ));
   };
 
   const handleBackupData = async () => {
@@ -3503,10 +3755,10 @@ function AppContent() {
           </div>
         </header>
 
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className={`flex-1 ${viewMode === 'social' ? 'p-4 sm:p-6 sm:pt-4 pt-2' : 'p-8'} overflow-y-auto`}>
           <div className="max-w-7xl mx-auto">
             {/* Page Title & Actions */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-6">
+            <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${viewMode === 'social' ? 'mb-4' : 'mb-6'}`}>
 
               {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && viewMode !== 'help' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
@@ -3724,7 +3976,7 @@ function AppContent() {
                         </button>
                       </div>
                         <select 
-                          className="flex-1 sm:flex-initial bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm"
+                          className="flex-1 sm:flex-initial bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm transition-colors duration-300"
                           value={statusFilter}
                           onChange={(e) => setStatusFilter(e.target.value as any)}
                         >
@@ -3733,6 +3985,7 @@ function AppContent() {
                           <option value="In Progress">In Progress</option>
                           <option value="Ready for Review">Ready for Review</option>
                           <option value="Scheduled">Scheduled</option>
+                          <option value="Published">Published</option>
                         </select>
                       </div>
                     </div>
@@ -3777,6 +4030,7 @@ function AppContent() {
                       profile={profile}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
                       socialLinks={socialLinks}
+                      newlyImportedIds={newlyImportedIds}
                     />
                   )}
                   {viewMode === 'social' && (
@@ -3816,6 +4070,7 @@ function AppContent() {
                       governanceSettings={governanceSettings}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
                       socialLinks={socialLinks}
+                      newlyImportedIds={newlyImportedIds}
                     />
                   )}
                   {viewMode === 'calendar' && (
@@ -4505,6 +4760,19 @@ function AppContent() {
             notifyAll('onPostPublished', title, msg, selectedFBPost.id);
           }
         }}
+      />
+
+      <ImportResolutionModal 
+        isOpen={showImportResolution}
+        items={importItems}
+        onClose={() => {
+          setShowImportResolution(false);
+          setImportItems([]);
+        }}
+        onUpdateItem={handleUpdateImportItem}
+        onBulkUpdate={handleBulkUpdateResolutions}
+        onProcess={handleProcessImport}
+        isProcessing={isSeeding}
       />
 
       <ConfirmationModal 

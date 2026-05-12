@@ -15,8 +15,11 @@ import {
   Trash2,
   Loader2,
   Check,
-  X
+  X,
+  ArrowUpDown,
+  ListFilter
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
@@ -55,12 +58,41 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   handleCancelDeletionRequest,
   userRole
 }) => {
-  const publishedPosts = posts.filter(p => p.status === 'Published').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const scheduledPosts = posts.filter(p => p.status === 'Scheduled').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
   const [activeTab, setActiveTab] = useState<'overview' | 'published' | 'scheduled' | 'history'>('overview');
+  const [publishedSort, setPublishedSort] = useState<'posted' | 'planned' | 'title'>('posted');
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<SocialHistoryEntry[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const publishedPosts = posts
+    .filter(p => p.status === 'Published')
+    .sort((a, b) => {
+      if (publishedSort === 'posted') {
+        const timeA = a.fbPublishedTime ? new Date(a.fbPublishedTime).getTime() : (a.updatedAt?.toMillis?.() || new Date(a.date).getTime());
+        const timeB = b.fbPublishedTime ? new Date(b.fbPublishedTime).getTime() : (b.updatedAt?.toMillis?.() || new Date(b.date).getTime());
+        return timeB - timeA;
+      }
+      if (publishedSort === 'planned') {
+        const timeA = new Date(a.date).getTime();
+        const timeB = new Date(b.date).getTime();
+        if (timeB === timeA) {
+          // Inner sort by updatedAt if dates are same
+          const upA = a.updatedAt?.toMillis?.() || 0;
+          const upB = b.updatedAt?.toMillis?.() || 0;
+          return upB - upA;
+        }
+        return timeB - timeA;
+      }
+      return (a.contentTitle || '').localeCompare(b.contentTitle || '');
+    });
+
+  const scheduledPosts = posts
+    .filter(p => p.status === 'Scheduled')
+    .sort((a, b) => {
+      const timeA = a.fbScheduledTime ? new Date(a.fbScheduledTime).getTime() : new Date(a.date).getTime();
+      const timeB = b.fbScheduledTime ? new Date(b.fbScheduledTime).getTime() : new Date(b.date).getTime();
+      return timeA - timeB;
+    });
 
   // Modal States
   const [confirmModal, setConfirmModal] = useState<{
@@ -78,16 +110,20 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
   const { deleteFacebookPost, isLoading: isDeleting, error: fbError } = useFacebookPost();
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const sortMenuRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (openMenuId && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpenMenuId(null);
       }
+      if (isSortOpen && sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setIsSortOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [openMenuId]);
+  }, [openMenuId, isSortOpen]);
 
   useEffect(() => {
     if (fbError) {
@@ -218,7 +254,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
+    <div className="max-w-7xl mx-auto p-4 pt-0 sm:p-6 sm:pt-0 space-y-6 sm:space-y-8">
       {/* Confirmation Modals */}
       <ConfirmationModal
         isOpen={confirmModal.isOpen && confirmModal.type === 'fb'}
@@ -251,38 +287,106 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
       {/* Header section */}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
         <div className="space-y-1">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Social Media Hub</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base">Manage your direct postings and track published content.</p>
         </div>
         <button 
           onClick={() => handleCreateForDate(new Date())}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-amber-200 shrink-0"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-amber-200 shrink-0"
         >
           <Plus className="w-5 h-5" />
           Create Direct Post
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl w-fit overflow-x-auto no-scrollbar border border-slate-200 dark:border-slate-800 transition-colors duration-300">
-        {['overview', 'scheduled', 'published', 'history'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => {
-              setActiveTab(tab as any);
-              setOpenMenuId(null);
-            }}
-            className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
-              activeTab === tab 
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/5' 
-                : 'text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Interaction Bar: Tabs + Sort/Counter */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/50 dark:bg-slate-800/40 rounded-lg w-fit overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/50 transition-colors duration-300">
+          {['overview', 'scheduled', 'published', 'history'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab as any);
+                setOpenMenuId(null);
+              }}
+              className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                activeTab === tab 
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700/50' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Right side controls for Published/Scheduled */}
+        {(activeTab === 'published' || activeTab === 'scheduled') && (
+          <div className="flex items-center gap-2 self-end md:self-auto">
+            {activeTab === 'published' && publishedPosts.length > 0 && (
+              <div className="relative" ref={sortMenuRef}>
+                <button
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all group ${
+                    isSortOpen 
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500/50 text-amber-600 dark:text-amber-400 shadow-sm' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-sm'
+                  }`}
+                >
+                  <ListFilter className={`w-3.5 h-3.5 transition-colors ${isSortOpen ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'}`} />
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Sort</span>
+                </button>
+
+                <AnimatePresence>
+                  {isSortOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                      className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-slate-100 dark:border-slate-800 z-[110] overflow-hidden p-2.5"
+                    >
+                      <div className="px-4 py-3 border-b border-slate-50 dark:border-slate-800 mb-1.5">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sort Published By</span>
+                      </div>
+                      {[
+                        { id: 'posted', label: 'Recently Posted' },
+                        { id: 'planned', label: 'Planned Date' },
+                        { id: 'title', label: 'Title' }
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => {
+                            setPublishedSort(s.id as any);
+                            setIsSortOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-bold transition-all ${
+                            publishedSort === s.id 
+                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' 
+                              : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          {s.label}
+                          {publishedSort === s.id && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-transparent rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+              <span className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide whitespace-nowrap">
+                {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {activeTab === 'overview' && (
@@ -292,10 +396,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <button 
                 onClick={() => setActiveTab('published')}
-                className="w-full text-left bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-900/30 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group/card"
+                className="w-full text-left bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 p-6 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group/card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl group-hover/card:bg-blue-500/30 transition-colors">
+                  <div className="p-3 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg group-hover/card:bg-blue-500/30 transition-colors">
                     <Send className="w-6 h-6 text-blue-500" />
                   </div>
                   <span className="text-2xl font-black text-slate-900 dark:text-white">{publishedPosts.length}</span>
@@ -305,10 +409,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               </button>
               <button 
                 onClick={() => setActiveTab('scheduled')}
-                className="w-full text-left bg-gradient-to-br from-white to-amber-50/30 dark:from-slate-900 dark:to-amber-900/10 p-6 rounded-[2rem] border border-amber-100 dark:border-amber-900/30 shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-700 transition-all cursor-pointer group/card"
+                className="w-full text-left bg-gradient-to-br from-white to-amber-50/30 dark:from-slate-900 dark:to-amber-900/10 p-6 rounded-xl border border-amber-100 dark:border-amber-900/30 shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-700 transition-all cursor-pointer group/card"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-2xl group-hover/card:bg-amber-500/30 transition-colors">
+                  <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-lg group-hover/card:bg-amber-500/30 transition-colors">
                     <Clock className="w-6 h-6 text-amber-500" />
                   </div>
                   <span className="text-2xl font-black text-slate-900 dark:text-white">{scheduledPosts.length}</span>
@@ -319,7 +423,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
               <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 dark:text-white">Recent Audit Trail</h3>
                 <button onClick={() => setActiveTab('history')} className="text-xs font-bold text-amber-600 hover:underline">View All</button>
@@ -361,13 +465,13 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
           {/* Social Platform Status */}
           <div className="space-y-6">
-            <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl">
+            <div className="bg-slate-900 rounded-xl p-6 text-white shadow-xl">
               <h3 className="font-bold mb-6 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-amber-500" />
                 Connected Apps
               </h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-white/10 rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/5">
                   <div className="flex items-center gap-3">
                     <Facebook className="w-5 h-5 text-[#1877F2]" />
                     <div className="flex flex-col">
@@ -378,7 +482,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-white/10 rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/5">
                   <div className="flex items-center gap-3">
                     <Instagram className="w-5 h-5 text-pink-500" />
                     <div className="flex flex-col">
@@ -400,7 +504,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       )}
 
       {activeTab === 'history' && (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-300">
           <div className="p-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/20 flex items-center gap-3">
             <History className="w-6 h-6 text-slate-800 dark:text-slate-200" />
             <h3 className="font-bold text-slate-900 dark:text-white">Full Audit History</h3>
@@ -463,10 +567,11 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       )}
 
       {(activeTab === 'published' || activeTab === 'scheduled') && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(activeTab === 'published' ? publishedPosts : scheduledPosts).length > 0 ? (
-            (activeTab === 'published' ? publishedPosts : scheduledPosts).map(post => (
-              <div key={post.id} className="group bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all p-5 flex flex-col h-full">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(activeTab === 'published' ? publishedPosts : scheduledPosts).length > 0 ? (
+              (activeTab === 'published' ? publishedPosts : scheduledPosts).map(post => (
+              <div key={post.id} id={`post-${post.id}`} className="group bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all p-5 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4 relative">
                   <div className="flex items-center gap-2">
                     <div className="p-2 bg-slate-900 dark:bg-slate-800 rounded-lg border border-slate-700">
@@ -506,7 +611,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                         />
                         <div 
                           ref={menuRef}
-                          className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 z-[100] overflow-hidden py-1"
+                          className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-100 dark:border-slate-800 z-[100] overflow-hidden py-1"
                         >
                           <button 
                             onClick={(e) => {
@@ -638,7 +743,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               </div>
             ))
           ) : (
-            <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="col-span-full py-20 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <Send className="w-8 h-8 text-slate-300 dark:text-slate-700" />
               </div>
@@ -646,6 +751,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
               <p className="text-sm text-slate-500 dark:text-slate-400">Planned contents will appear here once they are {activeTab === 'published' ? 'posted' : 'scheduled'}.</p>
             </div>
           )}
+          </div>
         </div>
       )}
     </div>
