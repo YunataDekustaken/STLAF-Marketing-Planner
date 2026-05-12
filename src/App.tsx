@@ -68,7 +68,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
-import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, setMonth, setYear } from 'date-fns';
 import {
   DndContext,
   closestCenter,
@@ -449,9 +449,10 @@ interface CalendarViewProps {
     linkedin: string;
     tiktok: string;
   };
+  highlightedPostId: string | null;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal, handleOpenFBModal, socialLinks }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handleCreateForDate, handleOpenModal, handleOpenShareModal, handleOpenFBModal, socialLinks, highlightedPostId }) => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -500,8 +501,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                 {dayPosts.map(post => (
                   <div 
                     key={post.id}
+                    id={`post-${post.id}`}
                     onClick={() => handleOpenModal(post)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer font-medium border ${STATUS_COLORS[post.status]} dark:border-slate-700 hover:brightness-95 transition-all flex flex-col gap-0.5 group/p shadow-sm hover:shadow-md`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded cursor-pointer font-medium border ${STATUS_COLORS[post.status]} dark:border-slate-700 hover:brightness-95 transition-all flex flex-col gap-0.5 group/p shadow-sm hover:shadow-md ${highlightedPostId === post.id ? 'ring-2 ring-amber-500 scale-105 z-10' : ''}`}
                     title={`${post.contentTitle}: ${post.topicTheme || "Untitled"}\nStatus: ${post.status}${
                       post.fbStatus === 'scheduled' ? `\nFacebook Scheduled: ${post.fbScheduledTime ? format(new Date(post.fbScheduledTime), 'PPP p') : 'Pending'}` : 
                       post.fbStatus === 'posted' ? `\nFacebook Published: ${post.fbPublishedTime ? format(new Date(post.fbPublishedTime), 'PPP p') : 'Completed'}` : ''
@@ -628,8 +630,10 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   
   // Optimization: Pre-filter posts for the current month once
   const monthPosts = useMemo(() => {
-    const currentMonthStr = format(currentMonth, 'yyyy-MM');
-    return posts.filter(p => p.date && p.date.startsWith(currentMonthStr));
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth() + 1;
+    const prefix = `${year}-${month.toString().padStart(2, '0')}`;
+    return posts.filter(p => p.date && p.date.startsWith(prefix));
   }, [posts, currentMonth]);
 
   const visibleColumns = tableColumns.filter(c => c.visible);
@@ -1203,6 +1207,11 @@ export default function App() {
   );
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 function AppContent() {
   const { user, profile, loading: authLoading, login, logout, updateProfile } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -1300,6 +1309,19 @@ function AppContent() {
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close month picker when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
+        setShowMonthPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -1454,12 +1476,23 @@ function AppContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
 
-  const scrollToPost = (postId: string) => {
-    const post = posts.find(p => p.id === postId);
+  const scrollToPost = async (postId: string) => {
+    let post = posts.find(p => p.id === postId);
     
+    // If not found in current local state (e.g. it's from a different month)
+    if (!post) {
+      try {
+        const docRef = doc(db, 'posts', postId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          post = { id: docSnap.id, ...docSnap.data() } as Post;
+        }
+      } catch (err) {
+        console.error("Error fetching post to scroll to:", err);
+      }
+    }
+
     if (post && post.date) {
-      const toastId = 'scroll-toast';
-      
       // Step 1: Switch View if in social hub
       const wasInSocial = viewMode === 'social';
       if (wasInSocial) setViewMode('list');
@@ -1470,25 +1503,33 @@ function AppContent() {
 
       // Step 3: Switch Month if necessary
       const [year, month, day] = post.date.split('-').map(Number);
-      const targetMonthDate = new Date(year, month - 1, 1);
+      const targetMonthDate = startOfMonth(new Date(year, month - 1, 1));
       
-      const isDifferentMonth = targetMonthDate.getMonth() !== currentMonth.getMonth() || 
-                              targetMonthDate.getFullYear() !== currentMonth.getFullYear();
+      const isDifferentMonth = format(targetMonthDate, 'yyyy-MM') !== format(currentMonth, 'yyyy-MM');
       
       if (isDifferentMonth) {
         setCurrentMonth(targetMonthDate);
       }
       
-      // Step 4: Wait for DOM to update and scrolls
-      const waitTime = isDifferentMonth || wasInSocial ? 600 : 100;
+      // Step 4: Wait for DOM to update and then scroll
+      const waitTime = isDifferentMonth || wasInSocial ? 1000 : 150;
+      
       setTimeout(() => {
         const element = document.getElementById(`post-${postId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           setHighlightedPostId(postId);
-          setTimeout(() => setHighlightedPostId(null), 3000);
+          setTimeout(() => setHighlightedPostId(null), 4000);
         } else {
-          console.warn(`Post element post-${postId} not found after month switch`);
+          // Retry logic for cases where month switch was slow
+          setTimeout(() => {
+            const retryElement = document.getElementById(`post-${postId}`);
+            if (retryElement) {
+              retryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              setHighlightedPostId(postId);
+              setTimeout(() => setHighlightedPostId(null), 4000);
+            }
+          }, 500);
         }
       }, waitTime);
     }
@@ -1859,30 +1900,8 @@ function AppContent() {
     }
     
     if (notif.postId) {
-      // Switch to list view if not already there
-      if (viewMode !== 'list') {
-        setViewMode('list');
-      }
-      
-      // Clear search query to ensure the post is visible
-      setSearchQuery('');
-      
-      // Highlight the post
-      setHighlightedPostId(notif.postId);
+      scrollToPost(notif.postId);
       setShowNotifications(false);
-      
-      // Scroll to the post
-      setTimeout(() => {
-        const element = document.getElementById(`post-${notif.postId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-
-      // Clear highlight after 3 seconds
-      setTimeout(() => {
-        setHighlightedPostId(null);
-      }, 3000);
     }
   };
 
@@ -3009,27 +3028,7 @@ function AppContent() {
         });
       }, 15000);
 
-      toast.success(
-        (t) => (
-          <div className="flex flex-col gap-1 pr-2">
-            <div className="font-bold">Import Successful!</div>
-            <div className="text-xs opacity-90">{importedTitles}{moreCount}</div>
-            <div className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mt-1">Items highlighted in gold</div>
-            {firstId && (
-              <button 
-                onClick={() => {
-                  scrollToPost(firstId);
-                  toast.dismiss(t.id);
-                }}
-                className="mt-2 px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-colors self-start"
-              >
-                Show Me
-              </button>
-            )}
-          </div>
-        ),
-        { id: toastId, duration: 6000 }
-      );
+      toast.success(`Imported: ${importedTitles}${moreCount}`, { id: toastId });
       
       addNotification('onNewTask', 'Import Successful', `Imported ${itemsToProcess.length} items: ${importedTitles}${moreCount}.`, firstId);
       setShowImportResolution(false);
@@ -3947,8 +3946,71 @@ function AppContent() {
                       <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
                         <ChevronLeft className="w-4 h-4 sm:w-5 h-5" />
                       </button>
-                      <div className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm">
-                        {format(currentMonth, 'MMMM yyyy')}
+                      <div className="relative" ref={monthPickerRef}>
+                        <button 
+                          onClick={() => setShowMonthPicker(!showMonthPicker)}
+                          className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm hover:bg-slate-50 py-1 rounded-lg transition-all flex items-center justify-center gap-1 group"
+                        >
+                          {format(currentMonth, 'MMMM yyyy')}
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500 transition-transform ${showMonthPicker ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showMonthPicker && (
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 p-4">
+                            <div className="flex flex-col gap-4">
+                              {/* Year Selector */}
+                              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                                <button 
+                                  onClick={() => setCurrentMonth(prev => setYear(prev, prev.getFullYear() - 1))}
+                                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-600"
+                                >
+                                  <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <span className="font-bold text-slate-800 dark:text-slate-200">{currentMonth.getFullYear()}</span>
+                                <button 
+                                  onClick={() => setCurrentMonth(prev => setYear(prev, prev.getFullYear() + 1))}
+                                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-600"
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              {/* Months Grid */}
+                              <div className="grid grid-cols-3 gap-2">
+                                {MONTH_NAMES.map((name, i) => {
+                                  const isSelected = currentMonth.getMonth() === i;
+                                  return (
+                                    <button
+                                      key={name}
+                                      onClick={() => {
+                                        setCurrentMonth(prev => setMonth(prev, i));
+                                        setShowMonthPicker(false);
+                                      }}
+                                      className={`py-2 text-[11px] font-bold rounded-xl transition-all ${
+                                        isSelected 
+                                          ? 'bg-amber-500 text-white shadow-md' 
+                                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                      }`}
+                                    >
+                                      {name.substring(0, 3)}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Quick Actions */}
+                              <button 
+                                onClick={() => {
+                                  setCurrentMonth(new Date());
+                                  setShowMonthPicker(false);
+                                }}
+                                className="w-full mt-2 py-2 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-all"
+                              >
+                                Go to Current Month
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
                         <ChevronRight className="w-4 h-4 sm:w-5 h-5" />
@@ -4106,6 +4168,7 @@ function AppContent() {
                       handleOpenShareModal={handleOpenShareModal}
                       handleOpenFBModal={handleOpenFBModal}
                       socialLinks={socialLinks}
+                      highlightedPostId={highlightedPostId}
                     />
                   )}
                 </div>
