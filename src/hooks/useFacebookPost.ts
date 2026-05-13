@@ -100,7 +100,38 @@ export function useFacebookPost() {
       setIsLoading(false);
     }
   };
+  
+  const updateFacebookPost = async (fbPostId: string, newMessage: string) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
 
+    try {
+      const response = await fetch(`/api/facebook-post/${fbPostId}/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: newMessage }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSuccess(true);
+        return true;
+      } else {
+        setError(result.error || 'Failed to update post on Facebook');
+        return false;
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const resetStatus = () => {
     setIsLoading(false);
     setError(null);
@@ -111,6 +142,7 @@ export function useFacebookPost() {
   return {
     postToFacebook,
     deleteFacebookPost,
+    updateFacebookPost,
     isLoading,
     error,
     success,

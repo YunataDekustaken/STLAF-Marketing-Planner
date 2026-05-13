@@ -11,7 +11,9 @@ import {
   AlertCircle,
   ExternalLink,
   Clock,
-  Trash2
+  Trash2,
+  PencilLine,
+  Save
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
@@ -52,8 +54,11 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const isAlreadyPublished = post?.fbStatus === 'posted' && post?.fbPostId;
   const isAlreadyScheduled = post?.fbStatus === 'scheduled' && post?.fbPostId;
   
-  const { postToFacebook, deleteFacebookPost, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
+  const { postToFacebook, deleteFacebookPost, updateFacebookPost, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
   const { postToInstagram, isLoading: isIGLoading, error: igError, success: igSuccess, postId: igPostIdRes, resetStatus: resetIGStatus } = useInstagramPost();
+
+  const [isEditingCaption, setIsEditingCaption] = useState(false);
+  const [editedCaption, setEditedCaption] = useState('');
 
   const isLoading = isFBLoading || isIGLoading;
   const error = fbError || igError;
@@ -81,6 +86,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       setScheduleTime('');
       setIsDeleting(false);
       setIsConfirmDeleteOpen(false);
+      setIsEditingCaption(false);
+      setEditedCaption(post.caption || '');
       setPostToFB(!post.fbPostId); // Default true if not already posted
       setPostToIG(false); // Default false initially
     }
@@ -227,7 +234,54 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
     setIsDeleting(false);
     setIsConfirmDeleteOpen(false);
   };
+  
+  const handleUpdateCaption = async () => {
+    if (!post?.fbPostId) return;
+    
+    const result = await updateFacebookPost(post.fbPostId, editedCaption);
+    
+    if (result) {
+      try {
+        const postRef = doc(db, 'posts', post.id);
+        await updateDoc(postRef, {
+          caption: editedCaption,
+          updatedAt: serverTimestamp()
+        });
 
+        // Log to history
+        await addDoc(collection(db, 'history'), {
+          postId: post.id,
+          contentTitle: post.topicTheme || post.contentTitle,
+          action: 'update_caption',
+          platform: 'facebook',
+          timestamp: serverTimestamp(),
+          userEmail: auth.currentUser?.email || 'unknown',
+          userName: auth.currentUser?.displayName || 'Unknown User',
+          details: 'Updated post caption on Facebook'
+        });
+
+        setNotification({
+          isOpen: true,
+          title: 'Updated',
+          message: 'Post caption successfully updated on Facebook.',
+          type: 'success'
+        });
+        
+        setCaption(editedCaption);
+        setIsEditingCaption(false);
+      } catch (err) {
+        console.error("Error updating post caption in Firestore:", err);
+      }
+    } else {
+      setNotification({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to update caption on Facebook.',
+        type: 'error'
+      });
+    }
+  };
+  
   const handleSchedule = async () => {
     setValidationError(null);
     if (!postToFB && !postToIG) {
@@ -358,9 +412,54 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                 </div>
                 
                 {/* Simplified Post Preview in View Mode */}
-                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-left transition-colors duration-300 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-                  <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3 mb-3 leading-relaxed">{caption}</p>
-                  {creatives.length > 0 && (
+                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-left transition-colors duration-300 text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Caption</span>
+                    {!isEditingCaption && (
+                      <button 
+                        onClick={() => setIsEditingCaption(true)}
+                        className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-lg text-slate-400 hover:text-[#1877F2] transition-all"
+                        title="Edit Caption"
+                      >
+                        <PencilLine className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingCaption ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editedCaption}
+                        onChange={(e) => setEditedCaption(e.target.value)}
+                        className="w-full min-h-[120px] p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-[#1877F2] transition-all outline-none text-sm text-slate-700 dark:text-slate-100 resize-none font-medium leading-relaxed"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={handleUpdateCaption}
+                          disabled={isLoading || editedCaption === caption}
+                          className="flex-1 flex items-center justify-center gap-2 py-2 bg-[#1877F2] text-white rounded-lg text-xs font-bold hover:bg-[#0e63d1] transition-all disabled:opacity-50"
+                        >
+                          {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                          Save Changes
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setIsEditingCaption(false);
+                            setEditedCaption(caption);
+                          }}
+                          disabled={isLoading}
+                          className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3 mb-3 leading-relaxed">{caption}</p>
+                  )}
+
+                  {creatives.length > 0 && !isEditingCaption && (
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       {creatives.map((url, i) => (
                         <img key={i} src={url} className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0" alt="" />

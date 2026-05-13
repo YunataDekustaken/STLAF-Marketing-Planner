@@ -240,6 +240,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       case 'schedule': return 'bg-amber-50 text-amber-600';
       case 'auto_publish': return 'bg-blue-50 text-blue-600';
       case 'delete': return 'bg-rose-50 text-rose-600';
+      case 'update_caption': return 'bg-indigo-50 text-indigo-600';
       default: return 'bg-slate-50 text-slate-600';
     }
   };
@@ -250,6 +251,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       case 'schedule': return 'FB Scheduled';
       case 'auto_publish': return 'System Auto-Publish';
       case 'delete': return 'Deleted from FB';
+      case 'update_caption': return 'Caption Updated';
       default: return action;
     }
   };

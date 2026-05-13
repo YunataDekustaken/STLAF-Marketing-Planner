@@ -444,6 +444,38 @@ async function startServer() {
     }
   });
 
+  // Update Facebook Post API Route (Caption/Message only)
+  app.post("/api/facebook-post/:postId/update", async (req, res) => {
+    const { postId } = req.params;
+    const { message } = req.body;
+    const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+
+    if (!PAGE_ACCESS_TOKEN) {
+      return res.status(500).json({ 
+        success: false, 
+        error: "Facebook credentials (FACEBOOK_PAGE_ACCESS_TOKEN) are not configured on the server." 
+      });
+    }
+
+    try {
+      const endpoint = `https://graph.facebook.com/v19.0/${postId}`;
+      const response = await axios.post(endpoint, {
+        message: message,
+        access_token: PAGE_ACCESS_TOKEN
+      });
+      
+      return res.json({ success: true, data: response.data });
+    } catch (error: any) {
+      const errorData = error.response?.data?.error || {};
+      console.error("Facebook API Update Error:", JSON.stringify(errorData, null, 2));
+      
+      res.status(error.response?.status || 500).json({ 
+        success: false, 
+        error: errorData.message || "Failed to update post on Facebook"
+      });
+    }
+  });
+
   // Fetch Facebook Page Info API Route
   app.get("/api/facebook-page-info", async (req, res) => {
     const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
