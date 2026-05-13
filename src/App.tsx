@@ -1653,13 +1653,16 @@ function AppContent() {
     const checkScheduledPosts = async () => {
       try {
         const now = new Date();
+        
+        // 1. Check regular app-status scheduled posts
         const scheduledQuery = query(collection(db, 'posts'), where('status', '==', 'Ready to Post'));
         const snap = await getDocs(scheduledQuery);
         
         let updatesCount = 0;
 
         for (const docSnap of snap.docs) {
-          const postDate = new Date(docSnap.data().date);
+          const data = docSnap.data();
+          const postDate = new Date(data.date);
           if (postDate <= now) {
             const postRef = doc(db, 'posts', docSnap.id);
             const historyRef = doc(collection(db, 'history'));
@@ -1684,6 +1687,48 @@ function AppContent() {
               });
             });
             updatesCount++;
+          }
+        }
+
+        // 2. Check Facebook scheduled posts
+        const fbScheduledQuery = query(collection(db, 'posts'), where('fbStatus', '==', 'scheduled'));
+        const fbSnap = await getDocs(fbScheduledQuery);
+
+        for (const docSnap of fbSnap.docs) {
+          const data = docSnap.data();
+          if (data.fbScheduledTime) {
+            const scheduledTime = new Date(data.fbScheduledTime);
+            if (scheduledTime <= now) {
+              const postRef = doc(db, 'posts', docSnap.id);
+              const historyRef = doc(collection(db, 'history'));
+
+              await runTransaction(db, async (transaction) => {
+                const freshSnap = await transaction.get(postRef);
+                if (!freshSnap.exists()) return;
+                
+                const freshData = freshSnap.data();
+                if (freshData.fbStatus !== 'scheduled') return; // already updated
+
+                transaction.update(postRef, { 
+                  fbStatus: 'posted',
+                  fbPublishedTime: freshData.fbScheduledTime,
+                  status: 'Completed', // Sync with main status too
+                  updatedAt: serverTimestamp()
+                });
+                
+                transaction.set(historyRef, {
+                  postId: docSnap.id,
+                  contentTitle: freshData.contentTitle,
+                  action: 'auto_publish',
+                  platform: 'facebook',
+                  timestamp: serverTimestamp(),
+                  userEmail: 'system-automation@gemini.ai',
+                  userName: 'System Auto-Publish',
+                  details: `Facebook scheduled time ${freshData.fbScheduledTime} reached.`
+                });
+              });
+              updatesCount++;
+            }
           }
         }
 
