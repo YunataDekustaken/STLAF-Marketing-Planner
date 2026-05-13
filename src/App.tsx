@@ -1679,7 +1679,7 @@ function AppContent() {
               transaction.update(postRef, { status: 'Completed' });
               transaction.set(historyRef, {
                 postId: docSnap.id,
-                contentTitle: freshData.contentTitle,
+                contentTitle: freshData.topicTheme || freshData.contentTitle,
                 action: 'auto_publish',
                 platform: 'system',
                 timestamp: serverTimestamp(),
@@ -1720,7 +1720,7 @@ function AppContent() {
                 
                 transaction.set(historyRef, {
                   postId: docSnap.id,
-                  contentTitle: freshData.contentTitle,
+                  contentTitle: freshData.topicTheme || freshData.contentTitle,
                   action: 'auto_publish',
                   platform: 'facebook',
                   timestamp: serverTimestamp(),

@@ -112,7 +112,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       // Log to history
       await addDoc(collection(db, 'history'), {
         postId: post.id,
-        contentTitle: post.contentTitle,
+        contentTitle: post.topicTheme || post.contentTitle,
         action: fbStatus === 'scheduled' ? 'schedule' : 'manual_publish',
         platform: postToFB && postToIG ? 'meta' : (postToFB ? 'facebook' : 'instagram'),
         timestamp: serverTimestamp(),
@@ -193,7 +193,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
         // Log to history
         await addDoc(collection(db, 'history'), {
           postId: post.id,
-          contentTitle: post.contentTitle,
+          contentTitle: post.topicTheme || post.contentTitle,
           action: 'delete',
           platform: 'facebook',
           timestamp: serverTimestamp(),

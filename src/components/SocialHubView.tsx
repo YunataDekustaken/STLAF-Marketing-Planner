@@ -201,7 +201,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
         await addDoc(collection(db, 'history'), {
           postId: post.id,
-          contentTitle: post.contentTitle,
+          contentTitle: post.topicTheme || post.contentTitle,
           action: 'delete',
           platform: 'facebook',
           timestamp: serverTimestamp(),
@@ -695,7 +695,24 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                 </div>
                 
                 <div className="flex-1">
-                  <h4 className="font-bold text-slate-900 dark:text-white mb-2 line-clamp-1">{post.contentTitle}</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-white mb-2 line-clamp-1">{post.topicTheme || post.contentTitle}</h4>
+                  
+                  {/* Image Previews */}
+                  {post.creatives && post.creatives.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">
+                      {post.creatives.map((url, index) => (
+                        <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-800 shadow-sm bg-slate-50 dark:bg-slate-950">
+                          <img 
+                            src={url} 
+                            alt={`Preview ${index + 1}`} 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="relative group/caption">
                     <p className={`text-sm text-slate-500 dark:text-slate-400 mb-4 leading-relaxed transition-all ${openMenuId === `caption_${post.id}` ? '' : 'line-clamp-3'}`}>
                       {post.caption || "No caption provided for this post."}
