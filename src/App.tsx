@@ -36,6 +36,7 @@ import {
   Columns,
   ChevronLeft,
   ChevronRight,
+  CheckSquare,
   Copy,
   Check,
   GripVertical,
@@ -569,10 +570,16 @@ interface MonthlyTableViewProps {
   actionMenuOpenId: string | null;
   setActionMenuOpenId: Dispatch<SetStateAction<string | null>>;
   handleDuplicatePost: (post: Post) => Promise<void>;
+  handleBulkUpdate: (field: keyof Post, value: any) => Promise<void>;
+  handleBulkDelete: () => Promise<void>;
   searchQuery?: string;
   columnSettingsRef: React.RefObject<HTMLDivElement>;
   highlightedPostId: string | null;
   canDelete?: boolean;
+  selectedPostIds: string[];
+  setSelectedPostIds: Dispatch<SetStateAction<string[]>>;
+  isSelectionMode: boolean;
+  setIsSelectionMode: (mode: boolean) => void;
   socialLinks: {
     facebook: string;
     instagram: string;
@@ -616,10 +623,16 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   actionMenuOpenId,
   setActionMenuOpenId,
   handleDuplicatePost,
+  handleBulkUpdate,
+  handleBulkDelete,
   searchQuery = '',
   columnSettingsRef,
   highlightedPostId,
   canDelete = true,
+  selectedPostIds,
+  setSelectedPostIds,
+  isSelectionMode,
+  setIsSelectionMode,
   socialLinks,
   governanceSettings,
   profile,
@@ -660,6 +673,22 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
     });
     return map;
   }, [monthPosts]);
+
+  const toggleSelectAll = () => {
+    if (selectedPostIds.length === monthPosts.length) {
+      setSelectedPostIds([]);
+    } else {
+      setSelectedPostIds(monthPosts.map(p => p.id));
+    }
+  };
+
+  const toggleSelectPost = (postId: string) => {
+    setSelectedPostIds(prev => 
+      prev.includes(postId) 
+        ? prev.filter(id => id !== postId) 
+        : [...prev, postId]
+    );
+  };
 
   const renderCell = (post: Post, colId: ColumnId, day: Date, pIdx: number) => {
     const isToday = isSameDay(day, new Date());
@@ -888,14 +917,30 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           <LayoutList className="w-4 h-4 text-slate-400 dark:text-slate-500" />
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Monthly Table</span>
         </div>
-        <div className="relative" ref={columnSettingsRef}>
+        <div className="flex items-center gap-2">
           <button 
-            onClick={() => setShowColumnSettings(!showColumnSettings)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode);
+              if (isSelectionMode) setSelectedPostIds([]);
+            }}
+            title={isSelectionMode ? 'Cancel Selection' : 'Batch Selection'}
+            className={`flex items-center justify-center p-1.5 rounded-lg text-xs font-medium transition-all border ${
+              isSelectionMode 
+                ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 shadow-sm' 
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
           >
-            <Columns className="w-3.5 h-3.5" />
-            Columns
+            <CheckSquare className="w-3.5 h-3.5" />
           </button>
+
+          <div className="relative" ref={columnSettingsRef}>
+            <button 
+              onClick={() => setShowColumnSettings(!showColumnSettings)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+            >
+              <Columns className="w-3.5 h-3.5" />
+              Columns
+            </button>
           
           <AnimatePresence>
             {showColumnSettings && (
@@ -960,6 +1005,55 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
           </AnimatePresence>
         </div>
       </div>
+    </div>
+      
+      <AnimatePresence>
+        {selectedPostIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-500">
+                {selectedPostIds.length} items selected
+              </span>
+              <div className="h-4 w-px bg-amber-200 dark:bg-amber-800" />
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500">Change Status:</span>
+                <select 
+                  onChange={(e) => handleBulkUpdate('status', e.target.value)}
+                  className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select status...</option>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Ready for Review">Ready for Review</option>
+                  <option value="Ready to Post">Ready to Post</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setSelectedPostIds([])}
+                className="text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleBulkDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors border border-red-100 dark:border-red-900/30"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <DndContext 
         sensors={sensors}
@@ -975,6 +1069,18 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                   strategy={horizontalListSortingStrategy}
                 >
                   <tr className="bg-slate-50/50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                    {isSelectionMode && (
+                      <th className="w-12 px-4 py-3 sticky left-0 bg-slate-50 dark:bg-slate-900 z-[35] border-r border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                        <div className="flex items-center justify-center">
+                          <input 
+                            type="checkbox" 
+                            checked={monthPosts.length > 0 && selectedPostIds.length === monthPosts.length}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </div>
+                      </th>
+                    )}
                     {visibleColumns.map((col) => (
                       <SortableHeader key={col.id.toString()} col={col} isLocked={isColumnsLocked} />
                     ))}
@@ -993,6 +1099,9 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                   if (dayPosts.length === 0) {
                     return (
                       <tr key={dateStr} className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''}`}>
+                        {isSelectionMode && (
+                          <td className="w-12 px-4 py-3 sticky left-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-20 border-r border-slate-100 dark:border-slate-800 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors"></td>
+                        )}
                         {visibleColumns.map((col, idx) => (
                           <td key={col.id} className="px-4 py-3 align-top">
                             {col.id === 'date' ? (
@@ -1019,8 +1128,20 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                     <tr 
                       key={post.id} 
                       id={`post-${post.id}`}
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01]' : ''} ${newlyImportedIds.has(post.id) ? 'bg-amber-50/70 dark:bg-amber-900/20 ring-1 ring-amber-500/50' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-500 ${isToday ? 'bg-amber-50/40 dark:bg-amber-900/10 border-l-4 border-l-amber-400' : ''} ${highlightedPostId === post.id ? 'bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-500 ring-inset shadow-lg scale-[1.01]' : ''} ${newlyImportedIds.has(post.id) ? 'bg-amber-50/70 dark:bg-amber-900/20 ring-1 ring-amber-500/50' : ''} ${selectedPostIds.includes(post.id) ? 'bg-amber-50/50 dark:bg-amber-900/20' : ''}`}
                     >
+                      {isSelectionMode && (
+                        <td className={`w-12 px-4 py-3 sticky left-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-20 border-r border-slate-100 dark:border-slate-800 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/80 transition-colors ${selectedPostIds.includes(post.id) ? '!bg-amber-50 dark:!bg-amber-900/30' : ''}`}>
+                          <div className="flex items-center justify-center">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedPostIds.includes(post.id)}
+                              onChange={() => toggleSelectPost(post.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                            />
+                          </div>
+                        </td>
+                      )}
                       {visibleColumns.map((col) => (
                         <td key={col.id} className="px-4 py-3 align-top">
                           {renderCell(post, col.id, day, pIdx)}
@@ -1307,8 +1428,11 @@ function AppContent() {
   const [importItems, setImportItems] = useState<any[]>([]);
   const [showImportResolution, setShowImportResolution] = useState(false);
   const [newlyImportedIds, setNewlyImportedIds] = useState<Set<string>>(new Set());
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
+  const [contentTypeFilter, setContentTypeFilter] = useState<string | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -1477,6 +1601,10 @@ function AppContent() {
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [quickLinks, setQuickLinks] = useState<{id: string, name: string, url: string}[]>([]);
+
+  useEffect(() => {
+    setSelectedPostIds([]);
+  }, [currentMonth]);
 
   const scrollToPost = async (postId: string) => {
     let post = posts.find(p => p.id === postId);
@@ -2217,8 +2345,9 @@ function AppContent() {
       (post.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     
     const matchesStatus = statusFilter === 'All' || post.status === statusFilter;
+    const matchesContentType = contentTypeFilter === 'All' || post.contentType === contentTypeFilter;
     
-    return !post.isDirectPost && matchesMonth && matchesSearch && matchesStatus;
+    return !post.isDirectPost && matchesMonth && matchesSearch && matchesStatus && matchesContentType;
   });
 
   const handleUpdatePostInline = async (id: string, field: keyof Post, value: any) => {
@@ -2395,6 +2524,47 @@ function AppContent() {
       toast.error('Failed to duplicate post');
     }
     setActionMenuOpenId(null);
+  };
+
+  const handleBulkUpdate = async (field: keyof Post, value: any) => {
+    if (selectedPostIds.length === 0) return;
+    
+    const batch = writeBatch(db);
+    selectedPostIds.forEach(id => {
+      batch.update(doc(db, 'posts', id), {
+        [field]: value,
+        updatedAt: serverTimestamp()
+      });
+    });
+
+    try {
+      await batch.commit();
+      toast.success(`Updated status for ${selectedPostIds.length} items`);
+      setSelectedPostIds([]);
+    } catch (err) {
+      console.error("Bulk update error:", err);
+      toast.error("Failed to perform bulk update.");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPostIds.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedPostIds.length} items?`)) return;
+
+    const batch = writeBatch(db);
+    selectedPostIds.forEach(id => {
+      batch.delete(doc(db, 'posts', id));
+    });
+
+    try {
+      await batch.commit();
+      toast.success(`Deleted ${selectedPostIds.length} items`);
+      setSelectedPostIds([]);
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      toast.error("Failed to perform bulk deletion.");
+    }
   };
 
   const handleOpenModal = (post?: Post) => {
@@ -3452,14 +3622,16 @@ function AppContent() {
             {isSidebarExpanded && <span className="whitespace-nowrap">Calendar View</span>}
           </button>
 
-          <button 
-            onClick={() => setViewMode('social')}
-            className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'social' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-            title={isSidebarMini ? "Social Media Hub" : ""}
-          >
-            <Share2 className="w-5 h-5 shrink-0" />
-            {isSidebarExpanded && <span className="whitespace-nowrap">Social Media Hub</span>}
-          </button>
+          <div className="pt-4 mt-4 border-t border-slate-700/50">
+            <button 
+              onClick={() => setViewMode('social')}
+              className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'social' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+              title={isSidebarMini ? "Social Media Hub" : ""}
+            >
+              <Share2 className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && <span className="whitespace-nowrap">Social Media Hub</span>}
+            </button>
+          </div>
           
           {profile?.role === 'marketing_supervisor' && (
             <div className="pt-4 mt-4 border-t border-slate-700/50">
@@ -3935,12 +4107,12 @@ function AppContent() {
                   <button 
                     onClick={() => handleOpenModal()}
                     className="group relative flex items-center gap-1.5 sm:gap-2 bg-amber-500 hover:bg-amber-600 text-slate-900 p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shrink-0"
-                    title="Create New Post"
+                    title="Add Content"
                   >
                     <Plus className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
-                    <span className="hidden sm:inline">Create Post</span>
+                    <span className="hidden sm:inline">Add Content</span>
                     <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-amber-600 text-slate-900 text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      Create New Post
+                      Add Content
                     </span>
                   </button>
                 </div>
@@ -4108,6 +4280,8 @@ function AppContent() {
                           <CalendarIcon className="w-3.5 h-3.5" />
                         </button>
                       </div>
+                      
+                      <div className="flex items-center gap-2">
                         <select 
                           className="flex-1 sm:flex-initial bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm transition-colors duration-300"
                           value={statusFilter}
@@ -4120,8 +4294,19 @@ function AppContent() {
                           <option value="Ready to Post">Ready to Post</option>
                           <option value="Completed">Completed</option>
                         </select>
+                        <select 
+                          className="flex-1 sm:flex-initial bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm transition-colors duration-300"
+                          value={contentTypeFilter}
+                          onChange={(e) => setContentTypeFilter(e.target.value)}
+                        >
+                          <option value="All">All Types</option>
+                          {CONTENT_TYPES.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
+                  </div>
                 )}
 
                 {/* View Content */}
@@ -4155,6 +4340,8 @@ function AppContent() {
                       actionMenuOpenId={actionMenuOpenId}
                       setActionMenuOpenId={setActionMenuOpenId}
                       handleDuplicatePost={handleDuplicatePost}
+                      handleBulkUpdate={handleBulkUpdate}
+                      handleBulkDelete={handleBulkDelete}
                       userRole={profile?.role}
                       searchQuery={searchQuery}
                       columnSettingsRef={columnSettingsRef}
@@ -4162,6 +4349,10 @@ function AppContent() {
                       governanceSettings={governanceSettings}
                       profile={profile}
                       canDelete={!governanceSettings.restrictDeletionToSupervisor || profile?.role === 'marketing_supervisor'}
+                      selectedPostIds={selectedPostIds}
+                      setSelectedPostIds={setSelectedPostIds}
+                      isSelectionMode={isSelectionMode}
+                      setIsSelectionMode={setIsSelectionMode}
                       socialLinks={socialLinks}
                       newlyImportedIds={newlyImportedIds}
                     />
@@ -4246,7 +4437,7 @@ function AppContent() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                      {editingPost ? 'Edit Post Content' : 'Create New Post'}
+                      {editingPost ? 'Edit Post Content' : 'Add Content'}
                     </h2>
                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
                       {editingPost ? 'Update details & assets' : 'Plan your social content'}
@@ -4630,7 +4821,7 @@ function AppContent() {
                     onClick={handleSavePost}
                     className="px-10 py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-black rounded-2xl transition-all shadow-xl shadow-amber-500/20 active:scale-95"
                   >
-                    {editingPost ? 'Update Post' : 'Create Post'}
+                    {editingPost ? 'Update Post' : 'Add Content'}
                   </button>
                 </div>
               </div>

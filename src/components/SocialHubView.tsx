@@ -16,13 +16,16 @@ import {
   Loader2,
   Check,
   X,
+  Search,
   RefreshCcw,
   PencilLine,
   ArrowUpDown,
-  ListFilter
+  ListFilter,
+  Filter,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { db, auth } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useFacebookPost } from '../hooks/useFacebookPost';
@@ -66,8 +69,59 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   const [historyEntries, setHistoryEntries] = useState<SocialHistoryEntry[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const publishedPosts = posts
-    .filter(p => p.fbPostId && p.fbStatus === 'posted')
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    fbStatus: 'all',
+    contentType: 'all',
+    postStatus: 'all',
+    startDate: '',
+    endDate: ''
+  });
+
+  const filterMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const applyFilters = (postList: Post[]) => {
+    return postList.filter(post => {
+      // Search Query
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        post.contentTitle?.toLowerCase().includes(searchLower) ||
+        post.caption?.toLowerCase().includes(searchLower) ||
+        post.topicTheme?.toLowerCase().includes(searchLower);
+
+      // FB Status
+      const matchesFBStatus = filters.fbStatus === 'all' || post.fbStatus === filters.fbStatus;
+
+      // Content Type
+      const matchesContentType = filters.contentType === 'all' || post.contentType === filters.contentType;
+
+      // Post Status
+      const matchesPostStatus = filters.postStatus === 'all' || post.status === filters.postStatus;
+
+      // Date Range
+      let matchesDate = true;
+      if (filters.startDate || filters.endDate) {
+        const postDate = new Date(post.date);
+        const start = filters.startDate ? startOfDay(new Date(filters.startDate)) : null;
+        const end = filters.endDate ? endOfDay(new Date(filters.endDate)) : null;
+
+        if (start && end) {
+          matchesDate = isWithinInterval(postDate, { start, end });
+        } else if (start) {
+          matchesDate = postDate >= start;
+        } else if (end) {
+          matchesDate = postDate <= end;
+        }
+      }
+
+      return matchesSearch && matchesFBStatus && matchesContentType && matchesPostStatus && matchesDate;
+    });
+  };
+
+  const filteredPublishedPosts = applyFilters(posts.filter(p => p.fbPostId && p.fbStatus === 'posted'));
+  const publishedPosts = filteredPublishedPosts
     .sort((a, b) => {
       if (publishedSort === 'posted') {
         const timeA = a.fbPublishedTime ? new Date(a.fbPublishedTime).getTime() : (a.updatedAt?.toMillis?.() || new Date(a.date).getTime());
@@ -88,8 +142,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       return (a.contentTitle || '').localeCompare(b.contentTitle || '');
     });
 
-  const scheduledPosts = posts
-    .filter(p => p.fbPostId && p.fbStatus === 'scheduled')
+  const filteredScheduledPosts = applyFilters(posts.filter(p => p.fbPostId && p.fbStatus === 'scheduled'));
+  const scheduledPosts = filteredScheduledPosts
     .sort((a, b) => {
       const timeA = a.fbScheduledTime ? new Date(a.fbScheduledTime).getTime() : new Date(a.date).getTime();
       const timeB = b.fbScheduledTime ? new Date(b.fbScheduledTime).getTime() : new Date(b.date).getTime();
@@ -121,6 +175,9 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       }
       if (isSortOpen && sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
         setIsSortOpen(false);
+      }
+      if (isFilterPanelOpen && filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+        setIsFilterPanelOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -259,6 +316,27 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     }
   };
 
+  const contentTypes = Array.from(new Set(posts.map(p => p.contentType).filter(Boolean)));
+  const postStatuses = Array.from(new Set(posts.map(p => p.status).filter(Boolean)));
+
+  const activeFilterCount = Object.entries(filters).reduce((acc, [key, value]) => {
+    if (key === 'fbStatus' || key === 'contentType' || key === 'postStatus') {
+      return value !== 'all' ? acc + 1 : acc;
+    }
+    return value ? acc + 1 : acc;
+  }, 0);
+
+  const resetFilters = () => {
+    setFilters({
+      fbStatus: 'all',
+      contentType: 'all',
+      postStatus: 'all',
+      startDate: '',
+      endDate: ''
+    });
+    setSearchQuery('');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 pt-0 sm:p-6 sm:pt-0 space-y-6 sm:space-y-8">
       {/* Confirmation Modals */}
@@ -292,57 +370,103 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       />
 
       {/* Interaction Bar: Tabs + Create Button */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          {/* Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100/50 dark:bg-slate-800/40 rounded-lg w-fit overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/50 transition-colors duration-300">
-            {['overview', 'scheduled', 'published', 'history'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab as any);
-                  setOpenMenuId(null);
-                }}
-                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
-                  activeTab === tab 
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700/50' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+      <div className="flex flex-col space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            {/* Tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100/50 dark:bg-slate-800/40 rounded-lg w-fit overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/50 transition-colors duration-300">
+              {['overview', 'scheduled', 'published', 'history'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab as any);
+                    setOpenMenuId(null);
+                  }}
+                  className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                    activeTab === tab 
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700/50' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Right side controls for Published/Scheduled (moved to left group on large screens) */}
+            {(activeTab === 'published' || activeTab === 'scheduled') && (
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
+                    {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right side controls for Published/Scheduled (moved to left group on large screens) */}
-          {(activeTab === 'published' || activeTab === 'scheduled') && (
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-2">
+            {/* Quick Post Button */}
+            <button 
+              onClick={() => handleCreateForDate(new Date())}
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-all shadow-md shadow-amber-200/50 shrink-0 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Quick Post
+            </button>
+          </div>
+        </div>
+
+        {/* Search and Advanced Filters */}
+        {(activeTab === 'published' || activeTab === 'scheduled') && (
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Search by title, caption, or theme..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button 
+                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border relative ${
+                  isFilterPanelOpen || activeFilterCount > 0
+                    ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                Advanced Filters
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
               {activeTab === 'published' && publishedPosts.length > 0 && (
                 <div className="relative" ref={sortMenuRef}>
                   <button
                     onClick={() => setIsSortOpen(!isSortOpen)}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all group ${
-                      isSortOpen 
-                        ? 'text-amber-600 dark:text-amber-400' 
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 text-sm font-bold transition-all"
                   >
-                    <ListFilter className={`w-3.5 h-3.5 transition-colors ${isSortOpen ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'}`} />
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Sort</span>
+                    <ArrowUpDown className="w-4 h-4" />
+                    Sort
                   </button>
-
                   <AnimatePresence>
                     {isSortOpen && (
                       <motion.div
                         initial={{ opacity: 0, y: 12, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                        className="absolute left-0 sm:left-auto sm:right-0 mt-3 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-slate-100 dark:border-slate-800 z-[110] overflow-hidden p-2.5"
+                        className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-slate-100 dark:border-slate-800 z-[110] overflow-hidden p-2"
                       >
-                        <div className="px-4 py-3 border-b border-slate-50 dark:border-slate-800 mb-1.5">
-                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sort Published By</span>
-                        </div>
                         {[
                           { id: 'posted', label: 'Recently Posted' },
                           { id: 'planned', label: 'Planned Date' },
@@ -354,14 +478,14 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                               setPublishedSort(s.id as any);
                               setIsSortOpen(false);
                             }}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-bold transition-all ${
+                            className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                               publishedSort === s.id 
                                 ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' 
-                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
+                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700'
                             }`}
                           >
                             {s.label}
-                            {publishedSort === s.id && <Check className="w-3.5 h-3.5" />}
+                            {publishedSort === s.id && <Check className="w-3 h-3" />}
                           </button>
                         ))}
                       </motion.div>
@@ -370,24 +494,85 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
-                  {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
-                </span>
-              </div>
+              {(activeFilterCount > 0 || searchQuery) && (
+                <button 
+                  onClick={resetFilters}
+                  className="px-3 py-2 text-slate-400 hover:text-rose-500 transition-colors"
+                  title="Clear all filters"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Create Direct Post Button */}
-        <button 
-          onClick={() => handleCreateForDate(new Date())}
-          className="flex items-center justify-center gap-2 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-all shadow-md shadow-amber-200/50 shrink-0 text-sm self-start md:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Create Direct Post
-        </button>
+        {/* Advanced Filter Panel */}
+        <AnimatePresence>
+          {isFilterPanelOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+              ref={filterMenuRef}
+            >
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-6 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Content Type Filter */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Content Type</label>
+                  <select 
+                    value={filters.contentType}
+                    onChange={(e) => setFilters(prev => ({ ...prev, contentType: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+                  >
+                    <option value="all">All Types</option>
+                    {contentTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* FB Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facebook Status</label>
+                  <select 
+                    value={filters.fbStatus}
+                    onChange={(e) => setFilters(prev => ({ ...prev, fbStatus: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="posted">Posted</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="idle">Idle / Draft</option>
+                  </select>
+                </div>
+
+                {/* Date Range Start */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date From</label>
+                  <input 
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+
+                {/* Date Range End */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date To</label>
+                  <input 
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {activeTab === 'overview' && (
@@ -766,58 +951,75 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 flex items-start justify-between gap-4">
-                  <div className="flex flex-col gap-3">
+                <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 space-y-4">
+                  <div className="space-y-3">
                     {/* Content Planner Date */}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50">
-                          Planner
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">📅 Content Date</span>
+                    <div className="flex items-center justify-between group/meta">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg group-hover/meta:bg-slate-100 dark:group-hover/meta:bg-slate-800 transition-colors">
+                          <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest leading-none mb-0.5">Content Planner</span>
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            {post.date ? format(new Date(post.date), 'MMM dd, yyyy') : 'N/A'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs font-extrabold text-slate-700 dark:text-slate-300 ml-1">
-                        {format(new Date(post.date), 'MMM dd, yyyy')}
-                      </p>
+                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-md text-[9px] font-black uppercase tracking-tighter">Planner</span>
                     </div>
 
-                    {/* Facebook Action Date */}
+                    {/* Facebook Status */}
                     {(post.fbStatus === 'posted' || post.fbStatus === 'scheduled') && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border ${
+                      <div className="flex items-center justify-between group/meta">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-lg transition-colors ${
                             post.fbStatus === 'posted' 
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100/50 dark:border-emerald-800/50' 
-                              : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100/50 dark:border-amber-800/50'
+                              ? 'bg-emerald-50 dark:bg-emerald-900/10 group-hover/meta:bg-emerald-100 dark:group-hover/meta:bg-emerald-900/20' 
+                              : 'bg-amber-50 dark:bg-amber-900/10 group-hover/meta:bg-amber-100 dark:group-hover/meta:bg-amber-900/20'
                           }`}>
-                            Facebook
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">
-                            {post.fbStatus === 'posted' ? '✅ Published on' : '🕐 FB Scheduled for'}
-                          </span>
+                            {post.fbStatus === 'posted' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5 text-amber-500" />
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest leading-none mb-0.5">
+                              {post.fbStatus === 'posted' ? 'Published' : 'Scheduled'}
+                            </span>
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                              {post.fbStatus === 'posted' && post.fbPublishedTime 
+                                ? format(new Date(post.fbPublishedTime), 'MMM dd, HH:mm')
+                                : post.fbStatus === 'scheduled' && post.fbScheduledTime
+                                  ? format(new Date(post.fbScheduledTime), 'MMM dd, HH:mm')
+                                  : 'Pending'}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-xs font-extrabold text-slate-700 dark:text-slate-300 ml-1">
-                          {post.fbStatus === 'posted' && post.fbPublishedTime 
-                            ? format(new Date(post.fbPublishedTime), 'MMM dd, HH:mm')
-                            : post.fbStatus === 'scheduled' && post.fbScheduledTime
-                              ? format(new Date(post.fbScheduledTime), 'MMM dd, HH:mm')
-                              : 'Pending'}
-                        </p>
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${
+                          post.fbStatus === 'posted' 
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          Facebook
+                        </span>
                       </div>
                     )}
                   </div>
                   
                   <button 
                     onClick={() => handleOpenFBModal(post)}
-                    className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                    className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${
                       post.fbStatus === 'posted' 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98]' 
                         : post.fbStatus === 'scheduled'
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
-                          : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                          ? 'bg-amber-500 text-white hover:bg-amber-600 active:scale-[0.98]'
+                          : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 active:scale-[0.98]'
                     }`}
                   >
-                    {post.fbStatus === 'posted' ? 'View Post' : post.fbStatus === 'scheduled' ? 'View Details' : 'Post Now'}
+                    {post.fbStatus === 'posted' ? 'View Live Post' : post.fbStatus === 'scheduled' ? 'Post Details' : 'View Details'}
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
