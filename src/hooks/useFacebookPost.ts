@@ -101,18 +101,22 @@ export function useFacebookPost() {
     }
   };
   
-  const updateFacebookPost = async (fbPostId: string, newMessage: string) => {
+  const updateFacebookPost = async (fbPostId: string, newMessage?: string, newScheduleTime?: number) => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
+      const payload: any = {};
+      if (newMessage !== undefined) payload.message = newMessage;
+      if (newScheduleTime !== undefined) payload.scheduled_publish_time = newScheduleTime;
+
       const response = await fetch(`/api/facebook-post/${fbPostId}/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: newMessage }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();

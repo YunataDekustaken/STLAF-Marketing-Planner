@@ -17,6 +17,7 @@ import {
   Check,
   X,
   RefreshCcw,
+  PencilLine,
   ArrowUpDown,
   ListFilter
 } from 'lucide-react';
@@ -241,6 +242,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       case 'auto_publish': return 'bg-blue-50 text-blue-600';
       case 'delete': return 'bg-rose-50 text-rose-600';
       case 'update_caption': return 'bg-indigo-50 text-indigo-600';
+      case 'reschedule': return 'bg-orange-50 text-orange-600';
       default: return 'bg-slate-50 text-slate-600';
     }
   };
@@ -252,6 +254,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
       case 'auto_publish': return 'System Auto-Publish';
       case 'delete': return 'Deleted from FB';
       case 'update_caption': return 'Caption Updated';
+      case 'reschedule': return 'Post Rescheduled';
       default: return action;
     }
   };
@@ -622,6 +625,36 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                             <ExternalLink className="w-3.5 h-3.5" />
                             View Details
                           </button>
+
+                          {(post.fbStatus === 'posted' || post.fbStatus === 'scheduled') && post.fbPostId && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenFBModal(post);
+                                // Note: The modal will open in "view" mode, so we might need a way to trigger edit mode directly
+                                // but the modal has an inline edit button now.
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                            >
+                              <PencilLine className="w-3.5 h-3.5" />
+                              Edit Caption
+                            </button>
+                          )}
+
+                          {post.fbStatus === 'scheduled' && post.fbPostId && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenFBModal(post);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              Adjust Schedule
+                            </button>
+                          )}
                           {post.deletionRequested || post.facebookDeletionRequested ? (
                             <div className="flex flex-col">
                               {userRole === 'marketing_supervisor' ? (

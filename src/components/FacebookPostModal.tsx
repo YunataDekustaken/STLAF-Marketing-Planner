@@ -59,6 +59,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
 
   const [isEditingCaption, setIsEditingCaption] = useState(false);
   const [editedCaption, setEditedCaption] = useState('');
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [newScheduleTime, setNewScheduleTime] = useState('');
 
   const isLoading = isFBLoading || isIGLoading;
   const error = fbError || igError;
@@ -87,6 +89,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       setIsDeleting(false);
       setIsConfirmDeleteOpen(false);
       setIsEditingCaption(false);
+      setIsRescheduling(false);
+      setNewScheduleTime('');
       setEditedCaption(post.caption || '');
       setPostToFB(!post.fbPostId); // Default true if not already posted
       setPostToIG(false); // Default false initially
@@ -281,6 +285,63 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       });
     }
   };
+
+  const handleReschedule = async () => {
+    if (!post?.fbPostId || !newScheduleTime) return;
+    
+    // Facebook expects Unix timestamp in seconds
+    const date = new Date(newScheduleTime);
+    const timestamp = Math.floor(date.getTime() / 1000);
+    
+    // Check if time is at least 20 mins in future
+    const now = Math.floor(Date.now() / 1000);
+    if (timestamp < now + (20 * 60)) {
+      setValidationError("New schedule time must be at least 20 minutes from now.");
+      return;
+    }
+
+    const result = await updateFacebookPost(post.fbPostId, undefined, timestamp);
+    
+    if (result) {
+      try {
+        const postRef = doc(db, 'posts', post.id);
+        await updateDoc(postRef, {
+          fbScheduledTime: newScheduleTime,
+          updatedAt: serverTimestamp()
+        });
+
+        // Log to history
+        await addDoc(collection(db, 'history'), {
+          postId: post.id,
+          contentTitle: post.topicTheme || post.contentTitle,
+          action: 'reschedule',
+          platform: 'facebook',
+          timestamp: serverTimestamp(),
+          userEmail: auth.currentUser?.email || 'unknown',
+          userName: auth.currentUser?.displayName || 'Unknown User',
+          details: `Rescheduled post to ${newScheduleTime}`
+        });
+
+        setNotification({
+          isOpen: true,
+          title: 'Rescheduled',
+          message: `Post successfully rescheduled to ${new Date(newScheduleTime).toLocaleString()}.`,
+          type: 'success'
+        });
+        
+        setIsRescheduling(false);
+      } catch (err) {
+        console.error("Error updating post schedule in Firestore:", err);
+      }
+    } else {
+      setNotification({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to reschedule post on Facebook.',
+        type: 'error'
+      });
+    }
+  };
   
   const handleSchedule = async () => {
     setValidationError(null);
@@ -469,6 +530,58 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                 </div>
 
                 <div className="flex flex-col gap-2 w-full">
+                  {isAlreadyScheduled && (
+                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 mb-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                          <Clock className="w-4 h-4" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Scheduled Post</span>
+                        </div>
+                        {!isRescheduling && (
+                          <button 
+                            onClick={() => setIsRescheduling(true)}
+                            className="text-[10px] font-bold text-amber-600 hover:text-amber-700 underline"
+                          >
+                            Change Time
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isRescheduling ? (
+                        <div className="space-y-3">
+                          <input 
+                            type="datetime-local" 
+                            className="w-full p-2.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-900/30"
+                            value={newScheduleTime}
+                            onChange={(e) => setNewScheduleTime(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={handleReschedule}
+                              disabled={isLoading || !newScheduleTime}
+                              className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-all disabled:opacity-50"
+                            >
+                              Update Time
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setIsRescheduling(false);
+                                setNewScheduleTime('');
+                              }}
+                              className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                          This post is scheduled to go live on {post?.fbScheduledTime ? new Date(post.fbScheduledTime).toLocaleString() : 'the scheduled time'}.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {(postId || post?.fbPostId) && (
                     <a 
                       href={`https://facebook.com/${postId || post?.fbPostId}`}

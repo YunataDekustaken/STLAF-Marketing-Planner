@@ -444,10 +444,10 @@ async function startServer() {
     }
   });
 
-  // Update Facebook Post API Route (Caption/Message only)
+  // Update Facebook Post API Route (Caption/Message or Schedule Time)
   app.post("/api/facebook-post/:postId/update", async (req, res) => {
     const { postId } = req.params;
-    const { message } = req.body;
+    const { message, scheduled_publish_time } = req.body;
     const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 
     if (!PAGE_ACCESS_TOKEN) {
@@ -459,10 +459,14 @@ async function startServer() {
 
     try {
       const endpoint = `https://graph.facebook.com/v19.0/${postId}`;
-      const response = await axios.post(endpoint, {
-        message: message,
+      const payload: any = {
         access_token: PAGE_ACCESS_TOKEN
-      });
+      };
+      
+      if (message !== undefined) payload.message = message;
+      if (scheduled_publish_time !== undefined) payload.scheduled_publish_time = scheduled_publish_time;
+
+      const response = await axios.post(endpoint, payload);
       
       return res.json({ success: true, data: response.data });
     } catch (error: any) {
