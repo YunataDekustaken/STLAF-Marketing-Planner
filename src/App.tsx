@@ -110,6 +110,8 @@ import {
   onSnapshot, 
   query, 
   where, 
+  or,
+  and,
   doc, 
   setDoc, 
   getDoc,
@@ -2188,24 +2190,18 @@ function AppContent() {
     const endStr = format(monthEnd, 'yyyy-MM-dd');
 
     const postsRef = collection(db, 'posts');
-    const q = query(
-      postsRef, 
-      where('date', '>=', startStr),
-      where('date', '<=', endStr)
-    );
+    // Simplified query: Fetch all posts to allow Social Hub to show everything 
+    // and Table to filter client-side by currentMonth.
+    const q = query(postsRef);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
       })) as Post[];
-      
-      // Because onSnapshot only gives us current month, we keep existing posts from OTHER months
-      // to avoid flickering if we have them, OR we just trust the month-scoped view.
-      // Since the app uses currentMonth to filter locally too, this is safe.
       setPosts(postsData);
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'posts');
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'posts');
     });
 
     return () => unsubscribe();
