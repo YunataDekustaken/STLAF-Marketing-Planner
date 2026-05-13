@@ -286,108 +286,103 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
         type={notification.type}
       />
 
-      {/* Header section */}
+      {/* Interaction Bar: Tabs + Create Button */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/50 dark:bg-slate-800/40 rounded-lg w-fit overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/50 transition-colors duration-300">
+            {['overview', 'scheduled', 'published', 'history'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab as any);
+                  setOpenMenuId(null);
+                }}
+                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                  activeTab === tab 
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700/50' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors duration-300">
-        <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Social Media Hub</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm sm:text-base">Manage your direct postings and track published content.</p>
+          {/* Right side controls for Published/Scheduled (moved to left group on large screens) */}
+          {(activeTab === 'published' || activeTab === 'scheduled') && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {activeTab === 'published' && publishedPosts.length > 0 && (
+                <div className="relative" ref={sortMenuRef}>
+                  <button
+                    onClick={() => setIsSortOpen(!isSortOpen)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all group ${
+                      isSortOpen 
+                        ? 'text-amber-600 dark:text-amber-400' 
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <ListFilter className={`w-3.5 h-3.5 transition-colors ${isSortOpen ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'}`} />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Sort</span>
+                  </button>
+
+                  <AnimatePresence>
+                    {isSortOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                        className="absolute left-0 sm:left-auto sm:right-0 mt-3 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-slate-100 dark:border-slate-800 z-[110] overflow-hidden p-2.5"
+                      >
+                        <div className="px-4 py-3 border-b border-slate-50 dark:border-slate-800 mb-1.5">
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sort Published By</span>
+                        </div>
+                        {[
+                          { id: 'posted', label: 'Recently Posted' },
+                          { id: 'planned', label: 'Planned Date' },
+                          { id: 'title', label: 'Title' }
+                        ].map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => {
+                              setPublishedSort(s.id as any);
+                              setIsSortOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-bold transition-all ${
+                              publishedSort === s.id 
+                                ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' 
+                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            {s.label}
+                            {publishedSort === s.id && <Check className="w-3.5 h-3.5" />}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
+                  {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
+                </span>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Create Direct Post Button */}
         <button 
           onClick={() => handleCreateForDate(new Date())}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-amber-200 shrink-0"
+          className="flex items-center justify-center gap-2 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-all shadow-md shadow-amber-200/50 shrink-0 text-sm self-start md:self-auto"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Create Direct Post
         </button>
-      </div>
-
-      {/* Interaction Bar: Tabs + Sort/Counter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/50 dark:bg-slate-800/40 rounded-lg w-fit overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/50 transition-colors duration-300">
-          {['overview', 'scheduled', 'published', 'history'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab as any);
-                setOpenMenuId(null);
-              }}
-              className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold capitalize transition-all whitespace-nowrap ${
-                activeTab === tab 
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/50 dark:border-slate-700/50' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {/* Right side controls for Published/Scheduled */}
-        {(activeTab === 'published' || activeTab === 'scheduled') && (
-          <div className="flex items-center gap-2 self-end md:self-auto">
-            {activeTab === 'published' && publishedPosts.length > 0 && (
-              <div className="relative" ref={sortMenuRef}>
-                <button
-                  onClick={() => setIsSortOpen(!isSortOpen)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all group ${
-                    isSortOpen 
-                      ? 'text-amber-600 dark:text-amber-400' 
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <ListFilter className={`w-3.5 h-3.5 transition-colors ${isSortOpen ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-500'}`} />
-                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Sort</span>
-                </button>
-
-                <AnimatePresence>
-                  {isSortOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                      className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-2xl border border-slate-100 dark:border-slate-800 z-[110] overflow-hidden p-2.5"
-                    >
-                      <div className="px-4 py-3 border-b border-slate-50 dark:border-slate-800 mb-1.5">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sort Published By</span>
-                      </div>
-                      {[
-                        { id: 'posted', label: 'Recently Posted' },
-                        { id: 'planned', label: 'Planned Date' },
-                        { id: 'title', label: 'Title' }
-                      ].map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => {
-                            setPublishedSort(s.id as any);
-                            setIsSortOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-[11px] font-bold transition-all ${
-                            publishedSort === s.id 
-                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' 
-                              : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
-                          }`}
-                        >
-                          {s.label}
-                          {publishedSort === s.id && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 px-2 py-1.5">
-              <div className="w-1.5 h-1.5 bg-emerald-500/80 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-              <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
-                {(activeTab === 'published' ? publishedPosts : scheduledPosts).length} Live Items
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {activeTab === 'overview' && (

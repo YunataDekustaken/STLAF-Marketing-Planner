@@ -1486,6 +1486,9 @@ function AppContent() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           post = { id: docSnap.id, ...docSnap.data() } as Post;
+          console.log("Fetched post from Firestore:", post);
+        } else {
+          console.log("Post not found in Firestore either.");
         }
       } catch (err) {
         console.error("Error fetching post to scroll to:", err);
@@ -1493,6 +1496,7 @@ function AppContent() {
     }
 
     if (post && post.date) {
+      console.log("Post to scroll to:", post);
       // Step 1: Switch View if in social hub
       const wasInSocial = viewMode === 'social';
       if (wasInSocial) setViewMode('list');
@@ -1508,30 +1512,32 @@ function AppContent() {
       const isDifferentMonth = format(targetMonthDate, 'yyyy-MM') !== format(currentMonth, 'yyyy-MM');
       
       if (isDifferentMonth) {
+        console.log("Switching month to:", targetMonthDate);
         setCurrentMonth(targetMonthDate);
       }
       
       // Step 4: Wait for DOM to update and then scroll
-      const waitTime = isDifferentMonth || wasInSocial ? 1000 : 150;
-      
-      setTimeout(() => {
-        const element = document.getElementById(`post-${postId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setHighlightedPostId(postId);
-          setTimeout(() => setHighlightedPostId(null), 4000);
-        } else {
-          // Retry logic for cases where month switch was slow
-          setTimeout(() => {
-            const retryElement = document.getElementById(`post-${postId}`);
-            if (retryElement) {
-              retryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              setHighlightedPostId(postId);
-              setTimeout(() => setHighlightedPostId(null), 4000);
-            }
-          }, 500);
-        }
-      }, waitTime);
+      const tryScroll = (attemptsLeft: number, delay: number) => {
+        setTimeout(() => {
+          const element = document.getElementById(`post-${postId}`);
+          if (element) {
+            console.log("Found element, scrolling...");
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedPostId(postId);
+            setTimeout(() => setHighlightedPostId(null), 4000);
+          } else if (attemptsLeft > 0) {
+            console.log("Element not found, retrying...", attemptsLeft);
+            tryScroll(attemptsLeft - 1, 500); // retry every 500ms
+          } else {
+            console.log("Gave up finding element for post", postId);
+          }
+        }, delay);
+      };
+
+      const initialWait = isDifferentMonth || wasInSocial ? 1000 : 150;
+      tryScroll(5, initialWait); // Up to 5 retries (2.5 seconds max)
+    } else {
+      console.log("Cannot scroll to post. Post or post.date missing.");
     }
   };
 
@@ -3408,10 +3414,10 @@ function AppContent() {
           <button 
             onClick={() => setViewMode('social')}
             className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out ${viewMode === 'social' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
-            title={isSidebarMini ? "Social Hub" : ""}
+            title={isSidebarMini ? "Social Media Hub" : ""}
           >
             <Share2 className="w-5 h-5 shrink-0" />
-            {isSidebarExpanded && <span className="whitespace-nowrap">Social Hub</span>}
+            {isSidebarExpanded && <span className="whitespace-nowrap">Social Media Hub</span>}
           </button>
           
           {profile?.role === 'marketing_supervisor' && (
@@ -3668,7 +3674,7 @@ function AppContent() {
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
 
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 pt-0 pl-0">
-              {viewMode === 'social' ? 'Social Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
+              {viewMode === 'social' ? 'Social Media Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
           <div className="flex items-center gap-4">
