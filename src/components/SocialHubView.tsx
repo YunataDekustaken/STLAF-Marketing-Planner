@@ -760,10 +760,12 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                     className={`shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
                       post.fbStatus === 'posted' 
                         ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
-                        : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                        : post.fbStatus === 'scheduled'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                          : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                     }`}
                   >
-                    {post.fbStatus === 'posted' ? 'View Post' : 'Post Now'}
+                    {post.fbStatus === 'posted' ? 'View Post' : post.fbStatus === 'scheduled' ? 'View Details' : 'Post Now'}
                   </button>
                 </div>
               </div>
