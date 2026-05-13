@@ -66,7 +66,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const publishedPosts = posts
-    .filter(p => p.status === 'Published')
+    .filter(p => p.fbPostId && p.fbStatus === 'posted')
     .sort((a, b) => {
       if (publishedSort === 'posted') {
         const timeA = a.fbPublishedTime ? new Date(a.fbPublishedTime).getTime() : (a.updatedAt?.toMillis?.() || new Date(a.date).getTime());
@@ -88,7 +88,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     });
 
   const scheduledPosts = posts
-    .filter(p => p.status === 'Scheduled')
+    .filter(p => p.fbPostId && p.fbStatus === 'scheduled')
     .sort((a, b) => {
       const timeA = a.fbScheduledTime ? new Date(a.fbScheduledTime).getTime() : new Date(a.date).getTime();
       const timeB = b.fbScheduledTime ? new Date(b.fbScheduledTime).getTime() : new Date(b.date).getTime();
@@ -722,10 +722,10 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                 <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase">
-                      {post.status === 'Published' ? 'Published' : 'Planned Date'}
+                      {post.fbStatus === 'posted' ? 'Published' : 'Planned Date'}
                     </span>
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {post.status === 'Published' && post.fbPublishedTime 
+                      {post.fbStatus === 'posted' && post.fbPublishedTime 
                         ? format(new Date(post.fbPublishedTime), 'MMM dd, HH:mm')
                         : format(new Date(post.date), 'MMM dd')}
                     </span>
@@ -733,12 +733,12 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                   <button 
                     onClick={() => handleOpenFBModal(post)}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
-                      post.status === 'Published' 
+                      post.fbStatus === 'posted' 
                         ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' 
                         : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
                     }`}
                   >
-                    {post.status === 'Published' ? 'View Post' : 'Post Now'}
+                    {post.fbStatus === 'posted' ? 'View Post' : 'Post Now'}
                   </button>
                 </div>
               </div>

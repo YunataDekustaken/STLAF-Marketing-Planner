@@ -188,16 +188,16 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   'Not Started': 'bg-slate-100 text-slate-600 border-slate-200',
   'In Progress': 'bg-blue-50 text-blue-600 border-blue-100',
   'Ready for Review': 'bg-amber-50 text-amber-600 border-amber-100',
-  'Scheduled': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  'Published': 'bg-indigo-50 text-indigo-600 border-indigo-100',
+  'Ready to Post': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  'Completed': 'bg-indigo-50 text-indigo-600 border-indigo-100',
 };
 
 const STATUS_ICONS: Record<PostStatus, any> = {
   'Not Started': AlertCircle,
   'In Progress': Clock,
   'Ready for Review': Edit2,
-  'Scheduled': CheckCircle2,
-  'Published': Check,
+  'Ready to Post': CheckCircle2,
+  'Completed': Check,
 };
 
 const FBStatusBadge: React.FC<{ post: Post }> = ({ post }) => {
@@ -305,7 +305,7 @@ const KanbanView: React.FC<KanbanViewProps> = ({
   socialLinks,
   newlyImportedIds
 }) => {
-  const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Scheduled', 'Published'];
+  const statuses: PostStatus[] = ['Not Started', 'In Progress', 'Ready for Review', 'Ready to Post', 'Completed'];
   
   return (
     <div className="flex gap-6 overflow-x-auto pb-6 min-h-[600px]">
@@ -823,8 +823,8 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
             <option value="Not Started" className="bg-white dark:bg-slate-900">Not Started</option>
             <option value="In Progress" className="bg-white dark:bg-slate-900">In Progress</option>
             <option value="Ready for Review" className="bg-white dark:bg-slate-900">Ready for Review</option>
-            <option value="Scheduled" className="bg-white dark:bg-slate-900">Scheduled</option>
-            <option value="Published" className="bg-white dark:bg-slate-900">Published</option>
+            <option value="Ready to Post" className="bg-white dark:bg-slate-900">Ready to Post</option>
+            <option value="Completed" className="bg-white dark:bg-slate-900">Completed</option>
           </select>
         );
       case 'approvalStatus':
@@ -1647,7 +1647,7 @@ function AppContent() {
     const checkScheduledPosts = async () => {
       try {
         const now = new Date();
-        const scheduledQuery = query(collection(db, 'posts'), where('status', '==', 'Scheduled'));
+        const scheduledQuery = query(collection(db, 'posts'), where('status', '==', 'Ready to Post'));
         const snap = await getDocs(scheduledQuery);
         
         let updatesCount = 0;
@@ -1663,9 +1663,9 @@ function AppContent() {
               if (!freshSnap.exists()) return;
               
               const freshData = freshSnap.data();
-              if (freshData.status !== 'Scheduled') return; // already updated by another client/process
+              if (freshData.status !== 'Ready to Post') return; // already updated by another client/process
 
-              transaction.update(postRef, { status: 'Published' });
+              transaction.update(postRef, { status: 'Completed' });
               transaction.set(historyRef, {
                 postId: docSnap.id,
                 contentTitle: freshData.contentTitle,
@@ -2180,15 +2180,15 @@ function AppContent() {
       await updateDoc(postRef, { [field]: value });
 
       if (field === 'status') {
-        if (value === 'Scheduled') {
-          addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Scheduled.', id);
-          notifySupervisors('onStatusScheduled', 'Task Scheduled', 'A task has been marked as Scheduled.', id);
+        if (value === 'Ready to Post') {
+          addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Ready to Post.', id);
+          notifySupervisors('onStatusScheduled', 'Task Ready to Post', 'A task has been marked as Ready to Post.', id);
         } else if (value === 'Ready for Review') {
           addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
           notifySupervisors('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
-        } else if (value === 'Published') {
-          addNotification('onPostPublished', 'Post Published', 'A post has been manually marked as Published.', id);
-          notifyAll('onPostPublished', 'Post Published', 'A new post has been published!', id);
+        } else if (value === 'Completed') {
+          addNotification('onPostPublished', 'Task Completed', 'A task has been manually marked as Completed.', id);
+          notifyAll('onPostPublished', 'Task Completed', 'A task has been completed!', id);
         }
       }
 
@@ -2415,9 +2415,9 @@ function AppContent() {
       } else {
         // If it's an update, check for status changes
         if (newStatus !== oldStatus) {
-          if (newStatus === 'Scheduled') {
-            addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Scheduled.', id);
-            notifySupervisors('onStatusScheduled', 'Task Scheduled', 'A task has been marked as Scheduled.', id);
+          if (newStatus === 'Ready to Post') {
+            addNotification('onStatusScheduled', 'Status Updated', 'A task has been marked as Ready to Post.', id);
+            notifySupervisors('onStatusScheduled', 'Task Ready to Post', 'A task has been marked as Ready to Post.', id);
           } else if (newStatus === 'Ready for Review') {
             addNotification('onStatusReadyForReview', 'Ready for Review', 'A task is now ready for your approval.', id);
             notifySupervisors('onApprovalRequired', 'Approval Required', 'A task is now ready for your review and approval.', id);
@@ -4070,8 +4070,8 @@ function AppContent() {
                           <option value="Not Started">Not Started</option>
                           <option value="In Progress">In Progress</option>
                           <option value="Ready for Review">Ready for Review</option>
-                          <option value="Scheduled">Scheduled</option>
-                          <option value="Published">Published</option>
+                          <option value="Ready to Post">Ready to Post</option>
+                          <option value="Completed">Completed</option>
                         </select>
                       </div>
                     </div>
@@ -4236,7 +4236,8 @@ function AppContent() {
                       <option value="Not Started">Not Started</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Ready for Review">Ready for Review</option>
-                      <option value="Scheduled">Scheduled</option>
+                      <option value="Ready to Post">Ready to Post</option>
+                      <option value="Completed">Completed</option>
                     </select>
                   </div>
                 </div>

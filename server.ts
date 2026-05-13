@@ -430,6 +430,13 @@ async function startServer() {
       const errorData = error.response?.data?.error || {};
       console.error("Facebook API Delete Error:", JSON.stringify(errorData, null, 2));
       
+      // If error subcode 33 (Unsupported get request) or code 100 (Object does not exist),
+      // the post is likely already deleted. Treat as success so the app can continue.
+      if (errorData.error_subcode === 33 || errorData.code === 100) {
+        console.log(`Treating FB delete error as success since post ${postId} is already gone.`);
+        return res.json({ success: true, message: "Post was already deleted on Facebook." });
+      }
+
       res.status(error.response?.status || 500).json({ 
         success: false, 
         error: errorData.message || "Failed to delete post from Facebook"

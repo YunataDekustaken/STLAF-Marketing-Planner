@@ -49,8 +49,8 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const [postToFB, setPostToFB] = useState(true);
   const [postToIG, setPostToIG] = useState(false);
 
-  const isAlreadyPublished = post?.status === 'Published' && post?.fbPostId;
-  const isAlreadyScheduled = post?.status === 'Scheduled' && post?.fbPostId;
+  const isAlreadyPublished = post?.fbStatus === 'posted' && post?.fbPostId;
+  const isAlreadyScheduled = post?.fbStatus === 'scheduled' && post?.fbPostId;
   
   const { postToFacebook, deleteFacebookPost, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
   const { postToInstagram, isLoading: isIGLoading, error: igError, success: igSuccess, postId: igPostIdRes, resetStatus: resetIGStatus } = useInstagramPost();

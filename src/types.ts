@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type PostStatus = 'Not Started' | 'In Progress' | 'Ready for Review' | 'Scheduled' | 'Published';
+export type PostStatus = 'Not Started' | 'In Progress' | 'Ready for Review' | 'Ready to Post' | 'Completed';
 
 export interface Post {
   id: string;
@@ -64,7 +64,7 @@ export const INITIAL_POSTS: Post[] = [
   {
     id: 'p3',
     date: '2026-04-29',
-    status: 'Scheduled',
+    status: 'Ready to Post',
     contentTitle: 'News',
     contentType: 'Update',
     format: 'Reel',
