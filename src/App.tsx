@@ -29,6 +29,7 @@ import {
   Loader2,
   Undo2,
   Redo2,
+  History,
   Image as ImageIcon,
   Upload,
   Eye,
@@ -1541,8 +1542,21 @@ function AppContent() {
     visualIdeas: '',
     caption: '',
     customPrompt: '',
+    notes: '',
     creatives: [],
   });
+
+  // Auto-save draft
+  useEffect(() => {
+    if (!isModalOpen) return;
+    
+    const draftKey = editingPost ? `draft_post_${editingPost.id}` : 'draft_post_new';
+    const timer = setTimeout(() => {
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [formData, isModalOpen, editingPost]);
 
   // Undo/Redo state for caption
   const [captionHistory, setCaptionHistory] = useState<string[]>([]);
@@ -1551,6 +1565,8 @@ function AppContent() {
   const [sidebarMode, setSidebarMode] = useState<'full' | 'mini-hover' | 'mini-fixed'>('full');
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isSocialChannelsExpanded, setIsSocialChannelsExpanded] = useState(true);
+  const [isQuickLinksExpanded, setIsQuickLinksExpanded] = useState(true);
+  const [draftToRestore, setDraftToRestore] = useState<Partial<Post> | null>(null);
   
   // Derived helper for rendering logic
   const isSidebarExpanded = sidebarMode === 'full' || (sidebarMode === 'mini-hover' && isSidebarHovered);
@@ -2568,11 +2584,31 @@ function AppContent() {
   };
 
   const handleOpenModal = (post?: Post) => {
+    const draftKey = post ? `draft_post_${post.id}` : 'draft_post_new';
+    const savedDraft = localStorage.getItem(draftKey);
+    let draftData = null;
+    
+    if (savedDraft) {
+      try {
+        draftData = JSON.parse(savedDraft);
+      } catch (e) {
+        console.error('Failed to parse draft', e);
+      }
+    }
+
     if (post) {
       setEditingPost(post);
-      setFormData({ ...post, creatives: post.creatives || [], customPrompt: post.customPrompt || '' });
+      const initialData = { ...post, creatives: post.creatives || [], customPrompt: post.customPrompt || '', notes: post.notes || '' };
+      setFormData(initialData);
       setCaptionHistory([post.caption || '']);
       setHistoryIndex(0);
+      
+      // Check if draft differs from current post (simple string comparison for speed)
+      if (draftData && JSON.stringify(draftData) !== JSON.stringify(initialData)) {
+        setDraftToRestore(draftData);
+      } else {
+        setDraftToRestore(null);
+      }
     } else {
       setEditingPost(null);
       const initialData = {
@@ -2586,11 +2622,19 @@ function AppContent() {
         visualIdeas: '',
         caption: '',
         customPrompt: '',
+        notes: '',
         creatives: [],
       };
       setFormData(initialData);
       setCaptionHistory(['']);
       setHistoryIndex(0);
+
+      // Check if any draft exists for a new post
+      if (draftData && JSON.stringify(draftData) !== JSON.stringify(initialData)) {
+        setDraftToRestore(draftData);
+      } else {
+        setDraftToRestore(null);
+      }
     }
     setIsModalOpen(true);
   };
@@ -2626,6 +2670,10 @@ function AppContent() {
         Object.entries(postData).filter(([_, v]) => v !== undefined)
       );
       await setDoc(doc(db, 'posts', id), cleanData);
+      
+      // Clear draft on successful save
+      localStorage.removeItem(editingPost ? `draft_post_${editingPost.id}` : 'draft_post_new');
+      setDraftToRestore(null);
       
       if (!editingPost) {
         addNotification('onNewTask', 'New Task Created', `"${formData.topicTheme || 'Untitled'}" has been added to the plan.`, id);
@@ -2687,6 +2735,7 @@ function AppContent() {
       }
 
       await deleteDoc(doc(db, 'posts', id));
+      localStorage.removeItem(`draft_post_${id}`);
       addNotification('onTaskDeleted', 'Task Deleted', 'A content task has been permanently removed.');
       if (editingPost?.id === id) {
         setIsModalOpen(false);
@@ -3674,21 +3723,38 @@ function AppContent() {
           {/* Quick Links Section */}
           {isSidebarExpanded && quickLinks.length > 0 && (
             <div className="px-4 pt-8 pb-4">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Quick Links</p>
-              <div className="space-y-3">
-                {quickLinks.map((link) => (
-                  <a 
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
-                  >
-                    <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors" />
-                    <span className="text-sm font-medium truncate">{link.name}</span>
-                  </a>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-0">Quick Links</p>
+                <button 
+                  onClick={() => setIsQuickLinksExpanded(!isQuickLinksExpanded)}
+                  className="p-1 hover:bg-slate-700/50 rounded transition-colors text-slate-500 hover:text-white"
+                >
+                  {isQuickLinksExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
               </div>
+              <AnimatePresence>
+                {isQuickLinksExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    {quickLinks.map((link) => (
+                      <a 
+                        key={link.id}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
+                      >
+                        <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-amber-500 transition-colors" />
+                        <span className="text-sm font-medium truncate">{link.name}</span>
+                      </a>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -4454,6 +4520,55 @@ function AppContent() {
               </div>
 
               <div className="p-8 overflow-y-auto space-y-8">
+                {/* Draft Restoration Banner */}
+                <AnimatePresence>
+                  {draftToRestore && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-4 shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <History className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-amber-800">Unsaved draft found</p>
+                          <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wider">Would you like to restore your progress?</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => {
+                            const draftKey = editingPost ? `draft_post_${editingPost.id}` : 'draft_post_new';
+                            localStorage.removeItem(draftKey);
+                            setDraftToRestore(null);
+                          }}
+                          className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-700 transition-colors uppercase tracking-widest"
+                        >
+                          Discard
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (draftToRestore) {
+                              setFormData(prev => ({ ...prev, ...draftToRestore }));
+                              if (draftToRestore.caption) {
+                                setCaptionHistory([draftToRestore.caption]);
+                                setHistoryIndex(0);
+                              }
+                              setDraftToRestore(null);
+                              toast.success('Draft restored');
+                            }
+                          }}
+                          className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm hover:shadow-md uppercase tracking-widest"
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-500 uppercase">Date</label>
@@ -4673,6 +4788,17 @@ function AppContent() {
                   <div className="text-[10px] text-slate-400 text-right">
                     History: {historyIndex + 1} / {captionHistory.length}
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-500 uppercase">Notes</label>
+                  <textarea 
+                    rows={3}
+                    placeholder="Add any internal notes or instructions here..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none text-sm"
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  />
                 </div>
 
                 {/* Social Media Redirection */}
