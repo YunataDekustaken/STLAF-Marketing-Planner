@@ -34,6 +34,9 @@ export interface Post {
   facebookDeletionRequested?: boolean;
   requestedBy?: string | null;
   requestDate?: string | null;
+  reactions?: number;
+  comments?: number;
+  shares?: number;
 }
 
 export const INITIAL_POSTS: Post[] = [

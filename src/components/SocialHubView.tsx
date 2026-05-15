@@ -17,6 +17,9 @@ import {
   Check,
   X,
   Search,
+  MessageSquare,
+  Share2,
+  ThumbsUp,
   RefreshCcw,
   PencilLine,
   ArrowUpDown,
@@ -1007,6 +1010,33 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                       </div>
                     )}
                   </div>
+                  
+                  {/* Analytics Row - Only for Published Posts */}
+                  {post.fbStatus === 'posted' && (
+                    <div className="grid grid-cols-3 gap-2 py-3 px-2 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100/50 dark:border-slate-800/50">
+                      <div className="flex flex-col items-center gap-1 group/stat border-r border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                          <ThumbsUp className="w-3 h-3" />
+                          <span className="text-[10px] font-black tracking-tight">{post.reactions || 0}</span>
+                        </div>
+                        <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">Reactions</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 group/stat border-r border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
+                          <MessageSquare className="w-3 h-3" />
+                          <span className="text-[10px] font-black tracking-tight">{post.comments || 0}</span>
+                        </div>
+                        <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">Comments</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 group/stat">
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                          <Share2 className="w-3 h-3" />
+                          <span className="text-[10px] font-black tracking-tight">{post.shares || 0}</span>
+                        </div>
+                        <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">Shares</span>
+                      </div>
+                    </div>
+                  )}
                   
                   <button 
                     onClick={() => handleOpenFBModal(post)}

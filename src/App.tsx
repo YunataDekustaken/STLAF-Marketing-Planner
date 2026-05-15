@@ -1544,6 +1544,9 @@ function AppContent() {
     customPrompt: '',
     notes: '',
     creatives: [],
+    reactions: 0,
+    comments: 0,
+    shares: 0,
   });
 
   // Auto-save draft
@@ -2419,6 +2422,9 @@ function AppContent() {
       caption: '',
       customPrompt: '',
       creatives: [],
+      reactions: 0,
+      comments: 0,
+      shares: 0,
       userId: user?.uid || 'guest_user',
       isDirectPost: isDirect
     };
@@ -2624,6 +2630,9 @@ function AppContent() {
         customPrompt: '',
         notes: '',
         creatives: [],
+        reactions: 0,
+        comments: 0,
+        shares: 0,
       };
       setFormData(initialData);
       setCaptionHistory(['']);

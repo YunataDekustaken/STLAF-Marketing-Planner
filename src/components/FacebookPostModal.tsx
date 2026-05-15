@@ -12,8 +12,12 @@ import {
   ExternalLink,
   Clock,
   Trash2,
+  ThumbsUp,
+  MessageSquare,
+  Share2,
   PencilLine,
-  Save
+  Save,
+  BarChart3
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
@@ -61,6 +65,12 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const [editedCaption, setEditedCaption] = useState('');
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [newScheduleTime, setNewScheduleTime] = useState('');
+  
+  const [reactions, setReactions] = useState(post?.reactions || 0);
+  const [comments, setComments] = useState(post?.comments || 0);
+  const [shares, setShares] = useState(post?.shares || 0);
+  const [isUpdatingAnalytics, setIsUpdatingAnalytics] = useState(false);
+  const [isEditingAnalytics, setIsEditingAnalytics] = useState(false);
 
   const isLoading = isFBLoading || isIGLoading;
   const error = fbError || igError;
@@ -92,6 +102,11 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       setIsRescheduling(false);
       setNewScheduleTime('');
       setEditedCaption(post.caption || '');
+      setReactions(post.reactions || 0);
+      setComments(post.comments || 0);
+      setShares(post.shares || 0);
+      setIsEditingAnalytics(false);
+      setIsUpdatingAnalytics(false);
       setPostToFB(!post.fbPostId); // Default true if not already posted
       setPostToIG(false); // Default false initially
     }
@@ -343,6 +358,38 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
     }
   };
   
+  const handleUpdateAnalytics = async () => {
+    if (!post) return;
+    setIsUpdatingAnalytics(true);
+    try {
+      const postRef = doc(db, 'posts', post.id);
+      await updateDoc(postRef, {
+        reactions,
+        comments,
+        shares,
+        updatedAt: serverTimestamp()
+      });
+
+      setNotification({
+        isOpen: true,
+        title: 'Analytics Updated',
+        message: 'Post metrics have been updated successfully.',
+        type: 'success'
+      });
+      setIsEditingAnalytics(false);
+    } catch (err) {
+      console.error("Error updating analytics in Firestore:", err);
+      setNotification({
+        isOpen: true,
+        title: 'Update Error',
+        message: 'Failed to update analytics in the database.',
+        type: 'error'
+      });
+    } finally {
+      setIsUpdatingAnalytics(false);
+    }
+  };
+  
   const handleSchedule = async () => {
     setValidationError(null);
     if (!postToFB && !postToIG) {
@@ -530,6 +577,87 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                 </div>
 
                 <div className="flex flex-col gap-2 w-full">
+                  {isAlreadyPublished && (
+                    <div className="w-full bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-2xl p-5 mb-2">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2 text-[#1877F2]">
+                          <BarChart3 className="w-4 h-4" />
+                          <span className="text-xs font-bold uppercase tracking-widest">Performance Insights</span>
+                        </div>
+                        <button 
+                          onClick={() => setIsEditingAnalytics(!isEditingAnalytics)}
+                          className="text-[10px] font-bold text-amber-600 hover:text-amber-700 underline flex items-center gap-1"
+                        >
+                          {isEditingAnalytics ? 'Cancel' : 'Update Metrics'}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                            <ThumbsUp className="w-4 h-4" />
+                            {isEditingAnalytics ? (
+                              <input 
+                                type="number" 
+                                value={reactions}
+                                onChange={(e) => setReactions(parseInt(e.target.value) || 0)}
+                                className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded px-1.5 py-0.5 text-xs font-black outline-none focus:ring-1 focus:ring-blue-300"
+                              />
+                            ) : (
+                              <span className="text-xl font-black">{reactions}</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Reactions</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                            <MessageSquare className="w-4 h-4" />
+                            {isEditingAnalytics ? (
+                              <input 
+                                type="number" 
+                                value={comments}
+                                onChange={(e) => setComments(parseInt(e.target.value) || 0)}
+                                className="w-full bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded px-1.5 py-0.5 text-xs font-black outline-none focus:ring-1 focus:ring-indigo-300"
+                              />
+                            ) : (
+                              <span className="text-xl font-black">{comments}</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Comments</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                            <Share2 className="w-4 h-4" />
+                            {isEditingAnalytics ? (
+                              <input 
+                                type="number" 
+                                value={shares}
+                                onChange={(e) => setShares(parseInt(e.target.value) || 0)}
+                                className="w-full bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded px-1.5 py-0.5 text-xs font-black outline-none focus:ring-1 focus:ring-emerald-300"
+                              />
+                            ) : (
+                              <span className="text-xl font-black">{shares}</span>
+                            )}
+                          </div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Shares</p>
+                        </div>
+                      </div>
+
+                      {isEditingAnalytics && (
+                        <button 
+                          onClick={handleUpdateAnalytics}
+                          disabled={isUpdatingAnalytics}
+                          className="w-full mt-4 flex items-center justify-center gap-2 py-2 bg-[#1877F2] text-white rounded-lg text-xs font-bold hover:bg-[#0e63d1] transition-all disabled:opacity-50"
+                        >
+                          {isUpdatingAnalytics ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Save Metrics to Database
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {isAlreadyScheduled && (
                     <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 mb-2">
                       <div className="flex items-center justify-between mb-3">
