@@ -96,6 +96,7 @@ import { generateCaption } from './services/geminiService';
 import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES } from './constants';
 import { auth, db, storage } from './firebase';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { useFacebookPost } from './hooks/useFacebookPost';
 import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
 import { SocialHubView } from './components/SocialHubView';
@@ -1357,6 +1358,37 @@ function AppContent() {
   const [postRedoStack, setPostRedoStack] = useState<Post[]>([]);
 
   const [refreshing, setRefreshing] = useState(false);
+  const { getPostMetrics } = useFacebookPost();
+
+  const handleSyncSocialMetrics = async () => {
+    const publishedPosts = posts.filter(p => (p.fbPostId && p.fbStatus === 'posted') || p.status === 'Completed');
+    const postsToSync = publishedPosts.filter(p => p.fbPostId || p.igPostId);
+    
+    if (postsToSync.length === 0) return;
+
+    let successCount = 0;
+    for (const post of postsToSync) {
+      try {
+        const targetId = post.fbPostId || post.igPostId;
+        const platform = post.igPostId ? 'instagram' : 'facebook';
+        if (targetId) {
+          const metrics = await getPostMetrics(targetId, platform);
+          if (metrics) {
+            const postRef = doc(db, 'posts', post.id);
+            await updateDoc(postRef, {
+              reactions: metrics.reactions,
+              comments: metrics.comments,
+              shares: metrics.shares,
+              updatedAt: serverTimestamp()
+            });
+            successCount++;
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to sync post ${post.id} from global refresh:`, err);
+      }
+    }
+  };
 
   const handleUndoDelete = async () => {
     if (postUndoStack.length === 0) return;
@@ -1415,10 +1447,20 @@ function AppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [postUndoStack, postRedoStack]);
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = async () => {
     setRefreshKey(prev => prev + 1);
     setRefreshing(true);
     toast.success('Synchronizing data...', { icon: '🔄', duration: 1500 });
+    
+    // If in social hub, also sync metrics
+    if (viewMode === 'social') {
+      try {
+        await handleSyncSocialMetrics();
+      } catch (err) {
+        console.error("Failed to sync social metrics during manual refresh:", err);
+      }
+    }
+
     setTimeout(() => setRefreshing(false), 600);
   };
   const isAuthReady = !authLoading;
@@ -1435,6 +1477,14 @@ function AppContent() {
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [contentTypeFilter, setContentTypeFilter] = useState<string | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  // Auto-sync metrics when entering Social Media Hub
+  useEffect(() => {
+    if (viewMode === 'social') {
+      console.log("Entering Social Hub: Auto-syncing metrics...");
+      handleSyncSocialMetrics();
+    }
+  }, [viewMode, posts]); // Added posts as dependency just in case they are needed for filter inside handleSyncSocialMetrics
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);

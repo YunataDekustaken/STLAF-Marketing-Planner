@@ -55,10 +55,10 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const [postToFB, setPostToFB] = useState(true);
   const [postToIG, setPostToIG] = useState(false);
 
-  const isAlreadyPublished = post?.fbStatus === 'posted' && post?.fbPostId;
+  const isAlreadyPublished = (post?.fbStatus === 'posted' && post?.fbPostId) || post?.status === 'Completed';
   const isAlreadyScheduled = post?.fbStatus === 'scheduled' && post?.fbPostId;
   
-  const { postToFacebook, deleteFacebookPost, updateFacebookPost, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
+  const { postToFacebook, deleteFacebookPost, updateFacebookPost, getPostMetrics, isLoading: isFBLoading, error: fbError, success: fbSuccess, postId: fbPostIdRes, resetStatus: resetFBStatus } = useFacebookPost();
   const { postToInstagram, isLoading: isIGLoading, error: igError, success: igSuccess, postId: igPostIdRes, resetStatus: resetIGStatus } = useInstagramPost();
 
   const [isEditingCaption, setIsEditingCaption] = useState(false);
@@ -71,6 +71,7 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   const [shares, setShares] = useState(post?.shares || 0);
   const [isUpdatingAnalytics, setIsUpdatingAnalytics] = useState(false);
   const [isEditingAnalytics, setIsEditingAnalytics] = useState(false);
+  const [isSyncingMetrics, setIsSyncingMetrics] = useState(false);
 
   const isLoading = isFBLoading || isIGLoading;
   const error = fbError || igError;
@@ -87,6 +88,40 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
   }>({ isOpen: false, title: '', message: '', type: 'success' });
 
   useEffect(() => {
+    const fetchAutoMetrics = async () => {
+      if (isOpen && post && isAlreadyPublished && (post.fbPostId || post.igPostId)) {
+        setIsSyncingMetrics(true);
+        try {
+          const targetId = post.fbPostId || post.igPostId;
+          const platform = post.igPostId ? 'instagram' : 'facebook';
+          
+          if (targetId) {
+            const metrics = await getPostMetrics(targetId, platform);
+            if (metrics) {
+              setReactions(metrics.reactions);
+              setComments(metrics.comments);
+              setShares(metrics.shares);
+              
+              // Only update if values actually changed to save on Firestore writes
+              if (metrics.reactions !== post.reactions || metrics.comments !== post.comments || metrics.shares !== post.shares) {
+                const postRef = doc(db, 'posts', post.id);
+                await updateDoc(postRef, {
+                  reactions: metrics.reactions,
+                  comments: metrics.comments,
+                  shares: metrics.shares,
+                  updatedAt: serverTimestamp()
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Auto-metrics sync failed:", err);
+        } finally {
+          setIsSyncingMetrics(false);
+        }
+      }
+    };
+
     if (isOpen && post) {
       setCaption(post.caption || '');
       setCreatives(post.creatives || []);
@@ -109,8 +144,10 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       setIsUpdatingAnalytics(false);
       setPostToFB(!post.fbPostId); // Default true if not already posted
       setPostToIG(false); // Default false initially
+      
+      fetchAutoMetrics();
     }
-  }, [isOpen, post]);
+  }, [isOpen, post?.id]);
 
   const updatePostStatus = async (fbPostId: string | null, igPostId: string | null, fbStatus: 'posted' | 'scheduled', timeStr?: string) => {
     if (!post) return;
@@ -583,6 +620,12 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                         <div className="flex items-center gap-2 text-[#1877F2]">
                           <BarChart3 className="w-4 h-4" />
                           <span className="text-xs font-bold uppercase tracking-widest">Performance Insights</span>
+                          {isSyncingMetrics && (
+                            <div className="flex items-center gap-1 ml-2">
+                              <Loader2 className="w-2.5 h-2.5 animate-spin text-[#1877F2]" />
+                              <span className="text-[8px] font-bold text-slate-400">Syncing...</span>
+                            </div>
+                          )}
                         </div>
                         <button 
                           onClick={() => setIsEditingAnalytics(!isEditingAnalytics)}

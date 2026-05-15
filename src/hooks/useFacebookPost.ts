@@ -136,6 +136,28 @@ export function useFacebookPost() {
     }
   };
   
+  const getPostMetrics = async (fbPostId: string, platform: 'facebook' | 'instagram' = 'facebook') => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/meta-post/${fbPostId}/metrics?platform=${platform}`);
+      const result = await response.json();
+
+      if (result.success) {
+        return result.metrics;
+      } else {
+        setError(result.error || 'Failed to fetch metrics');
+        return null;
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const resetStatus = () => {
     setIsLoading(false);
     setError(null);
@@ -147,6 +169,7 @@ export function useFacebookPost() {
     postToFacebook,
     deleteFacebookPost,
     updateFacebookPost,
+    getPostMetrics,
     isLoading,
     error,
     success,

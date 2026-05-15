@@ -25,6 +25,7 @@ import {
   ArrowUpDown,
   ListFilter,
   Filter,
+  BarChart3,
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -123,7 +124,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     });
   };
 
-  const filteredPublishedPosts = applyFilters(posts.filter(p => p.fbPostId && p.fbStatus === 'posted'));
+  const filteredPublishedPosts = applyFilters(posts.filter(p => (p.fbPostId && p.fbStatus === 'posted') || p.status === 'Completed'));
   const publishedPosts = filteredPublishedPosts
     .sort((a, b) => {
       if (publishedSort === 'posted') {
@@ -167,7 +168,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     type: 'success' | 'error';
   }>({ isOpen: false, title: '', message: '', type: 'success' });
 
-  const { deleteFacebookPost, isLoading: isDeleting, error: fbError } = useFacebookPost();
+  const { deleteFacebookPost, getPostMetrics, isLoading: isDeleting, error: fbError } = useFacebookPost();
   const menuRef = React.useRef<HTMLDivElement>(null);
   const sortMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -339,6 +340,29 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
     });
     setSearchQuery('');
   };
+
+  const allPublishedPosts = posts.filter(p => (p.fbPostId && p.fbStatus === 'posted') || p.status === 'Completed');
+  const aggregateMetrics = allPublishedPosts.reduce((acc, p) => {
+    acc.reactions += (p.reactions || 0);
+    acc.comments += (p.comments || 0);
+    acc.shares += (p.shares || 0);
+    
+    // Check platform
+    if (p.igPostId) {
+      acc.igReactions += (p.reactions || 0);
+      acc.igComments += (p.comments || 0);
+      acc.igShares += (p.shares || 0);
+    } else {
+      acc.fbReactions += (p.reactions || 0);
+      acc.fbComments += (p.comments || 0);
+      acc.fbShares += (p.shares || 0);
+    }
+    return acc;
+  }, { 
+    reactions: 0, comments: 0, shares: 0, 
+    fbReactions: 0, fbComments: 0, fbShares: 0,
+    igReactions: 0, igComments: 0, igShares: 0
+  });
 
   return (
     <div className="max-w-7xl mx-auto p-4 pt-0 sm:p-6 sm:pt-0 space-y-6 sm:space-y-8">
@@ -652,39 +676,90 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
           </div>
 
 
-          {/* Social Platform Status */}
+          {/* Aggregate Performance Insights */}
           <div className="space-y-6">
-            <div className="bg-slate-900 rounded-xl p-6 text-white shadow-xl">
-              <h3 className="font-bold mb-6 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-amber-500" />
-                Connected Apps
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <Facebook className="w-5 h-5 text-[#1877F2]" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">Facebook Page</span>
-                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Synchronized</span>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/5">
-                  <div className="flex items-center gap-3">
-                    <Instagram className="w-5 h-5 text-pink-500" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">Instagram Business</span>
-                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Synchronized via Meta</span>
-                    </div>
-                  </div>
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+            <div className="bg-slate-900 rounded-xl p-6 text-white shadow-xl border border-slate-800">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="font-bold flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-amber-500" />
+                  Performance Insights
+                </h3>
+                <div className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-black uppercase text-emerald-400 tracking-widest">
+                  Live Status
                 </div>
               </div>
-              <div className="mt-8 pt-8 border-t border-white/5">
-                <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">
-                  Your Meta APIs are active. Posting from the hub will update your Planner Table automatically without leaving the app. Instagram is connected via your linked Facebook Page.
+
+              {/* Principal Metrics */}
+              <div className="grid grid-cols-3 gap-6 mb-10">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <ThumbsUp className="w-4 h-4" />
+                    <span className="text-2xl font-black">{aggregateMetrics.reactions}</span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Reactions</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-400">
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-2xl font-black">{aggregateMetrics.comments}</span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Comments</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <Share2 className="w-4 h-4" />
+                    <span className="text-2xl font-black">{aggregateMetrics.shares}</span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Shares</p>
+                </div>
+              </div>
+
+              {/* Platform Breakdown */}
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Facebook className="w-3.5 h-3.5 text-[#1877F2]" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Facebook Overview</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500">{allPublishedPosts.filter(p => p.fbPostId && !p.igPostId).length} Posts</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                      <div className="text-lg font-black text-[#1877F2]">{aggregateMetrics.fbReactions}</div>
+                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Engagements</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                      <div className="text-lg font-black text-indigo-400">{aggregateMetrics.fbComments}</div>
+                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Discussions</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Instagram className="w-3.5 h-3.5 text-pink-500" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Instagram Insights</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-500">{allPublishedPosts.filter(p => p.igPostId).length} Posts</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                      <div className="text-lg font-black text-pink-500">{aggregateMetrics.igReactions}</div>
+                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Likes</div>
+                    </div>
+                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
+                      <div className="text-lg font-black text-indigo-400">{aggregateMetrics.igComments}</div>
+                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Comments</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10 pt-6 border-t border-white/5">
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
+                  Aggregate data encompasses all published items. Use individual post views for deep-dive tracking.
                 </p>
               </div>
             </div>
@@ -1011,8 +1086,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                     )}
                   </div>
                   
-                  {/* Analytics Row - Only for Published Posts */}
-                  {post.fbStatus === 'posted' && (
+                  {/* Analytics Row - Show for published/completed posts or if they have any metrics */}
+                  {((post.fbStatus === 'posted' || post.status === 'Completed') || (post.reactions || post.comments || post.shares)) && (
                     <div className="grid grid-cols-3 gap-2 py-3 px-2 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100/50 dark:border-slate-800/50">
                       <div className="flex flex-col items-center gap-1 group/stat border-r border-slate-200 dark:border-slate-800">
                         <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">

@@ -516,6 +516,65 @@ async function startServer() {
     }
   });
 
+  // Fetch Meta Post Metrics (Reactions, Comments, Shares)
+  app.get("/api/meta-post/:postId/metrics", async (req, res) => {
+    const { postId } = req.params;
+    const { platform } = req.query; // 'facebook' or 'instagram'
+    const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+    
+    if (!PAGE_ACCESS_TOKEN) {
+      return res.status(500).json({ 
+        success: false, 
+        error: "Facebook credentials (FACEBOOK_PAGE_ACCESS_TOKEN) are not configured on the server." 
+      });
+    }
+
+    try {
+      if (platform === 'instagram') {
+        const response = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+          params: {
+            fields: 'like_count,comments_count',
+            access_token: PAGE_ACCESS_TOKEN
+          }
+        });
+        return res.json({
+          success: true,
+          metrics: {
+            reactions: response.data.like_count || 0,
+            comments: response.data.comments_count || 0,
+            shares: 0 // Instagram share count is typically not available for individual media via public API
+          }
+        });
+      } else {
+        // Default: Facebook
+        const response = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+          params: {
+            fields: 'reactions.summary(true),comments.summary(true),shares',
+            access_token: PAGE_ACCESS_TOKEN
+          }
+        });
+        
+        return res.json({
+          success: true,
+          metrics: {
+            reactions: response.data.reactions?.summary?.total_count || 0,
+            comments: response.data.comments?.summary?.total_count || 0,
+            shares: response.data.shares?.count || 0
+          }
+        });
+      }
+    } catch (error: any) {
+      const errorData = error.response?.data?.error || {};
+      console.error("Meta Metrics API Error:", JSON.stringify(errorData, null, 2));
+      
+      res.status(error.response?.status || 500).json({ 
+        success: false, 
+        error: errorData.message || "Failed to fetch post metrics",
+        details: errorData
+      });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
