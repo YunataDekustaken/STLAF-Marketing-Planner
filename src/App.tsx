@@ -3557,22 +3557,22 @@ function AppContent() {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="relative z-10 flex flex-col items-center"
         >
-          <motion.div 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 200, 
-              damping: 15,
-              delay: 0.1 
-            }}
-            className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl shadow-2xl shadow-amber-500/20 flex items-center justify-center mb-8 relative"
-          >
-            <div className="absolute -right-2 -top-2 bg-white rounded-lg p-1.5 shadow-lg border border-slate-100">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </div>
-            <span className="text-white font-black text-2xl tracking-tighter">STLAF</span>
-          </motion.div>
+            <motion.div 
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 200, 
+                damping: 15,
+                delay: 0.1 
+              }}
+              className="w-24 h-24 mb-8 relative"
+            >
+              <div className="absolute -right-2 -top-2 bg-white rounded-lg p-1.5 shadow-lg border border-slate-100 z-10">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+              </div>
+              <img src="/src/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-2xl shadow-2xl" />
+            </motion.div>
           
           <motion.div
             initial={{ opacity: 0 }}
@@ -3705,10 +3705,10 @@ function AppContent() {
           className={`pt-[32px] pl-[24px] pr-[24px] pb-[19px] flex items-center cursor-pointer hover:bg-white/5 transition-colors group ${isSidebarMini ? 'justify-center' : 'gap-3'}`}
         >
           <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
-            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-tighter">
-              STLAF
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img src="/src/img/MAIN (1).png" alt="Logo" className="w-full h-full object-contain rounded-xl shadow-lg border border-white/10" />
             </div>
-            <div className="absolute -right-1.5 -top-1.5 bg-white rounded-lg p-1 shadow-sm border border-slate-100">
+            <div className="absolute -right-1.5 -top-1.5 bg-white rounded-lg p-1 shadow-sm border border-slate-100 z-10">
               <Sparkles className="w-3 h-3 text-amber-500" />
             </div>
           </div>
@@ -4140,13 +4140,13 @@ function AppContent() {
               {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && viewMode !== 'help' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
                   <div className="relative inline-block text-left">
-                    <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
+                    <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
                       <button 
                         onClick={() => {
                           handleExportCSV(false);
                           setShowExportMenu(false);
                         }}
-                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-full text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all border-r border-slate-200"
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-full text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border-r border-slate-200 dark:border-r-slate-800"
                         title="Export with Data"
                       >
                         <Download className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
@@ -4157,7 +4157,7 @@ function AppContent() {
                           e.stopPropagation();
                           setShowExportMenu(!showExportMenu);
                         }}
-                        className={`flex items-center justify-center w-8 sm:w-10 h-full transition-all ${showExportMenu ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                        className={`flex items-center justify-center w-8 sm:w-10 h-full transition-all ${showExportMenu ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                         title="Export Options"
                       >
                         <MoreVertical className="w-3.5 h-3.5" />
@@ -4171,11 +4171,11 @@ function AppContent() {
                             className="fixed inset-0 z-[60]" 
                             onClick={() => setShowExportMenu(false)}
                           />
-                          <motion.div
+                            <motion.div
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-[70] overflow-hidden"
+                            className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 py-2 z-[70] overflow-hidden"
                           >
                             <button
                               onClick={(e) => {
@@ -4183,14 +4183,14 @@ function AppContent() {
                                 handleExportCSV(false);
                                 setShowExportMenu(false);
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                             >
-                              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                 <FileText className="w-4 h-4" />
                               </div>
                               <div>
-                                <div className="text-slate-900">Export with Data</div>
-                                <div className="text-[10px] text-slate-400 font-normal">Full content library to CSV</div>
+                                <div className="text-slate-900 dark:text-slate-100">Export with Data</div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Full content library to CSV</div>
                               </div>
                             </button>
                             <button
@@ -4199,14 +4199,14 @@ function AppContent() {
                                 handleExportCSV(true);
                                 setShowExportMenu(false);
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-50"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-t border-slate-50 dark:border-slate-800"
                             >
-                              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                                 <Layout className="w-4 h-4" />
                               </div>
                               <div>
-                                <div className="text-slate-900">Format Only (Template)</div>
-                                <div className="text-[10px] text-slate-400 font-normal">Empty template for import</div>
+                                <div className="text-slate-900 dark:text-slate-100">Format Only (Template)</div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Empty template for import</div>
                               </div>
                             </button>
                           </motion.div>
@@ -4227,12 +4227,12 @@ function AppContent() {
                       <button 
                         onClick={() => document.getElementById('csv-import')?.click()}
                         disabled={isSeeding}
-                        className="group relative flex items-center gap-1.5 sm:gap-2 bg-slate-900 text-white p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-slate-800 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        className="group relative flex items-center gap-1.5 sm:gap-2 bg-slate-900 dark:bg-slate-800 text-white p-2 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-bold hover:bg-slate-800 dark:hover:bg-slate-700 transition-all shadow-sm dark:shadow-slate-950/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                         title="Import CSV"
                       >
                         <Upload className="w-3.5 h-3.5 sm:w-4 h-4 shrink-0" />
                         <span className="hidden sm:inline">{isSeeding ? 'Importing...' : 'Import'}</span>
-                        <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                        <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 dark:bg-slate-950 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 sm:group-hover:opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50">
                           {isSeeding ? 'Importing...' : 'Import CSV'}
                         </span>
                       </button>
@@ -4296,17 +4296,17 @@ function AppContent() {
                 {/* Month Navigation & Filters */}
                 {viewMode !== 'social' && (
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
-                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
-                      <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                    <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm shrink-0">
+                      <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 transition-colors">
                         <ChevronLeft className="w-4 h-4 sm:w-5 h-5" />
                       </button>
                       <div className="relative" ref={monthPickerRef}>
                         <button 
                           onClick={() => setShowMonthPicker(!showMonthPicker)}
-                          className="px-1 sm:px-3 font-bold text-slate-800 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm hover:bg-slate-50 py-1 rounded-lg transition-all flex items-center justify-center gap-1 group"
+                          className="px-1 sm:px-3 font-bold text-slate-800 dark:text-slate-200 min-w-[100px] sm:min-w-[160px] text-center text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-800 py-1 rounded-lg transition-all flex items-center justify-center gap-1 group"
                         >
                           {format(currentMonth, 'MMMM yyyy')}
-                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500 transition-transform ${showMonthPicker ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-amber-500 transition-transform ${showMonthPicker ? 'rotate-180' : ''}`} />
                         </button>
 
                         {showMonthPicker && (
@@ -4366,14 +4366,14 @@ function AppContent() {
                           </div>
                         )}
                       </div>
-                      <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
+                      <button onClick={handleNextMonth} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 transition-colors">
                         <ChevronRight className="w-4 h-4 sm:w-5 h-5" />
                       </button>
                     </div>
                     
                     <button 
                       onClick={handleToday}
-                      className="group relative text-xs sm:text-sm font-bold text-slate-600 hover:text-amber-600 p-2 sm:px-4 sm:py-2 bg-white border border-slate-200 rounded-xl shadow-sm transition-all shrink-0"
+                      className="group relative text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-500 p-2 sm:px-4 sm:py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm transition-all shrink-0"
                       title="Today"
                     >
                       <CalendarIcon className="w-3.5 h-3.5 sm:hidden" />
@@ -4381,35 +4381,35 @@ function AppContent() {
                     </button>
 
                     <div className="flex-1 min-w-[140px] sm:max-w-xs relative shrink-0">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                       <input 
                         type="text" 
                         placeholder="Search..."
-                        className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-xs sm:text-sm"
+                        className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
 
                     <div className="flex items-center gap-2 ml-auto">
-                      <div className="flex items-center bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm shrink-0">
+                      <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-0.5 rounded-xl shadow-sm shrink-0">
                         <button 
                           onClick={() => setViewMode('list')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                           title="List View"
                         >
                           <LayoutList className="w-3.5 h-3.5" />
                         </button>
                         <button 
                           onClick={() => setViewMode('kanban')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                           title="Kanban View"
                         >
                           <Columns className="w-3.5 h-3.5" />
                         </button>
                         <button 
                           onClick={() => setViewMode('calendar')}
-                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                          className={`p-1.5 rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                           title="Calendar View"
                         >
                           <CalendarIcon className="w-3.5 h-3.5" />

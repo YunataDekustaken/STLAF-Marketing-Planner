@@ -678,91 +678,184 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
 
           {/* Aggregate Performance Insights */}
           <div className="space-y-6">
-            <div className="bg-slate-900 rounded-xl p-6 text-white shadow-xl border border-slate-800">
-              <div className="flex items-center justify-between mb-8">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-slate-900 rounded-xl p-6 text-white shadow-xl border border-slate-800 relative overflow-hidden"
+            >
+              {/* Subtle background glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-[60px] rounded-full -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="flex items-center justify-between mb-8 relative z-10">
                 <h3 className="font-bold flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-amber-500" />
-                  Performance Insights
+                  Performance Hub
                 </h3>
-                <div className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-black uppercase text-emerald-400 tracking-widest">
-                  Live Status
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,1)]" />
+                  <span className="text-[9px] font-black uppercase text-emerald-400 tracking-widest">Active Data Feed</span>
                 </div>
               </div>
 
-              {/* Principal Metrics */}
-              <div className="grid grid-cols-3 gap-6 mb-10">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-blue-400">
-                    <ThumbsUp className="w-4 h-4" />
-                    <span className="text-2xl font-black">{aggregateMetrics.reactions}</span>
+              {/* Principal Metrics with visual weighting */}
+              <div className="grid grid-cols-1 gap-6 mb-10 relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white/5 p-5 rounded-xl border border-white/5 hover:bg-white/[0.08] transition-all group flex flex-col items-center justify-center text-center">
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                      <ThumbsUp className="w-5 h-5 text-blue-400 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-400/60">Reactions</span>
+                    </div>
+                    <div className="text-4xl font-black tabular-nums leading-none">{aggregateMetrics.reactions.toLocaleString()}</div>
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Reactions</p>
+                  
+                  <div className="bg-white/5 p-5 rounded-xl border border-white/5 hover:bg-white/[0.08] transition-all group flex flex-col items-center justify-center text-center">
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                      <MessageSquare className="w-5 h-5 text-indigo-400 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/60">Comments</span>
+                    </div>
+                    <div className="text-4xl font-black tabular-nums leading-none">{aggregateMetrics.comments.toLocaleString()}</div>
+                  </div>
+
+                  <div className="bg-white/5 p-5 rounded-xl border border-white/5 hover:bg-white/[0.08] transition-all group flex flex-col items-center justify-center text-center">
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                      <Share2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400/60">Shares</span>
+                    </div>
+                    <div className="text-4xl font-black tabular-nums leading-none">{aggregateMetrics.shares.toLocaleString()}</div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-indigo-400">
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="text-2xl font-black">{aggregateMetrics.comments}</span>
+
+                {/* Engagement Composition Bar */}
+                <div className="space-y-2 mt-2">
+                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <span>Engagement Breakdown</span>
+                    <span className="text-slate-300">Total: {(aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares).toLocaleString()}</span>
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Comments</p>
+                  <div className="h-2 w-full flex rounded-full overflow-hidden bg-white/5">
+                    {aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares > 0 ? (
+                      <>
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-1000" 
+                          style={{ width: `${(aggregateMetrics.reactions / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100}%` }}
+                          title={`Reactions: ${Math.round((aggregateMetrics.reactions / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100)}%`}
+                        />
+                        <div 
+                          className="h-full bg-indigo-500 transition-all duration-1000" 
+                          style={{ width: `${(aggregateMetrics.comments / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100}%` }}
+                          title={`Comments: ${Math.round((aggregateMetrics.comments / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100)}%`}
+                        />
+                        <div 
+                          className="h-full bg-emerald-500 transition-all duration-1000" 
+                          style={{ width: `${(aggregateMetrics.shares / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100}%` }}
+                          title={`Shares: ${Math.round((aggregateMetrics.shares / (aggregateMetrics.reactions + aggregateMetrics.comments + aggregateMetrics.shares)) * 100)}%`}
+                        />
+                      </>
+                    ) : (
+                      <div className="h-full w-full bg-white/5" />
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-400">
-                    <Share2 className="w-4 h-4" />
-                    <span className="text-2xl font-black">{aggregateMetrics.shares}</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Shares</p>
+              </div>
+
+              {/* Top Performing Content Link/Preview */}
+              <div className="mb-10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Top Performers</h4>
+                  {allPublishedPosts.length > 0 && (
+                    <button 
+                      onClick={() => {
+                        setPublishedSort('posted');
+                        setActiveTab('published');
+                      }} 
+                      className="text-[9px] font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors uppercase tracking-widest"
+                    >
+                      Analyze All <ChevronRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  {allPublishedPosts
+                    .sort((a, b) => ((b.reactions || 0) + (b.comments || 0) + (b.shares || 0)) - ((a.reactions || 0) + (a.comments || 0) + (a.shares || 0)))
+                    .slice(0, 3)
+                    .map((post, i) => (
+                      <div 
+                        key={post.id} 
+                        className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all group/post cursor-pointer"
+                        onClick={() => {
+                          const el = document.getElementById(`post-${post.id}`);
+                          if (el) {
+                            setActiveTab('published');
+                            setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                          }
+                        }}
+                      >
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-white/10 relative">
+                          {post.creatives?.[0] ? (
+                            <img src={post.creatives[0]} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                              <BarChart3 className="w-4 h-4 text-slate-600" />
+                            </div>
+                          )}
+                          <div className="absolute top-0 left-0 w-full h-full bg-black/20 group-hover/post:bg-transparent transition-colors" />
+                          <div className="absolute top-0.5 right-0.5">
+                            {post.igPostId ? <Instagram className="w-2.5 h-2.5 text-pink-500" /> : <Facebook className="w-2.5 h-2.5 text-blue-500" />}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h5 className="text-[11px] font-bold truncate text-slate-200">{post.contentTitle || post.topicTheme || "Untitled Post"}</h5>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-[9px] font-black text-amber-500 tabular-nums">#{(post.reactions || 0) + (post.comments || 0) + (post.shares || 0)} <span className="text-[8px] opacity-70">Engagement</span></span>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter"> Rank {i + 1}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                  {allPublishedPosts.length === 0 && (
+                    <div className="py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/10">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic opacity-50">No published content tracked</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Platform Breakdown */}
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <Facebook className="w-3.5 h-3.5 text-[#1877F2]" />
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Facebook Overview</span>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500">{allPublishedPosts.filter(p => p.fbPostId && !p.igPostId).length} Posts</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
-                      <div className="text-lg font-black text-[#1877F2]">{aggregateMetrics.fbReactions}</div>
-                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Engagements</div>
-                    </div>
-                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
-                      <div className="text-lg font-black text-indigo-400">{aggregateMetrics.fbComments}</div>
-                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Discussions</div>
-                    </div>
+                  <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 flex flex-col items-center text-center">
+                    <div className="text-xl font-black text-[#1877F2] tracking-tighter tabular-nums leading-none">{(aggregateMetrics.fbReactions + aggregateMetrics.fbComments).toLocaleString()}</div>
+                    <div className="text-[8px] font-black text-blue-500/50 uppercase tracking-widest mt-2">Reach Score</div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <Instagram className="w-3.5 h-3.5 text-pink-500" />
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">Instagram Insights</span>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500">{allPublishedPosts.filter(p => p.igPostId).length} Posts</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
-                      <div className="text-lg font-black text-pink-500">{aggregateMetrics.igReactions}</div>
-                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Likes</div>
-                    </div>
-                    <div className="bg-white/5 border border-white/5 rounded-lg p-3">
-                      <div className="text-lg font-black text-indigo-400">{aggregateMetrics.igComments}</div>
-                      <div className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">Comments</div>
-                    </div>
+                  <div className="bg-pink-500/5 border border-pink-500/10 rounded-xl p-4 flex flex-col items-center text-center">
+                    <div className="text-xl font-black text-pink-500 tracking-tighter tabular-nums leading-none">{(aggregateMetrics.igReactions + aggregateMetrics.igComments).toLocaleString()}</div>
+                    <div className="text-[8px] font-black text-pink-500/50 uppercase tracking-widest mt-2">Visual Impact</div>
                   </div>
                 </div>
               </div>
 
               <div className="mt-10 pt-6 border-t border-white/5">
-                <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic">
-                  Aggregate data encompasses all published items. Use individual post views for deep-dive tracking.
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic text-center">
+                  Insights represent aggregate engagement data across all active social assets.
                 </p>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       )}
