@@ -42,7 +42,7 @@ export default function AuthScreen() {
           <div className="relative">
             {/* Main Logo Image */}
             <div className="w-28 h-28 flex items-center justify-center">
-              <img src="/src/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-3xl shadow-2xl" />
+              <img src="/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-3xl shadow-2xl" />
             </div>
             
             {/* Star Icon Overlay */}

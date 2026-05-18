@@ -3571,7 +3571,7 @@ function AppContent() {
               <div className="absolute -right-2 -top-2 bg-white rounded-lg p-1.5 shadow-lg border border-slate-100 z-10">
                 <Sparkles className="w-5 h-5 text-amber-500" />
               </div>
-              <img src="/src/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-2xl shadow-2xl" />
+              <img src="/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-2xl shadow-2xl" />
             </motion.div>
           
           <motion.div
@@ -3706,7 +3706,7 @@ function AppContent() {
         >
           <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 flex items-center justify-center">
-              <img src="/src/img/MAIN (1).png" alt="Logo" className="w-full h-full object-contain rounded-xl shadow-lg border border-white/10" />
+              <img src="/img/MAIN (1).png" alt="Logo" className="w-full h-full object-contain rounded-xl shadow-lg border border-white/10" />
             </div>
             <div className="absolute -right-1.5 -top-1.5 bg-white rounded-lg p-1 shadow-sm border border-slate-100 z-10">
               <Sparkles className="w-3 h-3 text-amber-500" />

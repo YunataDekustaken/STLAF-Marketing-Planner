@@ -23,8 +23,8 @@ import { addDoc, collection, serverTimestamp, query, where, orderBy, onSnapshot,
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
 
-import captionImg from '../img/CAPTION.png';
-import editPoImg from '../img/EditPo.png';
+const captionImg = '/img/CAPTION.png';
+const editPoImg = '/img/EditPo.png';
 
 interface HelpViewProps {
   userEmail: string | null;
