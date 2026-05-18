@@ -97,7 +97,7 @@ export interface SocialHistoryEntry {
   postId: string;
   contentTitle: string;
   action: 'manual_publish' | 'schedule' | 'auto_publish' | 'delete' | 'update_caption' | 'reschedule';
-  platform: 'facebook' | 'instagram' | 'meta' | 'linkedin' | 'system';
+  platform: 'facebook' | 'instagram' | 'meta' | 'system';
   timestamp: any; // Firestore timestamp
   userEmail: string;
   userName: string;

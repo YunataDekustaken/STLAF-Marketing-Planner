@@ -549,9 +549,10 @@ async function startServer() {
         // Default: Facebook
         try {
           // Attempt grouped fetch with summaries and shares
+          // Using limit(0) on summaries is safer and only returns the total_count
           const response = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
             params: {
-              fields: 'reactions.summary(true),comments.summary(true),shares',
+              fields: 'reactions.limit(0).summary(true),comments.limit(0).summary(true),shares',
               access_token: PAGE_ACCESS_TOKEN
             }
           });
@@ -565,25 +566,62 @@ async function startServer() {
             }
           });
         } catch (firstTryErr: any) {
-          // If first try fails (often due to 'shares' field not being supported on certain post types), 
+          // If first try fails (often due to 'shares' field or specific summary fields not being supported on certain post types), 
           // try a more conservative fallback set.
-          console.warn(`Initial Facebook metrics fetch failed for ${postId}, attempting fallback...`);
+          const errorData = firstTryErr.response?.data?.error || {};
           
-          const fallbackResponse = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
-            params: {
-              fields: 'reactions.limit(0).summary(total_count),comments.limit(0).summary(total_count)',
-              access_token: PAGE_ACCESS_TOKEN
-            }
-          });
+          // If it's a known "not allowed" error (subcode 33), it usually means the object doesn't support these specific insight fields
+          if (errorData.error_subcode === 33 || errorData.code === 100) {
+             // Try one more time with just basic count fields or simple likes
+             try {
+                const ultraFallback = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+                  params: {
+                    fields: 'likes.summary(true),comments.summary(true)',
+                    access_token: PAGE_ACCESS_TOKEN
+                  }
+                });
+                return res.json({
+                  success: true,
+                  metrics: {
+                    reactions: ultraFallback.data.likes?.summary?.total_count || 0,
+                    comments: ultraFallback.data.comments?.summary?.total_count || 0,
+                    shares: 0
+                  }
+                });
+             } catch (e) {
+                // If even ultra fallback fails, it likely doesn't support metrics. Return zeros safely.
+                return res.json({
+                  success: true,
+                  metrics: { reactions: 0, comments: 0, shares: 0 }
+                });
+             }
+          }
+
+          console.warn(`Facebook metrics fetch fallback for ${postId} due to: ${errorData.message}`);
           
-          return res.json({
-            success: true,
-            metrics: {
-              reactions: fallbackResponse.data.reactions?.summary?.total_count || 0,
-              comments: fallbackResponse.data.comments?.summary?.total_count || 0,
-              shares: 0
-            }
-          });
+          try {
+            const fallbackResponse = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+              params: {
+                fields: 'reactions.limit(0).summary(total_count),comments.limit(0).summary(total_count)',
+                access_token: PAGE_ACCESS_TOKEN
+              }
+            });
+            
+            return res.json({
+              success: true,
+              metrics: {
+                reactions: fallbackResponse.data.reactions?.summary?.total_count || 0,
+                comments: fallbackResponse.data.comments?.summary?.total_count || 0,
+                shares: 0
+              }
+            });
+          } catch (secondTryErr) {
+            // Still failing? Return zero metrics instead of throwing to avoid client-side errors
+            return res.json({
+              success: true,
+              metrics: { reactions: 0, comments: 0, shares: 0 }
+            });
+          }
         }
       }
     } catch (error: any) {

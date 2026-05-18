@@ -57,7 +57,6 @@ import {
   Share2,
   Facebook,
   Instagram,
-  Linkedin,
   Share,
   Music2,
   Sun,
@@ -1506,7 +1505,7 @@ function AppContent() {
       console.log("Entering Social Hub: Auto-syncing metrics...");
       handleSyncSocialMetrics();
     }
-  }, [viewMode, posts]); // Added posts as dependency just in case they are needed for filter inside handleSyncSocialMetrics
+  }, [viewMode]);
   const [currentMonth, setCurrentMonth] = useState(new Date()); 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
@@ -1652,7 +1651,6 @@ function AppContent() {
   const [socialLinks, setSocialLinks] = useState({
     facebook: '',
     instagram: '',
-    linkedin: '',
     tiktok: ''
   });
 
