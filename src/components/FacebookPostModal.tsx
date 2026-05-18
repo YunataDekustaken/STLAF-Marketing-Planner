@@ -92,26 +92,47 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
       if (isOpen && post && isAlreadyPublished && (post.fbPostId || post.igPostId)) {
         setIsSyncingMetrics(true);
         try {
-          const targetId = post.fbPostId || post.igPostId;
-          const platform = post.igPostId ? 'instagram' : 'facebook';
+          let totalReactions = 0;
+          let totalComments = 0;
+          let totalShares = 0;
+          let hasAnyMetrics = false;
+
+          // Fetch Facebook metrics if ID exists
+          if (post.fbPostId) {
+            const fbMetrics = await getPostMetrics(post.fbPostId, 'facebook');
+            if (fbMetrics) {
+              totalReactions += fbMetrics.reactions || 0;
+              totalComments += fbMetrics.comments || 0;
+              totalShares += fbMetrics.shares || 0;
+              hasAnyMetrics = true;
+            }
+          }
+
+          // Fetch Instagram metrics if ID exists
+          if (post.igPostId) {
+            const igMetrics = await getPostMetrics(post.igPostId, 'instagram');
+            if (igMetrics) {
+              totalReactions += igMetrics.reactions || 0;
+              totalComments += igMetrics.comments || 0;
+              totalShares += igMetrics.shares || 0;
+              hasAnyMetrics = true;
+            }
+          }
           
-          if (targetId) {
-            const metrics = await getPostMetrics(targetId, platform);
-            if (metrics) {
-              setReactions(metrics.reactions);
-              setComments(metrics.comments);
-              setShares(metrics.shares);
-              
-              // Only update if values actually changed to save on Firestore writes
-              if (metrics.reactions !== post.reactions || metrics.comments !== post.comments || metrics.shares !== post.shares) {
-                const postRef = doc(db, 'posts', post.id);
-                await updateDoc(postRef, {
-                  reactions: metrics.reactions,
-                  comments: metrics.comments,
-                  shares: metrics.shares,
-                  updatedAt: serverTimestamp()
-                });
-              }
+          if (hasAnyMetrics) {
+            setReactions(totalReactions);
+            setComments(totalComments);
+            setShares(totalShares);
+            
+            // Only update if values actually changed to save on Firestore writes
+            if (totalReactions !== post.reactions || totalComments !== post.comments || totalShares !== post.shares) {
+              const postRef = doc(db, 'posts', post.id);
+              await updateDoc(postRef, {
+                reactions: totalReactions,
+                comments: totalComments,
+                shares: totalShares,
+                updatedAt: serverTimestamp()
+              });
             }
           }
         } catch (err) {

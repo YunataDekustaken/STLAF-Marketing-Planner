@@ -1369,20 +1369,42 @@ function AppContent() {
     let successCount = 0;
     for (const post of postsToSync) {
       try {
-        const targetId = post.fbPostId || post.igPostId;
-        const platform = post.igPostId ? 'instagram' : 'facebook';
-        if (targetId) {
-          const metrics = await getPostMetrics(targetId, platform);
-          if (metrics) {
-            const postRef = doc(db, 'posts', post.id);
-            await updateDoc(postRef, {
-              reactions: metrics.reactions,
-              comments: metrics.comments,
-              shares: metrics.shares,
-              updatedAt: serverTimestamp()
-            });
-            successCount++;
+        let totalReactions = 0;
+        let totalComments = 0;
+        let totalShares = 0;
+        let hasMetrics = false;
+
+        // Fetch Facebook metrics if ID exists
+        if (post.fbPostId) {
+          const fbMetrics = await getPostMetrics(post.fbPostId, 'facebook');
+          if (fbMetrics) {
+            totalReactions += fbMetrics.reactions || 0;
+            totalComments += fbMetrics.comments || 0;
+            totalShares += fbMetrics.shares || 0;
+            hasMetrics = true;
           }
+        }
+
+        // Fetch Instagram metrics if ID exists
+        if (post.igPostId) {
+          const igMetrics = await getPostMetrics(post.igPostId, 'instagram');
+          if (igMetrics) {
+            totalReactions += igMetrics.reactions || 0;
+            totalComments += igMetrics.comments || 0;
+            totalShares += igMetrics.shares || 0;
+            hasMetrics = true;
+          }
+        }
+
+        if (hasMetrics) {
+          const postRef = doc(db, 'posts', post.id);
+          await updateDoc(postRef, {
+            reactions: totalReactions,
+            comments: totalComments,
+            shares: totalShares,
+            updatedAt: serverTimestamp()
+          });
+          successCount++;
         }
       } catch (err) {
         console.error(`Failed to sync post ${post.id} from global refresh:`, err);
@@ -3818,7 +3840,7 @@ function AppContent() {
           )}
 
           {/* Social Channels Section */}
-          {isSidebarExpanded && (socialLinks.facebook || socialLinks.instagram || socialLinks.linkedin || socialLinks.tiktok) && (
+          {isSidebarExpanded && (socialLinks.facebook || socialLinks.instagram || socialLinks.tiktok) && (
             <div className="px-4 pt-4 pb-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-0">Social Channels</p>
@@ -3859,17 +3881,7 @@ function AppContent() {
                         <span className="text-sm font-medium truncate">Instagram</span>
                       </a>
                     )}
-                    {socialLinks.linkedin && (
-                      <a 
-                        href={socialLinks.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-400 hover:text-[#0A66C2] transition-colors group"
-                      >
-                        <Linkedin className="w-4 h-4 text-slate-500 group-hover:text-[#0A66C2] transition-colors" />
-                        <span className="text-sm font-medium truncate">LinkedIn</span>
-                      </a>
-                    )}
+
                     {socialLinks.tiktok && (
                       <a 
                         href={socialLinks.tiktok}
@@ -4920,25 +4932,9 @@ function AppContent() {
                         </a>
                       </div>
                     )}
-
-                    {socialLinks.linkedin && (
-                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 space-y-3 transition-all hover:border-slate-200 hover:bg-white active:scale-[0.98]">
-                        <div className="flex items-center gap-2 text-[#0A66C2]">
-                          <Linkedin className="w-5 h-5" />
-                          <span className="text-xs font-black uppercase tracking-wider">LinkedIn</span>
-                        </div>
-                        <a 
-                          href={socialLinks.linkedin} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#0A66C2] hover:bg-[#0A66C2]/10 rounded-xl text-[11px] font-bold transition-all border border-[#0A66C2]/20"
-                        >
-                          View Page
-                        </a>
-                      </div>
-                    )}
                   </div>
-                  {!socialLinks.facebook && !socialLinks.instagram && !socialLinks.linkedin && (
+
+                  {!socialLinks.facebook && !socialLinks.instagram && (
                     <div className="py-6 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest italic">No social links configured</p>
                     </div>

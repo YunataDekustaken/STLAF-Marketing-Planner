@@ -542,26 +542,49 @@ async function startServer() {
           metrics: {
             reactions: response.data.like_count || 0,
             comments: response.data.comments_count || 0,
-            shares: 0 // Instagram share count is typically not available for individual media via public API
+            shares: 0
           }
         });
       } else {
         // Default: Facebook
-        const response = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
-          params: {
-            fields: 'reactions.summary(true),comments.summary(true),shares',
-            access_token: PAGE_ACCESS_TOKEN
-          }
-        });
-        
-        return res.json({
-          success: true,
-          metrics: {
-            reactions: response.data.reactions?.summary?.total_count || 0,
-            comments: response.data.comments?.summary?.total_count || 0,
-            shares: response.data.shares?.count || 0
-          }
-        });
+        try {
+          // Attempt grouped fetch with summaries and shares
+          const response = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+            params: {
+              fields: 'reactions.summary(true),comments.summary(true),shares',
+              access_token: PAGE_ACCESS_TOKEN
+            }
+          });
+          
+          return res.json({
+            success: true,
+            metrics: {
+              reactions: response.data.reactions?.summary?.total_count || 0,
+              comments: response.data.comments?.summary?.total_count || 0,
+              shares: response.data.shares?.count || 0
+            }
+          });
+        } catch (firstTryErr: any) {
+          // If first try fails (often due to 'shares' field not being supported on certain post types), 
+          // try a more conservative fallback set.
+          console.warn(`Initial Facebook metrics fetch failed for ${postId}, attempting fallback...`);
+          
+          const fallbackResponse = await axios.get(`https://graph.facebook.com/v19.0/${postId}`, {
+            params: {
+              fields: 'reactions.limit(0).summary(total_count),comments.limit(0).summary(total_count)',
+              access_token: PAGE_ACCESS_TOKEN
+            }
+          });
+          
+          return res.json({
+            success: true,
+            metrics: {
+              reactions: fallbackResponse.data.reactions?.summary?.total_count || 0,
+              comments: fallbackResponse.data.comments?.summary?.total_count || 0,
+              shares: 0
+            }
+          });
+        }
       }
     } catch (error: any) {
       const errorData = error.response?.data?.error || {};
