@@ -26,7 +26,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SUPERVISOR_EMAILS = ['pjhbayno15@gmail.com']; // emergency admin access
+const SUPERVISOR_EMAILS = ['cbalvarado@sadsadtamesislaw.com']; // emergency admin access
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

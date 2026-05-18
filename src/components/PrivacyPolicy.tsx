@@ -71,7 +71,7 @@ export const PrivacyPolicy = () => {
             <section>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">6. Contact Us</h2>
               <p>
-                If you have questions or concerns about this Privacy Policy, please contact us at pjhbayno15@gmail.com.
+                If you have questions or concerns about this Privacy Policy, please contact us at cbalvarado@sadsadtamesislaw.com.
               </p>
             </section>
           </div>

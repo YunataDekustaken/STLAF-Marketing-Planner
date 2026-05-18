@@ -72,7 +72,7 @@ export const TermsOfService = () => {
             <section>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">7. Contact Information</h2>
               <p>
-                Questions about the Terms of Service should be sent to pjhbayno15@gmail.com.
+                Questions about the Terms of Service should be sent to cbalvarado@sadsadtamesislaw.com.
               </p>
             </section>
           </div>

@@ -39,7 +39,7 @@ export const DataDeletion = () => {
               <div className="space-y-4">
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                  <p>Send an email to <span className="font-bold text-slate-900 dark:text-white">pjhbayno15@gmail.com</span> with the subject line "Data Deletion Request".</p>
+                  <p>Send an email to <span className="font-bold text-slate-900 dark:text-white">cbalvarado@sadsadtamesislaw.com</span> with the subject line "Data Deletion Request".</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold shrink-0">2</div>
@@ -80,7 +80,7 @@ export const DataDeletion = () => {
               </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Support Contact</p>
-                <p className="text-sm font-medium text-slate-900 dark:text-white">pjhbayno15@gmail.com</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">cbalvarado@sadsadtamesislaw.com</p>
               </div>
             </section>
           </div>
