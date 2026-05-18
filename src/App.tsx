@@ -3568,8 +3568,8 @@ function AppContent() {
               }}
               className="w-24 h-24 mb-8 relative"
             >
-              <div className="absolute -right-2 -top-2 bg-white rounded-lg p-1.5 shadow-lg border border-slate-100 z-10">
-                <Sparkles className="w-5 h-5 text-amber-500" />
+              <div className="absolute -right-2 -top-2 bg-amber-500 rounded-lg p-1.5 shadow-lg shadow-amber-500/20 border border-amber-400 z-10">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <img src="/img/MAIN (1).png" alt="STLAF Logo" className="w-full h-full object-contain rounded-2xl shadow-2xl" />
             </motion.div>
@@ -3708,8 +3708,8 @@ function AppContent() {
             <div className="w-12 h-12 flex items-center justify-center">
               <img src="/img/MAIN (1).png" alt="Logo" className="w-full h-full object-contain rounded-xl shadow-lg border border-white/10" />
             </div>
-            <div className="absolute -right-1.5 -top-1.5 bg-white rounded-lg p-1 shadow-sm border border-slate-100 z-10">
-              <Sparkles className="w-3 h-3 text-amber-500" />
+            <div className="absolute -right-1.5 -top-1.5 bg-amber-500 rounded-lg p-1 shadow-sm border border-amber-400 z-10">
+              <Sparkles className="w-3 h-3 text-white" />
             </div>
           </div>
           {isSidebarExpanded && (

@@ -46,8 +46,8 @@ export default function AuthScreen() {
             </div>
             
             {/* Star Icon Overlay */}
-            <div className="absolute -right-3 -top-3 bg-white rounded-2xl p-2.5 shadow-xl border border-slate-50 z-20">
-              <Sparkles className="w-6 h-6 text-amber-500" />
+            <div className="absolute -right-3 -top-3 bg-amber-500 rounded-2xl p-2.5 shadow-xl shadow-amber-500/20 border border-amber-400 z-20">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
           </div>
         </div>
