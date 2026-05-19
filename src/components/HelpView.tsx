@@ -131,10 +131,45 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
 
   const guideSections = [
     {
+      title: "Getting Started",
+      icon: <CheckCircle2 className="w-5 h-5 text-sky-500" />,
+      content: "Learn the foundational steps to navigate the platform, from your first login to configuring your workspace for success.",
+      longContent: "Welcome to the Marketing Operations Portal. To get started, ensure you are logged in using your authorized organizational email. The navigation sidebar allows you to jump between the Content Planner (main hub), the Social Hub (history & metrics), and your Personal Profile. For administrators, the Admin Tab is the central place to configure API integrations and manage team roles.",
+      topics: [
+        {
+          title: "Initial Login",
+          content: "1. Access the portal via the provided URL.\n2. Log in using your registered Firebase Authentication credentials.\n3. Upon entry, you'll be directed to the 'Month' view of the Planner by default, showing the current month's campaign activities."
+        },
+        {
+          title: "Navigation 101",
+          content: "• Sidebar: Toggle between planning views and administrative tools.\n• Search Bar: Locate specific content titles or topics across the entire database.\n• Role Dashboard: In the top right, you can see your current role and sign out.\n• Theme Toggle: Switch between Light and Dark mode based on your preference."
+        },
+        {
+          title: "Profile Setup",
+          content: "Visit your User Settings to set your display name and check your permissions. If you are a supervisor, ensure you have configured the 'Governance' settings in the Admin tab to enable or disable deletion approvals."
+        }
+      ],
+      color: "bg-sky-50 dark:bg-sky-900/20"
+    },
+    {
       title: "Content Planning",
       icon: <Calendar className="w-5 h-5 text-indigo-500" />,
-      content: "Use the Calendar and Social Hub to plan your content. You can drag and drop (if supported) or click any date to create a new task. Tasks can be tracked through stages from 'Not Started' to 'Published'.",
-      longContent: "The Marketing Operations Portal provides three distinct views for planning: the Monthly Calendar for a high-level timeline, a dense Table View for batch editing, and a Kanban Board for workflow management. You can easily duplicate posts by long-pressing or using the copy icon, ensuring consistency across campaigns. Each post can have attachments, specific platform targets, and internal notes for team collaboration.",
+      content: "Organize your social media strategy using multiple view modes. Track content from ideation to final publication.",
+      longContent: "The Content Planner is where most of your work happens. It allows for high-level visualization and granular control over every piece of digital content being produced.",
+      topics: [
+        {
+          title: "Switching View Modes",
+          content: "Use the view switcher at the top of the Planner to alternate between:\n\n• Table View: Best for batch editing and viewing dense data (captions, links, notes).\n• Kanban Board: Visualizes the pipeline. Drag cards between 'Not Started', 'In Progress', 'For Review', 'Approved', 'Scheduled', and 'Published'.\n• Month View: A traditional calendar grid for checking campaign spacing and deadlines."
+        },
+        {
+          title: "Creating a Post",
+          content: "1. Click the 'Create New' button or click on a specific date in the Calendar/Table.\n2. Fill in the 'Content Title' (this is the internal identifier).\n3. Set the 'Topic/Theme' and choose from predefined 'Content Types' (e.g., Reel, Carousel, Photo).\n4. Assign a 'Format' and 'Objective' (Awareness, Conversion, etc.) to help with sorting and reporting."
+        },
+        {
+          title: "Collaboration & Attachments",
+          content: "Inside each post editor, you can upload 'Deliverables'. These are the actual media files (images/videos) that will be posted. Creative team members can upload files, and Supervisors can review them directly from the panel. You can also add 'Internal Notes' for team-only communication that won't be published."
+        }
+      ],
       color: "bg-indigo-50 dark:bg-indigo-900/20"
     },
     {
@@ -228,6 +263,27 @@ After completing these steps, go back to the "Admin" tab in this application and
       content: "Depending on your role, you may need supervisor approval to delete content or finalize schedules. If governance toggles are active, system restrictions keep the workflow safe and professional.",
       longContent: "The platform implements a multi-tier authorization system. Regular Marketing users can create and edit drafts, but critical actions like 'Deleting a Published Post' or 'Bypassing Schedule Limits' may require a Marketing Supervisor's approval. Deletion requests appear in the Social Hub for supervisors to review. Status progression is also protected: once a post is 'Scheduled' for Facebook, its core content is locked to prevent accidental changes before deployment.",
       color: "bg-emerald-50 dark:bg-emerald-900/20"
+    },
+    {
+      title: "Social Media Hub",
+      icon: <History className="w-5 h-5 text-violet-500" />,
+      content: "Track the performance and lifecycle of your published content. View historical data and real-time engagement metrics.",
+      longContent: "The Social Hub acts as your command center for everything that has left the Planner and gone live on social media. It provides transparency into post status and historical records.",
+      topics: [
+        {
+          title: "Monitoring Live Posts",
+          content: "The Hub displays a stream of 'Linked Content'. Each card shows:\n\n• Live Status: Indicates if the post is still live or has been deleted from Meta.\n• Performance Insights: (If supported) Real-time counts for Reactions, Comments, and Shares.\n• External Links: Quick links to view the post directly on Facebook or Instagram."
+        },
+        {
+          title: "Post History",
+          content: "Use the 'History' tab within the Social Hub to see a timeline of all completed publishing actions. You can search this history to see who published what, and on which date. This is crucial for verifying campaign consistency."
+        },
+        {
+          title: "Deletion Requests",
+          content: "If governance is enabled, deleting a published post requires a request. These requests appear in the Social Hub. Supervisors can either approve the deletion (removing it from both Meta and the Portal) or reject it, keeping the content live."
+        }
+      ],
+      color: "bg-violet-50 dark:bg-violet-900/20"
     },
     {
       title: "System Infrastructure",
