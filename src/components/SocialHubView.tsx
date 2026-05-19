@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Post, SocialHistoryEntry } from '../types';
+import { Post, SocialHistoryEntry, SocialLinks } from '../types';
+import { SUPPORTED_SOCIAL_PLATFORMS } from '../constants';
 import { 
   Facebook, 
   Instagram, 
@@ -52,6 +53,7 @@ interface SocialHubViewProps {
   handleRejectDeletion?: (id: string) => Promise<void>;
   handleCancelDeletionRequest?: (id: string, type: 'hub' | 'facebook') => Promise<void>;
   userRole?: string;
+  socialLinks: SocialLinks;
 }
 
 export const SocialHubView: React.FC<SocialHubViewProps> = ({ 
@@ -65,7 +67,8 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
   handleApproveDeletion,
   handleRejectDeletion,
   handleCancelDeletionRequest,
-  userRole
+  userRole,
+  socialLinks
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'published' | 'scheduled' | 'history'>('overview');
   const [publishedSort, setPublishedSort] = useState<'posted' | 'planned' | 'title'>('posted');
@@ -673,10 +676,7 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                 )}
               </div>
             </div>
-          </div>
-
-
-          {/* Aggregate Performance Insights */}
+          </div>          {/* Published items / Performance insights */}
           <div className="space-y-6">
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
@@ -856,6 +856,50 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({
                 </p>
               </div>
             </motion.div>
+
+            {/* Social Media Toolkit */}
+            {Object.values(socialLinks).some(link => !!link) && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                    <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                      <Share2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    Social Media Toolkit
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  {SUPPORTED_SOCIAL_PLATFORMS.map(platform => {
+                    const link = socialLinks[platform.id];
+                    if (!link) return null;
+                    const Icon = platform.icon;
+                    
+                    return (
+                      <motion.a 
+                        key={platform.id}
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ y: -2, scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 hover:bg-white dark:hover:bg-slate-800 transition-all group relative overflow-hidden shadow-sm hover:shadow-md"
+                      >
+                        <div className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ExternalLink className="w-2.5 h-2.5 text-indigo-500" />
+                        </div>
+                        <div className={`p-3 rounded-xl bg-white dark:bg-slate-900 mb-3 shadow-inner transition-transform group-hover:scale-105`}>
+                          <Icon className="w-5 h-5" style={{ color: platform.color }} />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-tight text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                          {platform.label}
+                        </span>
+                      </motion.a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

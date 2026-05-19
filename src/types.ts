@@ -110,6 +110,17 @@ export type Department = 'Marketing' | 'HR' | 'Litigation' | 'Corpo' | 'Accounti
 
 export type UserStatus = 'active' | 'pending' | 'blocked';
 
+export interface SocialLinks {
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  linkedin?: string;
+  twitter?: string;
+  youtube?: string;
+  website?: string;
+  [key: string]: string | undefined;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;

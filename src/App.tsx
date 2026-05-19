@@ -90,9 +90,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Toaster, toast } from 'react-hot-toast';
-import { Post, PostStatus, ViewMode, INITIAL_POSTS, UserProfile } from './types';
+import { Post, PostStatus, ViewMode, INITIAL_POSTS, UserProfile, SocialLinks } from './types';
 import { generateCaption } from './services/geminiService';
-import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES } from './constants';
+import { CONTENT_TITLES, CONTENT_TYPES, FORMATS, FUNNEL_STATUSES, SUPPORTED_SOCIAL_PLATFORMS } from './constants';
 import { auth, db, storage } from './firebase';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useFacebookPost } from './hooks/useFacebookPost';
@@ -284,12 +284,7 @@ interface KanbanViewProps {
     requireDeletionApproval: boolean;
   };
   canDelete: boolean;
-  socialLinks: {
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    tiktok: string;
-  };
+  socialLinks: SocialLinks;
   newlyImportedIds: Set<string>;
 }
 
@@ -369,18 +364,31 @@ const KanbanView: React.FC<KanbanViewProps> = ({
                       <FBStatusBadge post={post} />
                     </div>
                     <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
-                      {socialLinks.facebook && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenFBModal(post);
-                          }}
-                          className="p-1 text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                          title="Post to Facebook"
-                        >
-                          <Facebook className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      {SUPPORTED_SOCIAL_PLATFORMS.map(platform => {
+                        const link = socialLinks[platform.id];
+                        if (!link) return null;
+                        const Icon = platform.icon;
+                        
+                        return (
+                          <button 
+                            key={platform.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (platform.id === 'facebook') {
+                                handleOpenFBModal(post);
+                              } else {
+                                window.open(link, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                            className={`p-1 rounded transition-colors ${
+                              platform.id === 'facebook' ? 'text-[#1877F2] hover:bg-blue-50 dark:hover:bg-blue-900/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            }`}
+                            title={platform.id === 'facebook' ? 'Post to Facebook' : `View ${platform.label}`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                          </button>
+                        );
+                      })}
                       {(post.deletionRequested || post.facebookDeletionRequested) && userRole !== 'marketing_supervisor' && (
                         <button 
                           onClick={(e) => {
@@ -447,12 +455,7 @@ interface CalendarViewProps {
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
   handleOpenFBModal: (post: Post) => void;
-  socialLinks: {
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    tiktok: string;
-  };
+  socialLinks: SocialLinks;
   highlightedPostId: string | null;
 }
 
@@ -515,17 +518,33 @@ const CalendarView: React.FC<CalendarViewProps> = ({ currentMonth, posts, handle
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="truncate">{post.contentTitle}: {post.topicTheme || "Untitled"}</span>
-                      {socialLinks.facebook && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenFBModal(post);
-                          }}
-                          className="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/p:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 transition-all p-0.5"
-                        >
-                          <Facebook className="w-2.5 h-2.5" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/p:opacity-100 transition-opacity">
+                        {SUPPORTED_SOCIAL_PLATFORMS.map(platform => {
+                          const link = socialLinks[platform.id];
+                          if (!link) return null;
+                          const Icon = platform.icon;
+                          
+                          return (
+                            <button
+                              key={platform.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (platform.id === 'facebook') {
+                                  handleOpenFBModal(post);
+                                } else {
+                                  window.open(link, '_blank', 'noopener,noreferrer');
+                                }
+                              }}
+                              className={`p-0.5 transition-all text-slate-400 ${
+                                platform.id === 'facebook' ? 'hover:text-[#1877F2]' : 'hover:text-slate-600 dark:hover:text-slate-200'
+                              }`}
+                              title={platform.id === 'facebook' ? 'Post to Facebook' : `View ${platform.label}`}
+                            >
+                              <Icon className="w-2.5 h-2.5" />
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                     {post.fbStatus && post.fbStatus !== 'idle' && (
                       <div className="scale-75 origin-left -mt-1 -mb-1">
@@ -581,12 +600,7 @@ interface MonthlyTableViewProps {
   setSelectedPostIds: Dispatch<SetStateAction<string[]>>;
   isSelectionMode: boolean;
   setIsSelectionMode: (mode: boolean) => void;
-  socialLinks: {
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    tiktok: string;
-  };
+  socialLinks: SocialLinks;
   governanceSettings: {
     restrictDeletionToSupervisor: boolean;
     requireDeletionApproval: boolean;
@@ -1648,10 +1662,14 @@ function AppContent() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [socialLinks, setSocialLinks] = useState({
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
     facebook: '',
     instagram: '',
-    tiktok: ''
+    tiktok: '',
+    linkedin: '',
+    twitter: '',
+    youtube: '',
+    website: '',
   });
 
   const [notifSettings, setNotifSettings] = useState({
@@ -3838,7 +3856,7 @@ function AppContent() {
           )}
 
           {/* Social Channels Section */}
-          {isSidebarExpanded && (socialLinks.facebook || socialLinks.instagram || socialLinks.tiktok) && (
+          {isSidebarExpanded && Object.values(socialLinks).some(link => !!link) && (
             <div className="px-4 pt-4 pb-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-0">Social Channels</p>
@@ -3857,44 +3875,25 @@ function AppContent() {
                     exit={{ height: 0, opacity: 0 }}
                     className="space-y-3 overflow-hidden"
                   >
-                    {socialLinks.facebook && (
-                      <a 
-                        href={socialLinks.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-400 hover:text-[#1877F2] transition-colors group"
-                      >
-                        <Facebook className="w-4 h-4 text-slate-500 group-hover:text-[#1877F2] transition-colors" />
-                        <span className="text-sm font-medium truncate">Facebook</span>
-                      </a>
-                    )}
-                    {socialLinks.instagram && (
-                      <a 
-                        href={socialLinks.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-400 hover:text-[#E4405F] transition-colors group"
-                      >
-                        <Instagram className="w-4 h-4 text-slate-500 group-hover:text-[#E4405F] transition-colors" />
-                        <span className="text-sm font-medium truncate">Instagram</span>
-                      </a>
-                    )}
-
-                    {socialLinks.tiktok && (
-                      <a 
-                        href={socialLinks.tiktok}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
-                      >
-                        <div className="w-4 h-4 flex items-center justify-center text-slate-500 group-hover:text-white transition-colors">
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                            <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.59-1.01V15.5c0 1.28-.18 2.58-.73 3.74-.72 1.42-2.02 2.59-3.5 3.12-1.35.5-2.87.57-4.25.26-1.38-.32-2.65-1.12-3.52-2.22-1.01-1.28-1.53-2.92-1.48-4.56.05-1.92.83-3.83 2.25-5.13 1.4-1.28 3.32-2.02 5.22-2 1.19.03 2.38.31 3.44.88.01-1.37.01-2.75.01-4.12-.92-.35-1.91-.49-2.88-.42-1.02.05-2.02.32-2.92.81-1.01.56-1.85 1.39-2.43 2.39-.59 1.01-.89 2.15-.9 3.31.01 2.34 1.13 4.6 3.02 5.96 1.44 1.03 3.25 1.48 5.02 1.34 1.78-.14 3.44-1.05 4.41-2.58.55-.86.82-1.87.82-2.89V0z"/>
-                          </svg>
-                        </div>
-                        <span className="text-sm font-medium truncate">TikTok</span>
-                      </a>
-                    )}
+                    {SUPPORTED_SOCIAL_PLATFORMS.map((platform) => {
+                      const link = socialLinks[platform.id as keyof typeof socialLinks];
+                      if (!link) return null;
+                      
+                      const Icon = platform.icon;
+                      
+                      return (
+                        <a 
+                          key={platform.id}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors group"
+                        >
+                          <Icon className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" style={{ color: undefined }} />
+                          <span className="text-sm font-medium truncate">{platform.label}</span>
+                        </a>
+                      );
+                    })}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -5108,57 +5107,58 @@ function AppContent() {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Publishing & External Links</label>
                     <div className="h-px flex-1 bg-slate-100 ml-4"></div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {socialLinks.facebook && (
-                      <div className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-4 transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-500/5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 text-[#1877F2]">
-                            <Facebook className="w-6 h-6" />
-                            <span className="text-sm font-black uppercase tracking-wider">Facebook</span>
-                          </div>
-                          {sharingPost && <FBStatusBadge post={sharingPost} />}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <a 
-                            href={socialLinks.facebook} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#1877F2] hover:bg-[#1877F2]/5 rounded-2xl text-xs font-bold transition-all border border-[#1877F2]/10"
-                          >
-                            View Live Page
-                          </a>
-                          <button 
-                            onClick={() => handleOpenFBModal(sharingPost)}
-                            className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1877F2] text-white hover:bg-[#166fe5] rounded-2xl text-xs font-black transition-all shadow-lg shadow-[#1877F2]/20 active:scale-95"
-                          >
-                            <Send className="w-4 h-4" />
-                            Post Content
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {socialLinks.instagram && (
-                      <div className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-4 transition-all hover:bg-white hover:shadow-xl hover:shadow-pink-500/5">
-                        <div className="flex items-center gap-3 text-[#E4405F]">
-                          <Instagram className="w-6 h-6" />
-                          <span className="text-sm font-black uppercase tracking-wider">Instagram</span>
-                        </div>
-                        <a 
-                          href={socialLinks.instagram} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 px-4 py-3 bg-white text-[#E4405F] hover:bg-[#E4405F]/5 rounded-2xl text-xs font-bold transition-all border border-[#E4405F]/10"
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {SUPPORTED_SOCIAL_PLATFORMS.map(platform => {
+                      const link = socialLinks[platform.id];
+                      if (!link) return null;
+                      const Icon = platform.icon;
+                      const isMeta = platform.id === 'facebook' || platform.id === 'instagram';
+                      
+                      return (
+                        <div 
+                          key={platform.id}
+                          className={`p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-4 transition-all hover:bg-white hover:shadow-xl hover:shadow-${isMeta ? 'blue' : 'slate'}-500/5`}
                         >
-                          View Profile
-                        </a>
-                      </div>
-                    )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3" style={{ color: platform.color }}>
+                              <Icon className="w-6 h-6" />
+                              <span className="text-sm font-black uppercase tracking-wider">{platform.label}</span>
+                            </div>
+                            {platform.id === 'facebook' && sharingPost && <FBStatusBadge post={sharingPost} />}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <a 
+                              href={link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 rounded-2xl text-xs font-bold transition-all border border-slate-100 shadow-sm"
+                              style={{ color: platform.color }}
+                            >
+                              {platform.id === 'website' ? 'Visit Site' : `View ${platform.label}`}
+                            </a>
+                            {platform.id === 'facebook' && (
+                              <button 
+                                onClick={() => handleOpenFBModal(sharingPost!)}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1877F2] text-white hover:bg-[#166fe5] rounded-2xl text-xs font-black transition-all shadow-lg shadow-[#1877F2]/20 active:scale-95"
+                              >
+                                <Send className="w-4 h-4" />
+                                Post Content
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  {!Object.values(socialLinks).some(l => !!l) && (
+                    <div className="py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest italic tracking-wider">No profile links configured in settings</p>
+                    </div>
+                  )}
                 </div>
               </div>
-
-
             </motion.div>
           </div>
         )}

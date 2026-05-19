@@ -24,11 +24,18 @@ import {
   Lock,
   MessageSquare,
   Send,
-  User
+  User,
+  Linkedin,
+  Twitter,
+  Youtube,
+  Globe,
+  PlusCircle,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Cloud, RefreshCw, Users as UsersIcon, UserCog, Upload, Mail as MailIcon } from 'lucide-react';
 import { RoleManager } from './RoleManager';
+import { SUPPORTED_SOCIAL_PLATFORMS } from '../constants';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, arrayUnion, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import toast from 'react-hot-toast';
@@ -237,6 +244,18 @@ export const AdminView = ({
     { id: 'links', label: 'Quick Links', icon: <ExternalLink className="w-4 h-4" /> },
     { id: 'settings', label: 'System Settings', icon: <Zap className="w-4 h-4" /> }
   ] as const;
+
+  const handleTogglePlatform = (platformId: string) => {
+    setLocalSocialLinks(prev => {
+      const newLinks = { ...prev };
+      if (platformId in newLinks) {
+        delete newLinks[platformId];
+      } else {
+        newLinks[platformId] = '';
+      }
+      return newLinks;
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -750,128 +769,93 @@ export const AdminView = ({
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Social Media Redirection Links</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="col-span-1 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 mb-2">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#1877F2]/10 rounded-xl flex items-center justify-center">
-                          {fbPageInfo?.picture?.data?.url ? (
-                            <img src={fbPageInfo.picture.data.url} alt="FB" className="w-10 h-10 rounded-lg object-cover" />
-                          ) : (
-                            <Facebook className="w-6 h-6 text-[#1877F2]" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Meta Connections</p>
-                          {isLoadingFBInfo ? (
-                            <div className="flex items-center gap-2">
-                              <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />
-                              <span className="text-sm font-bold text-slate-500">Syncing with Meta...</span>
+                <div className="space-y-8">
+                  {/* Select Platforms Subsection */}
+                  <div className="col-span-1 md:col-span-2 p-6 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Select Platforms</h4>
+                    <div className="flex flex-wrap gap-3">
+                      {SUPPORTED_SOCIAL_PLATFORMS.map((platform) => {
+                        const Icon = platform.icon;
+                        const isActive = platform.id in localSocialLinks;
+                        
+                        return (
+                          <button
+                            key={platform.id}
+                            onClick={() => handleTogglePlatform(platform.id)}
+                            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all duration-300 ${
+                              isActive 
+                                ? 'bg-white dark:bg-slate-900 border-indigo-500 text-slate-900 dark:text-white shadow-md' 
+                                : 'bg-transparent border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <div className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                              <Icon 
+                                className="w-4 h-4" 
+                                style={{ color: isActive ? platform.color : undefined }}
+                              />
                             </div>
-                          ) : fbPageInfo ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-slate-900 dark:text-white">{fbPageInfo.name}</span>
-                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-widest rounded-full">Facebook</span>
-                              </div>
-                              {fbPageInfo.instagram_business_account && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-black text-slate-900 dark:text-white">@{fbPageInfo.instagram_business_account.username}</span>
-                                  <span className="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 text-[8px] font-black uppercase tracking-widest rounded-full">Instagram Business</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-rose-500 italic">Meta Integration required</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <button 
-                        onClick={async () => {
-                          setIsLoadingFBInfo(true);
-                          try {
-                            const response = await fetch('/api/facebook-page-info', {
-                              headers: {
-                                'Accept': 'application/json',
-                                'Cache-Control': 'no-cache'
-                              }
-                            });
-                            
-                            if (!response.ok) {
-                              const text = await response.text();
-                              toast.error(`Server Error (${response.status})`);
-                              return;
-                            }
-
-                            const data = await response.json();
-                            if (data.success) {
-                              setFbPageInfo(data.pageInfo);
-                              toast.success("Facebook status refreshed.");
-                            } else {
-                              setFbPageInfo(null);
-                              toast.error(data.error || "Connection failed.");
-                            }
-                          } catch (err: any) {
-                            console.error("Refresh fetch error:", err);
-                            toast.error(err.message === 'Failed to fetch' ? "Network error: Connection refused" : "Failed to refresh status.");
-                          } finally {
-                            setIsLoadingFBInfo(false);
-                          }
-                        }}
-                        disabled={isLoadingFBInfo}
-                        className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all text-slate-400 hover:text-indigo-500 shadow-sm border border-slate-100 dark:border-slate-800"
-                        title="Refresh Connection"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${isLoadingFBInfo ? 'animate-spin' : ''}`} />
-                      </button>
+                            <span className="text-sm font-bold">{platform.label}</span>
+                            {isActive ? (
+                              <CheckCircle2 className="w-4 h-4 text-indigo-500" />
+                            ) : (
+                              <PlusCircle className="w-4 h-4 opacity-40" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                      <Facebook className="w-3 h-3 text-[#1877F2]" />
-                      Facebook URL
-                    </label>
-                    <input 
-                      type="url" 
-                      value={localSocialLinks.facebook}
-                      onChange={(e) => setLocalSocialLinks(prev => ({ ...prev, facebook: e.target.value }))}
-                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                      <Instagram className="w-3 h-3 text-[#E4405F]" />
-                      Instagram URL
-                    </label>
-                    <input 
-                      type="url" 
-                      value={localSocialLinks.instagram}
-                      onChange={(e) => setLocalSocialLinks(prev => ({ ...prev, instagram: e.target.value }))}
-                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                      <Music2 className="w-3 h-3 text-slate-900 dark:text-slate-100" />
-                      TikTok URL
-                    </label>
-                    <input 
-                      type="url" 
-                      value={localSocialLinks.tiktok || ''}
-                      onChange={(e) => setLocalSocialLinks(prev => ({ ...prev, tiktok: e.target.value }))}
-                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 dark:text-slate-100"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <AnimatePresence mode="popLayout">
+                      {SUPPORTED_SOCIAL_PLATFORMS.filter(p => p.id in localSocialLinks).map((platform) => {
+                        const Icon = platform.icon;
+                        return (
+                          <motion.div
+                            key={platform.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="space-y-1.5"
+                          >
+                            <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                              <Icon className="w-3 h-3" style={{ color: platform.color }} />
+                              {platform.label} URL
+                            </label>
+                            <div className="group relative">
+                              <input 
+                                type="url" 
+                                placeholder={`https://${platform.id}.com/yourpage`}
+                                value={localSocialLinks[platform.id] || ''}
+                                onChange={(e) => setLocalSocialLinks(prev => ({ ...prev, [platform.id]: e.target.value }))}
+                                className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-slate-100 transition-all"
+                              />
+                              <button 
+                                onClick={() => handleTogglePlatform(platform.id)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Remove Link"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                    
+                    {Object.keys(localSocialLinks).length === 0 && (
+                      <div className="col-span-1 md:col-span-2 py-12 text-center bg-slate-50 dark:bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <Share2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-relaxed"> No Platforms Selected</h4>
+                        <p className="text-[11px] text-slate-500 mt-1">Select social media icons above to add links to your portal.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <button 
                   onClick={() => onUpdateSocialLinks(localSocialLinks)}
-                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                  className="mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
                 >
                   Save Social Links
                 </button>
