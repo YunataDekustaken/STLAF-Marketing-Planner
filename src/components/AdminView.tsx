@@ -109,10 +109,12 @@ export const AdminView = ({
     }
   } | null>(null);
   const [isLoadingFBInfo, setIsLoadingFBInfo] = useState(false);
+  const [fbError, setFbError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFBPageInfo = async (isRetry = false) => {
       setIsLoadingFBInfo(true);
+      setFbError(null);
       try {
         const response = await fetch('/api/facebook-page-info', {
           headers: {
@@ -122,8 +124,8 @@ export const AdminView = ({
         });
         
         if (!response.ok) {
-          const text = await response.text();
-          console.warn(`FB API returned ${response.status}: ${text}`);
+          const data = await response.json();
+          setFbError(data.error || `Error ${response.status}: Failed to connect to Meta API`);
           return;
         }
 
@@ -131,13 +133,12 @@ export const AdminView = ({
         if (data.success) {
           setFbPageInfo(data.pageInfo);
         } else {
-          console.info("FB Page info fetch returned success:false", data.error);
+          setFbError(data.error);
         }
       } catch (err: any) {
-        console.error("Failed to fetch FB Page info:", err);
+        setFbError(err.message || 'Network error connecting to internal API');
         // If it's a transient network error, try once after a delay
         if (!isRetry && err.message === 'Failed to fetch') {
-          console.log("Retrying FB Page info fetch in 2 seconds...");
           setTimeout(() => fetchFBPageInfo(true), 2000);
         }
       } finally {
@@ -1016,18 +1017,27 @@ export const AdminView = ({
                       </p>
                     </div>
 
-                    <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-[#1877F2]/30 transition-all group">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={`w-1.5 h-1.5 rounded-full ${fbPageInfo ? 'bg-[#1877F2] animate-pulse' : 'bg-slate-300'}`} />
-                        <p className="text-[10px] font-black text-[#1877F2] uppercase tracking-widest">Meta Integration</p>
+                    <div className={`p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border transition-all group ${fbError ? 'border-rose-500/50 hover:border-rose-500' : 'border-slate-100 dark:border-slate-800 hover:border-[#1877F2]/30'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${fbError ? 'bg-rose-500' : (fbPageInfo ? 'bg-[#1877F2] animate-pulse' : 'bg-slate-300')}`} />
+                          <p className={`text-[10px] font-black uppercase tracking-widest ${fbError ? 'text-rose-500' : 'text-[#1877F2]'}`}>Meta Integration</p>
+                        </div>
+                        {fbError && (
+                          <div className="px-2 py-0.5 bg-rose-100 dark:bg-rose-900/30 rounded-full">
+                            <span className="text-[8px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">Action Needed</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-base font-black text-slate-900 dark:text-slate-100 mb-2 truncate">
-                        {isLoadingFBInfo ? 'Loading...' : fbPageInfo?.name || 'Not Connected'}
+                      <p className={`text-base font-black mb-2 truncate ${fbError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                        {isLoadingFBInfo ? 'Loading...' : fbError ? 'Integration Failed' : fbPageInfo?.name || 'Not Connected'}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                        {fbPageInfo 
-                          ? `Linked to Facebook Page "${fbPageInfo.name}". This connection enables automated publishing and scheduling of social content.`
-                          : 'No Facebook Page is currently linked. Connect a page in the Social Redirection Links section to enable automated publishing.'}
+                      <p className={`text-[11px] leading-relaxed font-medium ${fbError ? 'text-rose-500 dark:text-rose-400/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {fbError 
+                          ? fbError
+                          : (fbPageInfo 
+                            ? `Linked to Facebook Page "${fbPageInfo.name}". This connection enables automated publishing and scheduling of social content.`
+                            : 'No Facebook Page is currently linked. Connect a page in the Social Redirection Links section to enable automated publishing.')}
                       </p>
                     </div>
 
