@@ -3524,9 +3524,7 @@ function AppContent() {
     
     setIsSeeding(true);
     try {
-      const targetUserId = user?.uid || 'guest_user';
-      
-      const collectionsToClear = ['posts', 'notifications', 'comments', 'activityLogs', 'history'];
+      const collectionsToClear = ['posts', 'notifications', 'comments', 'activityLogs', 'history', 'concerns'];
       
       for (const colName of collectionsToClear) {
         const snapshot = await getDocs(collection(db, colName));
@@ -3537,28 +3535,10 @@ function AppContent() {
         await batch.commit();
       }
 
-      // 3. Seed initial posts with dynamic, future/current dates to prevent immediate auto-publishing
-      const seedBatch = writeBatch(db);
-      const today = new Date();
-      INITIAL_POSTS.forEach((post, index) => {
-        const dynamicDate = format(addDays(today, index), 'yyyy-MM-dd');
-        const postData = { 
-          ...post, 
-          date: dynamicDate,
-          userId: targetUserId,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
-        seedBatch.set(doc(db, 'posts', post.id), postData);
-      });
-
-      await seedBatch.commit();
-
-      addNotification('onNewTask', 'Data Restored', 'The portal has been reset to its initial state.');
-      alert('Data restoration successful. The portal has been reset.');
+      alert('Reset successful. The portal has been cleared of all data, files, and notifications.');
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'data/restore');
-      alert('Error restoring data. Please check logs.');
+      alert('Error clearing data. Please check logs.');
     } finally {
       setIsSeeding(false);
     }
