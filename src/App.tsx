@@ -69,7 +69,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
-import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, setMonth, setYear } from 'date-fns';
+import { format, formatDistanceToNow, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addDays, addMonths, subMonths, startOfWeek, endOfWeek, setMonth, setYear } from 'date-fns';
 import {
   DndContext,
   closestCenter,
@@ -3526,7 +3526,7 @@ function AppContent() {
     try {
       const targetUserId = user?.uid || 'guest_user';
       
-      const collectionsToClear = ['posts', 'notifications', 'comments', 'activityLogs'];
+      const collectionsToClear = ['posts', 'notifications', 'comments', 'activityLogs', 'history'];
       
       for (const colName of collectionsToClear) {
         const snapshot = await getDocs(collection(db, colName));
@@ -3537,11 +3537,14 @@ function AppContent() {
         await batch.commit();
       }
 
-      // 3. Seed initial posts
+      // 3. Seed initial posts with dynamic, future/current dates to prevent immediate auto-publishing
       const seedBatch = writeBatch(db);
-      INITIAL_POSTS.forEach((post) => {
+      const today = new Date();
+      INITIAL_POSTS.forEach((post, index) => {
+        const dynamicDate = format(addDays(today, index), 'yyyy-MM-dd');
         const postData = { 
           ...post, 
+          date: dynamicDate,
           userId: targetUserId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
