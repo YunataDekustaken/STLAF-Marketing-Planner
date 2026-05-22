@@ -1035,20 +1035,36 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                 {selectedPostIds.length} items selected
               </span>
               <div className="h-4 w-px bg-amber-200 dark:bg-amber-800" />
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500">Change Status:</span>
-                <select 
-                  onChange={(e) => handleBulkUpdate('status', e.target.value)}
-                  className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  defaultValue=""
-                >
-                  <option value="" disabled>Select status...</option>
-                  <option value="Not Started">Not Started</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Ready for Review">Ready for Review</option>
-                  <option value="Ready to Post">Ready to Post</option>
-                  <option value="Completed">Completed</option>
-                </select>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500">Change Status:</span>
+                  <select 
+                    onChange={(e) => handleBulkUpdate('status', e.target.value)}
+                    className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select status...</option>
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Ready for Review">Ready for Review</option>
+                    <option value="Ready to Post">Ready to Post</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div className="h-4 w-px bg-amber-200 dark:bg-amber-800 hidden sm:block" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500">Change Approval:</span>
+                  <select 
+                    onChange={(e) => handleBulkUpdate('approvalStatus', e.target.value)}
+                    className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Select approval...</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="For Revision">For Revision</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -2649,7 +2665,8 @@ function AppContent() {
 
     try {
       await batch.commit();
-      toast.success(`Updated status for ${selectedPostIds.length} items`);
+      const fieldLabel = field === 'approvalStatus' ? 'approval status' : 'status';
+      toast.success(`Updated ${fieldLabel} for ${selectedPostIds.length} items`);
       setSelectedPostIds([]);
     } catch (err) {
       console.error("Bulk update error:", err);
