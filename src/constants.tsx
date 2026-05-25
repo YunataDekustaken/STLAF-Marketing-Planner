@@ -10,7 +10,8 @@ import {
   Linkedin, 
   Twitter, 
   Youtube, 
-  Globe 
+  Globe,
+  Mail
 } from 'lucide-react';
 
 export const CONTENT_TITLES = [
@@ -55,4 +56,5 @@ export const SUPPORTED_SOCIAL_PLATFORMS = [
   { id: 'twitter', label: 'Twitter / X', icon: Twitter, color: '#000000' },
   { id: 'youtube', label: 'YouTube', icon: Youtube, color: '#FF0000' },
   { id: 'website', label: 'Website', icon: Globe, color: '#6366F1' },
+  { id: 'mailingAppUrl', label: 'Subscriber Mailing App', icon: Mail, color: '#10B981' },
 ];

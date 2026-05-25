@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#df9f15" />
+      <stop offset="100%" stop-color="#b87a0e" />
+    </linearGradient>
+  </defs>
+  <!-- Outer Rounded Square Background with Border -->
+  <rect x="3" y="3" width="58" height="58" rx="18" fill="url(#goldGradient)" stroke="#f1c40f" stroke-width="3" />
+  
+  <!-- Left-Bottom Dot -->
+  <circle cx="21" cy="43" r="3" fill="#ffffff" />
+
+  <!-- Main Sparkle / Star in the center -->
+  <path d="M 32 18 Q 32 32 46 32 Q 32 32 32 46 Q 32 32 18 32 Q 32 32 32 18 Z" fill="#ffffff" />
+  
+  <!-- Top-Right Plus Sign -->
+  <path d="M 41 21 h 6 M 44 18 v 6" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+</svg>

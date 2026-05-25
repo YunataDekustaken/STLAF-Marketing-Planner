@@ -90,7 +90,7 @@ export const INITIAL_POSTS: Post[] = [
   }
 ];
 
-export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar' | 'profile' | 'social' | 'help';
+export type ViewMode = 'admin' | 'list' | 'kanban' | 'calendar' | 'profile' | 'social' | 'help' | 'newsletter';
 
 export interface SocialHistoryEntry {
   id: string;

@@ -388,6 +388,8 @@ async function startServer() {
         const subcode = errorData.error_subcode ? ` (Subcode: ${errorData.error_subcode})` : '';
         if (errorData.error_subcode === 4854002) {
           friendlyMessage = `Meta Security Check: Meta requires you to confirm your identity or Page permissions before publishing. Please open the Facebook app on your phone, check your notifications for "Action Needed", and follow the instructions there. Also ensure your Instagram account is fully linked and set to "Business".`;
+        } else if (errorData.error_subcode === 465) {
+          friendlyMessage = `Meta Business Link Error (Subcode 465): The access token belongs to a Meta App that is not connected to your Meta Business Manager. To resolve: 1) Go to business.facebook.com/settings -> Accounts -> Apps, click "Add" and "Connect an App ID" to link your App. 2) Ensure your System User has both the Page and the App assigned with Admin permissions. 3) Re-generate the Page Access Token.`;
         } else {
           friendlyMessage = `Meta Authentication/Permission Error: ${errorData.message || "Invalid or expired token"}${subcode}. Please check your FACEBOOK_PAGE_ACCESS_TOKEN and FACEBOOK_PAGE_ID.`;
         }

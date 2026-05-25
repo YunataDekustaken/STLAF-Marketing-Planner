@@ -18,6 +18,7 @@ import {
   Edit2, 
   Trash2, 
   ExternalLink,
+  Mail,
   ChevronDown,
   ChevronUp,
   MoreVertical,
@@ -98,7 +99,9 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useFacebookPost } from './hooks/useFacebookPost';
 import AuthScreen from './components/AuthScreen';
 import { AdminView } from './components/AdminView';
+import { MailingDistributionScreen } from './components/MailingDistributionScreen';
 import { SocialHubView } from './components/SocialHubView';
+import { NewsletterHubView } from './components/NewsletterHubView';
 import { ProfileView } from './components/ProfileView';
 import { ImportResolutionModal } from './components/ImportResolutionModal';
 import { FacebookPostModal } from './components/FacebookPostModal';
@@ -583,6 +586,7 @@ interface MonthlyTableViewProps {
   handleOpenModal: (post?: Post) => void;
   handleOpenShareModal: (post: Post) => void;
   handleOpenFBModal: (post: Post) => void;
+  handleMailToSubscriber?: (post: Post) => void;
   handleDeletePost: (id: string) => void;
   handleApproveDeletion: (id: string) => Promise<void>;
   handleRejectDeletion: (id: string) => Promise<void>;
@@ -631,6 +635,7 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
   handleOpenModal,
   handleOpenShareModal,
   handleOpenFBModal,
+  handleMailToSubscriber,
   handleDeletePost,
   handleApproveDeletion,
   handleRejectDeletion,
@@ -1249,6 +1254,17 @@ const MonthlyTableView: React.FC<MonthlyTableViewProps> = ({
                                       Post to FB
                                     </button>
                                   )}
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMailToSubscriber?.(post);
+                                      setActionMenuOpenId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-[#10B981] hover:bg-[#10B981]/5 flex items-center gap-2 transition-colors"
+                                  >
+                                    <Mail className="w-4 h-4" />
+                                    Mail to Subscriber
+                                  </button>
                                   {(post.deletionRequested || canDelete) && <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2" />}
                                   {post.deletionRequested ? (
                                     <div className="px-3 py-1 flex flex-col gap-1.5">
@@ -2616,6 +2632,36 @@ function AppContent() {
     setActionMenuOpenId(null);
   };
 
+  const handleMailToSubscriber = async (post: Post) => {
+    try {
+      await updateDoc(doc(db, 'posts', post.id), {
+        mailStatus: 'pending_authorization',
+        updatedAt: serverTimestamp()
+      });
+
+      const targetUrl = socialLinks.mailingAppUrl;
+      if (!targetUrl) {
+        toast.error("Please configure the 'Subscriber Mailing App' URL in Admin Settings > Quick Links (toggle on Subscriber Mailing App and enter its URL).", { duration: 6000 });
+        return;
+      }
+
+      toast.success("Ready for distribution! Redirecting to Subscriber Mailing App...", { duration: 3000 });
+
+      addNotification('onNewTask', 'Mailing Hand-off Initialized', `"${post.contentTitle || 'Untitled'}" is ready for authorization.`, post.id);
+
+      setActionMenuOpenId(null);
+
+      const separator = targetUrl.includes('?') ? '&' : '?';
+      setTimeout(() => {
+        window.open(`${targetUrl}${separator}postId=${post.id}`, '_blank');
+      }, 1500);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to prepare post for mailing hand-off.");
+    }
+  };
+
   const handleDuplicatePost = async (post: Post) => {
     const newId = Math.random().toString(36).substr(2, 9);
     const postData: Post = {
@@ -3652,6 +3698,22 @@ function AppContent() {
     );
   }
 
+  if (currentPath === '/distribute' || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('postId'))) {
+    const urlPostId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('postId') : '';
+    return (
+      <>
+        <Toaster position="top-right" reverseOrder={false} />
+        <MailingDistributionScreen 
+          postId={urlPostId || ''} 
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPath('/');
+          }}
+        />
+      </>
+    );
+  }
+
   if (currentPath === '/privacy') {
     return (
       <>
@@ -3737,7 +3799,7 @@ function AppContent() {
               className="overflow-hidden whitespace-nowrap"
             >
               <h2 className="text-sm font-bold text-white leading-tight group-hover:text-amber-500 transition-colors">Marketing Portal</h2>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">MARKETING DEPT</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Content Planner</p>
             </motion.div>
           )}
         </div>
@@ -3776,6 +3838,14 @@ function AppContent() {
             >
               <Share2 className="w-5 h-5 shrink-0" />
               {isSidebarExpanded && <span className="whitespace-nowrap">Social Media Hub</span>}
+            </button>
+            <button 
+              onClick={() => setViewMode('newsletter')}
+              className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out mt-1 ${viewMode === 'newsletter' ? 'bg-slate-700/50 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
+              title={isSidebarMini ? "Newsletter Hub" : ""}
+            >
+              <Mail className="w-5 h-5 shrink-0" />
+              {isSidebarExpanded && <span className="whitespace-nowrap">Newsletter Hub</span>}
             </button>
           </div>
           
@@ -4021,7 +4091,7 @@ function AppContent() {
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
 
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 pt-0 pl-0">
-              {viewMode === 'social' ? 'Social Media Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
+              {viewMode === 'social' ? 'Social Media Hub' : viewMode === 'newsletter' ? 'Newsletter Hub' : viewMode === 'help' ? 'Support Center' : viewMode === 'list' ? 'Monthly Table' : viewMode === 'kanban' ? 'Kanban Board' : viewMode === 'calendar' ? 'Calendar View' : viewMode === 'profile' ? 'My Profile' : 'Settings'}
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -4131,12 +4201,12 @@ function AppContent() {
           </div>
         </header>
 
-        <main className={`flex-1 ${viewMode === 'social' ? 'p-4 sm:p-6 sm:pt-4 pt-2' : 'p-8'} overflow-y-auto`}>
+        <main className={`flex-1 ${['social', 'newsletter'].includes(viewMode) ? 'p-4 sm:p-6 sm:pt-4 pt-2' : 'p-8'} overflow-y-auto`}>
           <div className="max-w-7xl mx-auto">
             {/* Page Title & Actions */}
-            <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${viewMode === 'social' ? 'mb-4' : 'mb-6'}`}>
+            <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${['social', 'newsletter'].includes(viewMode) ? 'mb-4' : 'mb-6'}`}>
 
-              {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && viewMode !== 'help' && (
+              {viewMode !== 'admin' && viewMode !== 'profile' && viewMode !== 'social' && viewMode !== 'newsletter' && viewMode !== 'help' && (
                 <div className="flex items-center gap-1.5 sm:gap-3 overflow-visible pb-1 lg:pb-0">
                   <div className="relative inline-block text-left">
                     <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm h-9 sm:h-10 shrink-0 overflow-hidden">
@@ -4293,7 +4363,7 @@ function AppContent() {
             ) : (
               <>
                 {/* Month Navigation & Filters */}
-                {viewMode !== 'social' && (
+                {viewMode !== 'social' && viewMode !== 'newsletter' && (
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-6">
                     <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm shrink-0">
                       <button onClick={handlePrevMonth} className="p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 transition-colors">
@@ -4467,6 +4537,7 @@ function AppContent() {
                       handleOpenModal={handleOpenModal}
                       handleOpenShareModal={handleOpenShareModal}
                       handleOpenFBModal={handleOpenFBModal}
+                      handleMailToSubscriber={handleMailToSubscriber}
                       handleDeletePost={handleDeletePost}
                       handleApproveDeletion={handleApproveDeletion}
                       handleRejectDeletion={handleRejectDeletion}
@@ -4511,6 +4582,13 @@ function AppContent() {
                           }
                         });
                       }}
+                    />
+                  )}
+                  {viewMode === 'newsletter' && (
+                    <NewsletterHubView
+                      posts={posts}
+                      socialLinks={socialLinks}
+                      userRole={profile?.role}
                     />
                   )}
                   {viewMode === 'kanban' && (
