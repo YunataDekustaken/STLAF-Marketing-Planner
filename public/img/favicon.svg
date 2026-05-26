@@ -1,19 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#df9f15" />
-      <stop offset="100%" stop-color="#b87a0e" />
-    </linearGradient>
-  </defs>
-  <!-- Outer Rounded Square Background with Border -->
-  <rect x="3" y="3" width="58" height="58" rx="18" fill="url(#goldGradient)" stroke="#f1c40f" stroke-width="3" />
+  <rect x="2" y="2" width="60" height="60" rx="18" fill="#c39d4b" stroke="#ffb100" stroke-width="4" />
   
-  <!-- Left-Bottom Dot -->
-  <circle cx="21" cy="43" r="3" fill="#ffffff" />
+  <g transform="translate(10, 10) scale(1.83333)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+  </g>
 
-  <!-- Main Sparkle / Star in the center -->
-  <path d="M 32 18 Q 32 32 46 32 Q 32 32 32 46 Q 32 32 18 32 Q 32 32 32 18 Z" fill="#ffffff" />
-  
-  <!-- Top-Right Plus Sign -->
-  <path d="M 41 21 h 6 M 44 18 v 6" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+  <g fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round">
+    <circle cx="22" cy="42" r="3" />
+    <path d="M 40 22 h 8 M 44 18 v 8" />
+  </g>
 </svg>
