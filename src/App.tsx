@@ -2001,48 +2001,6 @@ function AppContent() {
           }
         }
 
-        // 3. Check Mailing scheduled posts
-        const mailScheduledQuery = query(collection(db, 'posts'), where('mailStatus', '==', 'scheduled'));
-        const mailSnap = await getDocs(mailScheduledQuery);
-
-        for (const docSnap of mailSnap.docs) {
-          const data = docSnap.data();
-          if (data.mailScheduledTime) {
-            const scheduledTime = new Date(data.mailScheduledTime);
-            if (scheduledTime <= now) {
-              const postRef = doc(db, 'posts', docSnap.id);
-              const historyRef = doc(collection(db, 'history'));
-
-              await runTransaction(db, async (transaction) => {
-                const freshSnap = await transaction.get(postRef);
-                if (!freshSnap.exists()) return;
-                
-                const freshData = freshSnap.data();
-                if (freshData.mailStatus !== 'scheduled') return; // already updated
-
-                transaction.update(postRef, { 
-                  mailStatus: 'authorized',
-                  mailSentTime: serverTimestamp(),
-                  mailScheduledTime: null,
-                  updatedAt: serverTimestamp()
-                });
-                
-                transaction.set(historyRef, {
-                  postId: docSnap.id,
-                  contentTitle: freshData.topicTheme || freshData.contentTitle,
-                  action: 'auto_publish',
-                  platform: 'system',
-                  timestamp: serverTimestamp(),
-                  userEmail: 'system-automation@gemini.ai',
-                  userName: 'System Auto-Publish',
-                  details: `Mailing scheduled time ${freshData.mailScheduledTime} reached. Campaign authorized for delivery.`
-                });
-              });
-              updatesCount++;
-            }
-          }
-        }
-
         if (updatesCount > 0) {
           addNotification('System Update', `${updatesCount} scheduled post(s) auto-published.`, 'info');
         }
