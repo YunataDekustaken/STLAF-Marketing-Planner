@@ -168,9 +168,9 @@ export const MailingDistributionScreen: React.FC<MailingDistributionScreenProps>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {mailStatus === 'authorized' && (
+          {(mailStatus === 'authorized' || mailStatus === 'sent') && (
             <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-[10px] uppercase tracking-widest font-black text-emerald-400 flex items-center gap-1.5 animate-pulse">
-              <Check className="w-3 h-3" /> Authorized for Broadcast
+              <Check className="w-3 h-3" /> {mailStatus === 'sent' ? 'Broadcast Sent Successfully' : 'Authorized for Broadcast'}
             </span>
           )}
           {mailStatus === 'scheduled' && (
