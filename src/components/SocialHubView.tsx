@@ -1,3 +1,10 @@
+//
+// File: SocialHubView.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Multi-platform integration panel visualizing content campaigns, views, live posts, and historic post deletions.
+//
+
 import React, { useState, useEffect } from 'react';
 import { Post, SocialHistoryEntry, SocialLinks } from '../types';
 import { SUPPORTED_SOCIAL_PLATFORMS } from '../constants';

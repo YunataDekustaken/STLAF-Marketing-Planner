@@ -1,3 +1,10 @@
+//
+// File: NewsletterHubView.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Main dashboard layout for the Newsletter outbox, queue management, and subscriber deep-links.
+//
+
 import React, { useState } from 'react';
 import { Post, SocialLinks } from '../types';
 import { 
@@ -305,10 +312,10 @@ export const NewsletterHubView: React.FC<NewsletterHubViewProps> = ({
                   const hasGraphics = post.creatives && post.creatives.length > 0;
 
                   return (
-                    <div key={post.id} className="p-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                    <div key={post.id} className="p-5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
                       
                       {/* Left Block: Info & Metadata */}
-                      <div className="space-y-2 w-full lg:flex-1 lg:min-w-0 max-w-xl">
+                      <div className="space-y-2 w-full xl:flex-1 min-w-[280px] sm:min-w-[340px] md:min-w-[420px] max-w-2xl">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="px-2.5 py-0.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-[9px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">
                             {post.format || "Post"}
@@ -377,7 +384,7 @@ export const NewsletterHubView: React.FC<NewsletterHubViewProps> = ({
                       </div>
 
                       {/* Right Block: Context Operators */}
-                      <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto lg:justify-end shrink-0">
+                      <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto xl:justify-end shrink-0">
                         {/* Eye Preview button */}
                         <button 
                           onClick={() => setSelectedPostForPreview(post)}

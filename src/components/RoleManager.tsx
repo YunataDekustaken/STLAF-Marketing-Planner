@@ -1,3 +1,10 @@
+//
+// File: RoleManager.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Admin subview to coordinate member accounts, access rules, and collaborative role permissions.
+//
+
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 

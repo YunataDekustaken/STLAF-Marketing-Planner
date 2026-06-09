@@ -1,3 +1,10 @@
+//
+// File: MailingDistributionScreen.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Subscription mailing dispatcher simulator for newsletter broadcast reviews and authorization.
+//
+
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';

@@ -32,9 +32,18 @@ export default async function handler(req, res) {
     const errorData = error.response?.data?.error || {};
     console.error('Facebook Page Info Error:', JSON.stringify(errorData, null, 2));
 
+    let friendlyMessage = errorData.message || 'Failed to fetch Facebook Page info';
+    
+    if (errorData.error_subcode === 465) {
+      friendlyMessage = "Configuration Error (Subcode 465): The Meta App used to generate your token is not correctly associated with the Business Manager that owns the Facebook Page. Please ensure: 1. Your App is added to your Business Manager Assets. 2. The System User who generated the token is also added to the same Business Manager. 3. The App and System User are linked in the 'System Users' section of Meta Business Suite.";
+    } else if (errorData.error_subcode === 460) {
+      friendlyMessage = "Session Invalidated (Subcode 460): The Facebook/Meta access token session was invalidated, likely because the password was changed or the session was revoked for security reasons. Please generate and configure a fresh Page Access Token.";
+    }
+
     return res.status(error.response?.status || 500).json({
       success: false,
-      error: errorData.message || 'Failed to fetch Facebook Page info',
+      error: friendlyMessage,
+      details: errorData
     });
   }
 }

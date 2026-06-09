@@ -227,7 +227,14 @@ export default async function handler(req, res) {
 
     let friendlyMessage = 'Failed to post to Meta properties';
     if (errorData.type === 'OAuthException') {
-      friendlyMessage = `Meta Auth Error: ${errorData.message || 'Invalid or expired token'}`;
+      if (errorData.error_subcode === 465) {
+        friendlyMessage = `Meta Business Link Error (Subcode 465): The access token belongs to a Meta App that is not connected to your Meta Business Manager. To resolve: 1) Go to business.facebook.com/settings -> Accounts -> Apps, click "Add" and "Connect an App ID" to link your App. 2) Ensure your System User has both the Page and the App assigned with Admin permissions. 3) Re-generate the Page Access Token.`;
+      } else if (errorData.error_subcode === 460) {
+        friendlyMessage = `Meta Session Invalidated (Subcode 460): The access token session has been invalidated because the password was changed, or Facebook revoked it for security reasons. Please generate and configure a fresh Page Access Token.`;
+      } else {
+        const subcode = errorData.error_subcode ? ` (Subcode: ${errorData.error_subcode})` : '';
+        friendlyMessage = `Meta Auth Error: ${errorData.message || 'Invalid or expired token'}${subcode}`;
+      }
     } else if (errorData.message) {
       friendlyMessage = errorData.message;
     } else if (error.message) {

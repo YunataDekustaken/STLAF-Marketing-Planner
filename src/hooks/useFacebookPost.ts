@@ -1,3 +1,10 @@
+//
+// File: useFacebookPost.ts
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Hook providing utility functions to coordinate direct Facebook Meta Graph API posts.
+//
+
 import { useState } from 'react';
 
 interface FacebookPostData {

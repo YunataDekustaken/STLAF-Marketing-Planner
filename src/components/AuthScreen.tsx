@@ -1,3 +1,10 @@
+//
+// File: AuthScreen.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Renders the beautiful custom lock screen layout for secure authentication logins.
+//
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Sparkles, Lock } from 'lucide-react';

@@ -1,3 +1,10 @@
+//
+// File: NotificationToast.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Dynamic animation-equipped flash feedback notification toaster.
+//
+
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';

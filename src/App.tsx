@@ -1,3 +1,10 @@
+//
+// File: App.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Primary full-stack client application entry point organizing views, sidebars, context managers, and dashboard modules.
+//
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -1544,6 +1551,20 @@ function AppContent() {
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'All'>('All');
   const [contentTypeFilter, setContentTypeFilter] = useState<string | 'All'>('All');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [helpInitialTab, setHelpInitialTab] = useState<'guide' | 'setup' | 'contact' | 'history'>('guide');
+  const [helpInitialGuideTitle, setHelpInitialGuideTitle] = useState<string | undefined>(undefined);
+  const [helpInitialTopicIndex, setHelpInitialTopicIndex] = useState<number | undefined>(undefined);
+
+  const handleNavigateToHelp = (
+    tab: 'guide' | 'setup' | 'contact' | 'history' = 'guide', 
+    guideTitle?: string, 
+    topicIndex?: number
+  ) => {
+    setHelpInitialTab(tab);
+    setHelpInitialGuideTitle(guideTitle);
+    setHelpInitialTopicIndex(topicIndex);
+    setViewMode('help');
+  };
 
   // Auto-sync metrics when entering Social Media Hub
   useEffect(() => {
@@ -3878,7 +3899,12 @@ function AppContent() {
             </button>
 
             <button 
-              onClick={() => setViewMode('help')}
+              onClick={() => {
+                setHelpInitialTab('guide');
+                setHelpInitialGuideTitle(undefined);
+                setHelpInitialTopicIndex(undefined);
+                setViewMode('help');
+              }}
               className={`w-full flex items-center ${isSidebarMini ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out mt-1 ${viewMode === 'help' ? 'bg-slate-700/50 text-indigo-400 border-l-4 border-indigo-500' : 'hover:bg-white/10 hover:text-white text-slate-400'}`}
               title={isSidebarMini ? "Help & Guide" : ""}
             >
@@ -4347,12 +4373,16 @@ function AppContent() {
                 profile={profile}
                 pendingConcernsCount={activeConcernsCount}
                 refreshKey={refreshKey}
+                onNavigateToHelp={handleNavigateToHelp}
               />
             ) : viewMode === 'help' ? (
               <HelpView 
                 userEmail={user.email} 
                 displayName={profile?.displayName || user.email} 
                 userId={user.uid}
+                initialTab={helpInitialTab}
+                initialGuideTitle={helpInitialGuideTitle}
+                initialTopicIndex={helpInitialTopicIndex}
               />
             ) : viewMode === 'profile' ? (
               <ProfileView 
@@ -5335,6 +5365,7 @@ function AppContent() {
         handleCancelDeletionRequest={handleCancelDeletionRequest}
         userRole={profile?.role}
         governanceSettings={governanceSettings}
+        onNavigateToHelp={handleNavigateToHelp}
         onSuccess={(fId, fStatus) => {
           if (selectedFBPost) {
             const title = fStatus === 'posted' ? 'Post Published' : 'Post Scheduled';

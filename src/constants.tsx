@@ -1,3 +1,10 @@
+//
+// File: constants.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Declares social media platform definitions, default categories, and styling tags used app-wide.
+//
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0

@@ -1,3 +1,10 @@
+//
+// File: ConfirmationModal.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Dynamic popover component to authorize irreversible actions safely.
+//
+
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, Trash2, X, Loader2 } from 'lucide-react';

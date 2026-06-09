@@ -1,3 +1,10 @@
+//
+// File: useInstagramPost.ts
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Hook handling connection logic, image payloads, and status codes for Instagram publishing.
+//
+
 import { useState } from 'react';
 
 interface InstagramPostData {

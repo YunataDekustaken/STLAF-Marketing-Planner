@@ -1,3 +1,10 @@
+/*
+File: index.css
+Author: Raphael Mendoza
+Date: 2026-06-09
+Purpose: Defines global application styles, custom tailwind theme overrides, animations, and typography variables.
+*/
+
 @import "tailwindcss";
 
 @theme {

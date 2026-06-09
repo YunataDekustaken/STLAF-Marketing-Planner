@@ -1,3 +1,10 @@
+//
+// File: useAuth.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Configures authentication state context provider, listener sync, login triggers and logout helpers.
+//
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { auth, db } from '../firebase';
 import {

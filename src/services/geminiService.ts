@@ -1,3 +1,10 @@
+//
+// File: geminiService.ts
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Wrapper service interfacing with the @google/genai package to suggest, translate, or refine post captions.
+//
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0

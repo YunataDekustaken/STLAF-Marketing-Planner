@@ -1,3 +1,10 @@
+//
+// File: firebase.ts
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Initializes the Firebase applet connection for state management, Firestore database access, and user authentication.
+//
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';

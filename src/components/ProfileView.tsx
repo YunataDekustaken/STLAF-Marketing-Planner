@@ -1,3 +1,10 @@
+//
+// File: ProfileView.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Handles profile detail rendering, credentials, role viewing, and connected settings.
+//
+
 import React, { useState } from 'react';
 import { 
   User, 

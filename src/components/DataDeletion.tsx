@@ -1,3 +1,10 @@
+//
+// File: DataDeletion.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Renders GDPR & CCPA compliant self-service data deletion guidance interface.
+//
+
 import React from 'react';
 import { Trash2, ChevronLeft, Mail, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';

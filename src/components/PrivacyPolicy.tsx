@@ -1,3 +1,10 @@
+//
+// File: PrivacyPolicy.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Legal page setting forth client data sharing and safety frameworks.
+//
+
 import React from 'react';
 import { Shield, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';

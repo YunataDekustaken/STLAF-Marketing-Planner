@@ -1,3 +1,10 @@
+//
+// File: ImportResolutionModal.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Dedicated modal to identify, resolve and merge duplicate campaigns during file uploads.
+//
+
 import React from 'react';
 import { Post } from '../types';
 import { X, Check, AlertCircle, Trash2, Edit2, Copy, FileText, Loader2, Upload } from 'lucide-react';

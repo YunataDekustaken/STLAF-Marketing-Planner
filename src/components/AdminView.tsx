@@ -1,3 +1,10 @@
+//
+// File: AdminView.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Orchestrates administrative settings, notification logs, subscriber deep links, and Meta credentials telemetry feedback.
+//
+
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
@@ -58,7 +65,8 @@ export const AdminView = ({
   onUpdateGovernanceSettings,
   profile,
   pendingConcernsCount,
-  refreshKey
+  refreshKey,
+  onNavigateToHelp
 }: { 
   notificationSettings: any,
   onUpdateNotificationSettings: (settings: any) => void,
@@ -77,7 +85,8 @@ export const AdminView = ({
   isSeeding: boolean,
   profile: any,
   pendingConcernsCount?: number,
-  refreshKey?: number
+  refreshKey?: number,
+  onNavigateToHelp?: (tab?: 'guide' | 'setup' | 'contact' | 'history', guideTitle?: string, topicIndex?: number) => void
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'concerns' | 'links' | 'settings'>('users');
   const [localSettings, setLocalSettings] = useState(notificationSettings);
@@ -1032,13 +1041,78 @@ export const AdminView = ({
                       <p className={`text-base font-black mb-2 truncate ${fbError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'}`}>
                         {isLoadingFBInfo ? 'Loading...' : fbError ? 'Integration Failed' : fbPageInfo?.name || 'Not Connected'}
                       </p>
-                      <p className={`text-[11px] leading-relaxed font-medium ${fbError ? 'text-rose-500 dark:text-rose-400/80' : 'text-slate-500 dark:text-slate-400'}`}>
-                        {fbError 
-                          ? fbError
-                          : (fbPageInfo 
+                      {fbError ? (
+                        <div className="mt-2 space-y-3">
+                          <p className="text-[11px] leading-relaxed font-semibold text-rose-500 dark:text-rose-400">
+                            {fbError.includes("Subcode 465") ? "Meta App & Business Manager Link Required" : fbError.includes("Subcode 460") ? "Meta Token Session Expired" : fbError}
+                          </p>
+                          {fbError.includes("Subcode 465") && (
+                            <div className="bg-white dark:bg-slate-900/60 rounded-xl p-3.5 border border-rose-200 dark:border-rose-900/30 text-[11px] text-slate-600 dark:text-slate-300 space-y-2 mt-2">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 block uppercase text-[9px] tracking-wider">How to resolve Subcode 465:</span>
+                              <ol className="list-decimal pl-4 space-y-1.5 font-medium text-slate-600 dark:text-slate-400">
+                                <li>
+                                  Go to <a href="https://business.facebook.com/settings" target="_blank" rel="noreferrer" className="text-[#1877F2] font-black hover:underline">Meta Business Settings</a>.
+                                </li>
+                                <li>
+                                  Select <strong className="text-slate-800 dark:text-slate-200">Accounts &gt; Apps</strong>, click <strong className="text-slate-700 dark:text-slate-300">"Add"</strong>, then select <strong className="text-slate-700 dark:text-slate-300">"Connect an App ID"</strong> to link your Meta App.
+                                </li>
+                                <li>
+                                  Under <strong className="text-slate-800 dark:text-slate-200">Users &gt; System Users</strong>, ensure the user who owns the token has both the App and the Facebook Page assigned with full control.
+                                </li>
+                                <li>
+                                  Generate a fresh Page Access Token and paste it into yours.
+                                </li>
+                              </ol>
+                              <button
+                                onClick={() => onNavigateToHelp?.('guide', 'Facebook Integration', 5)}
+                                className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold rounded-xl text-xs transition-all border border-rose-100 dark:border-rose-900/30"
+                              >
+                                View "Resolve Subcode 465" Detailed Steps
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          {fbError.includes("Subcode 460") && (
+                            <div className="bg-white dark:bg-slate-900/60 rounded-xl p-3.5 border border-rose-200 dark:border-rose-900/30 text-[11px] text-slate-600 dark:text-slate-300 space-y-2 mt-2">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 block uppercase text-[9px] tracking-wider">How to resolve Subcode 460:</span>
+                              <ol className="list-decimal pl-4 space-y-1.5 font-medium text-slate-600 dark:text-slate-400">
+                                <li>
+                                  This error usually happens when a Facebook password has been changed, or Facebook invalidated the active session for security reasons.
+                                </li>
+                                <li>
+                                  Go to the <a href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer" className="text-[#1877F2] font-black hover:underline">Meta Graph API Explorer</a> or your Meta Custom App Portal.
+                                </li>
+                                <li>
+                                  Select your Meta App and generate a fresh, long-lived <strong className="text-slate-800 dark:text-slate-200">Page Access Token</strong> for your Page with the required permissions (<code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">pages_manage_posts</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">pages_read_engagement</code>).
+                                </li>
+                                <li>
+                                  Paste the newly generated token into your environment settings.
+                                </li>
+                              </ol>
+                              <button
+                                onClick={() => onNavigateToHelp?.('guide', 'Facebook Integration', 6)}
+                                className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold rounded-xl text-xs transition-all border border-rose-100 dark:border-rose-900/30"
+                              >
+                                View "Resolve Subcode 460" Detailed Steps
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => onNavigateToHelp?.('guide', 'Facebook Integration')}
+                            className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-md mt-2"
+                          >
+                            <Info className="w-3.5 h-3.5 animate-pulse" />
+                            Go to Help & Support: Facebook Integration
+                          </button>
+                        </div>
+                      ) : (
+                        <p className={`text-[11px] leading-relaxed font-medium ${fbPageInfo ? 'text-emerald-600 dark:text-emerald-400/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {fbPageInfo 
                             ? `Linked to Facebook Page "${fbPageInfo.name}". This connection enables automated publishing and scheduling of social content.`
-                            : 'No Facebook Page is currently linked. Connect a page in the Social Redirection Links section to enable automated publishing.')}
-                      </p>
+                            : 'No Facebook Page is currently linked. Connect a page in the Social Redirection Links section to enable automated publishing.'}
+                        </p>
+                      )}
                     </div>
 
                     <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-pink-500/30 transition-all group">

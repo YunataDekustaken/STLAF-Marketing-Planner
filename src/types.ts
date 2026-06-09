@@ -1,3 +1,10 @@
+//
+// File: types.ts
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Defines shared TypeScript interfaces, types, and model definitions for the whole application.
+//
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0

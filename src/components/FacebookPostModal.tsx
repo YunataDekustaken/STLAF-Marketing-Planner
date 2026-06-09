@@ -1,3 +1,10 @@
+//
+// File: FacebookPostModal.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Modal layout to edit, schedule, delete, and publish Facebook and Instagram posts, with direct error matching and deep-links to developer guides.
+//
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -17,7 +24,8 @@ import {
   Share2,
   PencilLine,
   Save,
-  BarChart3
+  BarChart3,
+  HelpCircle
 } from 'lucide-react';
 import { useFacebookPost } from '../hooks/useFacebookPost';
 
@@ -40,11 +48,22 @@ interface FacebookPostModalProps {
   governanceSettings?: {
     requireFacebookDeletionApproval: boolean;
   };
+  onNavigateToHelp?: (tab?: 'guide' | 'setup' | 'contact' | 'history', guideTitle?: string, topicIndex?: number) => void;
 }
 
 const FB_CHAR_LIMIT = 63206;
 
-export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDeleteFromFB, handleCancelDeletionRequest, userRole, governanceSettings }: FacebookPostModalProps) {
+export function FacebookPostModal({ 
+  isOpen, 
+  onClose, 
+  post, 
+  onSuccess, 
+  handleDeleteFromFB, 
+  handleCancelDeletionRequest, 
+  userRole, 
+  governanceSettings,
+  onNavigateToHelp 
+}: FacebookPostModalProps) {
   const [caption, setCaption] = useState(post?.caption || '');
   const [creatives, setCreatives] = useState<string[]>(post?.creatives || []);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -848,13 +867,31 @@ export function FacebookPostModal({ isOpen, onClose, post, onSuccess, handleDele
                 {(error || validationError) && (
                   <div className="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-2xl flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-bold text-rose-800 dark:text-rose-200">
                         {validationError ? 'Validation Error' : 'Posting Error'}
                       </p>
                       <p className="text-xs text-rose-600/80 dark:text-rose-400 font-medium leading-relaxed">
                         {validationError || error}
                       </p>
+                      {error && onNavigateToHelp && (
+                        <button
+                          onClick={() => {
+                            onClose();
+                            let topicIdx: number | undefined = undefined;
+                            if (error.includes("465")) {
+                              topicIdx = 5; // Resolve Subcode 465
+                            } else if (error.includes("460")) {
+                              topicIdx = 6; // Resolve Subcode 460
+                            }
+                            onNavigateToHelp('guide', 'Facebook Integration', topicIdx);
+                          }}
+                          className="mt-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-md cursor-pointer select-none border border-rose-500"
+                        >
+                          <HelpCircle className="w-3.5 h-3.5" />
+                          View Setup & Integration Guide
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

@@ -1,3 +1,10 @@
+//
+// File: HelpView.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Renders the Help & Support page with user guides, Facebook setup instructions, contact forms, and history tracking.
+//
+
 import React, { useState, useEffect } from 'react';
 import { 
   HelpCircle, 
@@ -16,7 +23,17 @@ import {
   User,
   Shield,
   Trash2,
-  X
+  X,
+  ChevronDown,
+  Settings,
+  Key,
+  Sliders,
+  AppWindow,
+  Lock,
+  RefreshCw,
+  Info,
+  Mail,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { addDoc, collection, serverTimestamp, query, where, orderBy, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
@@ -30,10 +47,21 @@ interface HelpViewProps {
   userEmail: string | null;
   displayName: string | null;
   userId: string | null;
+  initialTab?: 'guide' | 'setup' | 'contact' | 'history';
+  initialGuideTitle?: string;
+  initialTopicIndex?: number;
 }
 
-export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, userId }) => {
-  const [activeTab, setActiveTab] = useState<'guide' | 'contact' | 'history'>('guide');
+export const HelpView: React.FC<HelpViewProps> = ({ 
+  userEmail, 
+  displayName, 
+  userId, 
+  initialTab, 
+  initialGuideTitle, 
+  initialTopicIndex 
+}) => {
+  const [activeTab, setActiveTab] = useState<'guide' | 'setup' | 'contact' | 'history'>('guide');
+  const [openSetupStep, setOpenSetupStep] = useState<number | null>(0);
   const [subject, setSubject] = useState('');
   const [concern, setConcern] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +116,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
         status: 'pending',
         timestamp: serverTimestamp(),
       });
-      toast.success("Concern submitted. A supervisor will review it shortly.");
+      toast.success("Concern submitted. The support team will review it shortly.");
       setConcern('');
       setSubject('');
       setActiveTab('history');
@@ -204,55 +232,32 @@ export const HelpView: React.FC<HelpViewProps> = ({ userEmail, displayName, user
       longContent: `Direct Meta API integration allows you to sync your marketing efforts across Facebook and Instagram seamlessly.`,
       topics: [
         {
-          title: "Overview",
-          content: "Direct Meta API integration allows you to sync your marketing efforts across Facebook and Instagram seamlessly. When a post is marked as 'Published' or 'Scheduled', the system communicates with Meta's Graph API to post to the appropriate channels. The portal also tracks 'Linked Content', helping you maintain a consistent brand voice across all platforms."
+          title: "1. Overview",
+          content: "### Direct Meta API Integration\n\nThis application connects directly with Meta's Graph API to publish and schedule social content automatically without manual copy-pasting. \n\nBy leveraging the Meta Graph API v19.0+ and server-side authentication, once your keys are set up, all authorized marketing users and supervisors can post updates, link campaigns, and schedule content directly from our planner in real-time.\n\n### Key Concepts:\n\n• **Page ID**: A unique numerical identifier for your Facebook Business Page.\n• **Page Access Token**: A special cryptographic key that authorizes this web application to act on behalf of your Facebook Page. To prevent repetitive logins, we use a **Never-Expiring Long-Lived Token**.\n• **Instagram Business Discovery**: To post to Instagram, your Instagram Professional account must be connected to your Facebook Page. The Meta API automatically detects this link, so you only need to manage a single Facebook token!"
         },
         {
-          title: "How does it work?",
-          content: "The system connects directly to Meta's Graph API using a Long-Lived Page Access Token. When you trigger an action in the application, such as publishing or scheduling a post, the app translates those actions into API calls.\n\nFor Facebook: Posts and attachments are formatted and sent to the Facebook Page's feed endpoints.\nFor Instagram: Posts are assembled first into \"Media Containers\" which Meta validates, then these containers are \"published\" to the connected Instagram Business account.\n\nAuthentication happens server-side, meaning once set up, no ongoing user authentication prompts are required to post."
+          title: "2. Create Meta App",
+          content: "### Part 1: How to Create your Custom Meta Developer App\n\nTo connect the Facebook Page, you need to register a Developer Application on the Meta App Portal. Follow these exact steps:\n\n1. Go to the [Meta developers portal](https://developers.facebook.com/) and click **Log In** in the top-right corner. Log in with your primary Facebook account associated with the target Facebook Page.\n2. Once logged in, click **My Apps** in the navigation bar.\n3. Click the green **Create App** button.\n4. Select **Other** as your app use-case, then click **Next**.\n5. Choose **Business** as your app type. (This is critical because it unlocks the permissions required to manage and publish page and Instagram posts). Click **Next**.\n6. Fill in your details:\n   • **App Display Name**: Enter a descriptive name (e.g., `Marketing Planner Integration`).\n   • **App Contact Email**: Use your primary developer email address.\n   • **Business Portfolio**: If you have a Meta Business Account (Business Manager), select it from the dropdown here. If not, you can leave it empty for now (though linking it later is required for production live-posting).\n7. Click **Create App** and enter your password if prompted."
         },
         {
-          title: "How to use it?",
-          content: "1. Create a Post in the Planner\n2. Add your captions and media (note: Instagram requires at least one image or video).\n3. Click 'Publish Now' or 'Schedule' in the post details panel.\n4. Select 'Facebook Page', 'Instagram Business', or both to publish the content.\n5. Wait for the success response. The Social Hub will also track its history."
+          title: "3. Configure Permissions",
+          content: "### Part 2: Adding Products & Authorizing Graph API\n\nNow that your Meta App is created, you must request permissions and generate your credentials:\n\n1. In your app's dashboard, look at the left sidebar menu. Locate the **Tools** cascading menu and click on **Graph API Explorer**.\n2. In the right side of the Graph API Explorer window:\n   • Under **Meta App**, make sure your newly created app is selected.\n   • Under **User or Page**, select **Get User Access Token** from the dropdown menu.\n3. Under the **Permissions** section, you will see default permissions. You must add the following specific permissions by searching or selecting them:\n   • `pages_show_list` (Allows the app to see your Facebook pages)\n   • `pages_read_engagement` (Allows reading page analytics and status)\n   • `pages_manage_posts` (Allows publishing/scheduling posts on your page)\n   • `instagram_basic` (Allows seeing connected Instagram account info)\n   • `instagram_content_publish` (Allows publishing stories, reels, and photos to Instagram)\n4. Click the blue **Generate Access Token** button.\n5. A Facebook login popup will appear. Follow the prompts:\n   • Select **Opt-in to all current and future business assets** (or hand-select the specific Facebook Pages and connected Instagram Business accounts you wish to manage).\n   • Confirm the permissions requested and click **Done** then **OK**."
         },
         {
-          title: "Setup Guide",
-          content: `Here is a step-by-step guide to connect this web app to your Facebook Page and Instagram Business Account:
-
-1. Create a Meta Developer App
-   - Go to developers.facebook.com and log in with your Facebook account.
-   - Click "My Apps" -> "Create App".
-   - Select "Other" -> "Business" (or whatever corresponds to API access) as the app type.
-   - Enter your App Name and contact email, and click "Create App".
-
-2. Set Up Permissions & Graph API
-   - In your app dashboard, add the "Facebook Login for Business" product if prompted, or directly use the Graph API Explorer (Tools -> Graph API Explorer).
-   - Select your Facebook App. Under "Permissions", add the following:
-     • pages_show_list
-     • pages_read_engagement
-     • pages_manage_posts
-     • instagram_basic
-     • instagram_content_publish
-   - Click "Generate Access Token" and log in to authorize your account. Ensure you select the specific Page(s) and Instagram account(s) you want to manage.
-
-3. Obtain a Long-Lived Page Access Token
-   - Click the "i" (info) icon next to your access token in the Graph API Explorer and click "Open in Access Token Tool" -> "Extend Access Token" to get a 60-day token.
-   - Go back to the Graph API Explorer, paste the 60-day token, and run the query: \`me/accounts\`
-   - Find your target page in the response. Copy its \`access_token\` (this is a never-expiring Page Access Token) and its \`id\` (your Page ID).
-
-4. Configure the Web App Environment Variables
-   - Go to your hosting environment settings (AI Studio or Vercel, etc).
-   - Add the following environment variables:
-     • FACEBOOK_PAGE_ACCESS_TOKEN = Your_Never_Expiring_Page_Token
-     • FACEBOOK_PAGE_ID = Your_Page_ID
-   - Restart the server if necessary.
-
-5. Linking Instagram Business
-   - To post to Instagram, you MUST have an Instagram account converted to a professional Business Account, AND it must be linked to your Facebook Page.
-   - Go to your Facebook Page Settings -> Linked Accounts, and connect your Instagram account.
-   - No separate Instagram token or ID is needed! The app will automatically discover the connected Instagram Business account via the Page Access Token.
-
-After completing these steps, go back to the "Admin" tab in this application and click the refresh button in the Meta Integration section to verify your connection. You should now be able to schedule and publish correctly.`
+          title: "4. Get Permanent Token",
+          content: "### Part 3: Generating a Never-Expiring Page Access Token\n\nBy default, the Graph Explorer token expires in 1 to 2 hours. We need to convert it into a permanent token for this webapp:\n\n1. **Convert User Token to Long-Lived Token (60 days)**:\n   • In the Graph API Explorer, next to the generated access token string, click the small info **i** icon.\n   • Click **Open in Access Token Tool**.\n   • Scroll down and click **Extend Access Token** at the bottom. This will generate a 60-day Long-Lived User Access Token.\n   • Copy this extended access token.\n\n2. **Generate the Permanent Page Access Token**:\n   • Return to the **Graph API Explorer**.\n   • Paste your newly copied 60-day token into the Access Token input field.\n   • In the request path input field (which currently says `me?fields=id,name`), type:\n     `me/accounts`\n   • Click **Submit** on the far right.\n   • Scroll down to inspect the JSON response. You will see an array of your Facebook Pages. Look for the target page in the list.\n   • For your target page, you will see two crucial values:\n     • **`id`**: This is your Facebook Page ID.\n     • **`access_token`**: This is your **Never-Expiring Page Access Token**. Copy this token character-for-character. Save it safely!"
+        },
+        {
+          title: "5. Link to Webapp",
+          content: "### Part 4: Saving Credentials into the Portal\n\nOnce you have your Facebook Page ID and the Never-Expiring Page Access Token, save them into the application environment:\n\n1. Access the hosting configuration panel (Admin tab or project `.env` settings depending on your hosting service).\n2. Update the following environment variables:\n   • `FACEBOOK_PAGE_ID` = *[Your Facebook Page ID]*\n   • `FACEBOOK_PAGE_ACCESS_TOKEN` = *[Your Never-Expiring Page Access Token]*\n3. After setting these environment variables, restart the server.\n4. Go into the **Admin** dashboard tab of this application. Under **Integration Status**, locate the **Meta Integration** panel and click the **Sync/Refresh** icon.\n5. The system will make an automated health check call to verify your metadata and display **Connected** along with your Page's name.\n\n### Instagram Requirements:\nTo publish content to Instagram through this setup, ensure your Instagram Account is a **Professional Business Account** and is linked to the target Facebook page via Page Settings -> Connected Accounts."
+        },
+        {
+          title: "6. Resolve Subcode 465",
+          content: "### Troubleshooting: Meta Business Link Error (Subcode 465)\n\n#### What it means:\n\"The application does not belong to system user's business or its aggregators's business.\"\nThis occurs because Meta requires that any custom Developer App publishing posts on a Facebook Page owned by a Facebook Business Manager must be linked/associated with that same Business Manager.\n\n#### How to resolve step-by-step:\n1. Go to [Meta Business Settings](https://business.facebook.com/settings).\n2. Select your Business Manager from the dropdown menu in the top left.\n3. In the left navigation bar, expand **Accounts** and select **Apps**.\n4. Click the **Add** dropdown button, then choose **Connect an App ID**.\n5. Enter your Meta Developer App ID (which you can find in the header of developers.facebook.com) and click **Add App**.\n6. Next, click **Users** -> **System Users** in the left sidebar.\n7. Select the system user or manager who generated your token, click **Assign Assets**:\n   • Add your newly connected **App** and assign Full Control.\n   • Add your **Facebook Page** under Pages and assign Full Control.\n8. Regenerate the Page Access Token following **Tab 4 (Get Permanent Token)** to acquire a valid token."
+        },
+        {
+          title: "7. Resolve Subcode 460",
+          content: "### Troubleshooting: Session Invalidated Error (Subcode 460)\n\n#### What it means:\n\"The session has been invalidated because the user changed their password or Facebook has changed the session for security reasons.\"\nMeta revokes all active and long-lived access tokens associated with a user profile if that user updates their password, turns on 2FA list modifications, or if Meta detects suspicious login activity on the account.\n\n#### How to resolve step-by-step:\n1. This requires generating a brand new access token. Your previous token is permanently dead.\n2. Access the [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer).\n3. Re-authorize your app by choosing **Get User Access Token** in the dropdown. Standard security scopes (`pages_manage_posts`, `instagram_content_publish`) must be checked.\n4. Follow the instructions starting at **Tab 4 (Get Permanent Token)**:\n   • Extend the User Token to 60-days using the Access Token Tool.\n   • Run `me/accounts` with the long-lived token.\n   • Copy the fresh, permanent `access_token` for your page.\n5. Paste the new token into your environment settings (replacing the old `FACEBOOK_PAGE_ACCESS_TOKEN`), restart the application server, and run a Sync check in the Admin tab."
         }
       ],
       color: "bg-blue-50 dark:bg-blue-900/20"
@@ -286,6 +291,31 @@ After completing these steps, go back to the "Admin" tab in this application and
       color: "bg-violet-50 dark:bg-violet-900/20"
     },
     {
+      title: "Newsletter Hub",
+      icon: <Mail className="w-5 h-5 text-rose-500" />,
+      content: "Review, queue, schedule, and authorize your audience email broadcasts directly from approved content planner campaigns.",
+      longContent: "The Newsletter Hub is a specialized module that handshakes with your internal CRM or Subscriber Mailing system. It enables you to reuse your social media topics, imagery, or captions to trigger newsletter broadcasts directly to your subscribers & customers.",
+      topics: [
+        {
+          title: "1. Overview & Connection",
+          content: "### Unified Content-Newsletter Bridge\n\nThe Newsletter Hub automatically compiles campaign materials from your Planner so you can distribute them to your subscriber base without duplicating work.\n\nBy building an elegant pipeline between your media posts and subscription outreach tools, your creative team can convert approved social posts into high-impact direct newsletters with a single click."
+        },
+        {
+          title: "2. How to Use the Outbox",
+          content: "### Step-by-Step Campaign Broadcast Guide\n\n1. **Push to Outbox**:\n   From your main Planner (e.g. inside the edit panel or list view), select your post and choose the **Push to Mailing Outbox** action. This sets its `mailStatus` to 'Pending Authorization' and forwards it to the Newsletter pipeline.\n\n2. **Review Campaign**:\n   Open the **Newsletter Hub** tab. Locate your content under the **Pending** list. You can click the eye icon to preview the formatting, headers, images, and content.\n\n3. **Authorize Delivery**:\n   • **Authorize Now**: Click **Authorize Delivery** next to the item to prompt an immediate queue integration in the mailing system. This updates the status to 'Authorized' / 'Sent'.\n   • **Schedule Future Broadcast**: Click **Schedule Delivery**, input your target date and time in the calendar popover, and confirm. This transitions the post to the **Scheduled** tab."
+        },
+        {
+          title: "3. Direct Mailing App Integration",
+          content: "### Connecting Your Launchpad\n\nTo allow seamless deep-linking:\n1. Navigate to the **Admin Settings &gt; Quick Links** tab of this application.\n2. Locate the **Subscriber Mailing App URL** edit field.\n3. Paste the URL of your external email dispatcher or microservice database.\n4. Save changes.\n\nWhen administrators or support members click **Launch Mailing App** inside the Newsletter Hub, the platform handles deep-linking by automatically passing the selected post's parameter (`?postId=[ID]`) to prepare your newsletter draft automatically."
+        },
+        {
+          title: "4. Troubleshooting",
+          content: "### Troubleshooting & Diagnostics\n\n#### Error: \"Please configure Subscriber Mailing App URL first\"\n* **Cause**: You clicked a deep-link feature before registering the mailing endpoint.\n* **Fix**: Ask your Support Team or Workspace Administrator to complete the Link Setup in Admin Settings.\n\n#### Issue: Status says \"Authorized\" but emails are not arriving\n* **Cause**: Standard credential mismatch or background polling job interval delays.\n* **Fix**: Ensure your primary sender account has authorized your Workspace OAuth scopes. Check the active Gmail/SMTP relay status connected to your companion subscriber application.\n\n#### Issue: Cannot see any posts in the Newsletter Hub tabs\n* **Cause**: Your posts may not have been pushed to the mailing queue yet, or are filtered out.\n* **Fix**: Expand your filters to 'All', or go back to the Main Planner, select the desired campaign post, and mark its Mail Status as 'Pending Authorization' first to initialize the queue handshake."
+        }
+      ],
+      color: "bg-rose-50 dark:bg-rose-900/20"
+    },
+    {
       title: "System Infrastructure",
       icon: <Shield className="w-5 h-5 text-purple-500" />,
       content: "The app utilizes two projects: the 'Active Database' (marketing-43c62) for high-speed data and auth, and the 'Provisioned Runtime' for the AI Studio hosting environment and GenAI engine.",
@@ -294,8 +324,197 @@ After completing these steps, go back to the "Admin" tab in this application and
     }
   ];
 
+  const setupSteps = [
+    {
+      title: "Create a Meta Developer App",
+      sub: "Register and setup your developer profile & business app type",
+      icon: <AppWindow className="w-5 h-5 text-blue-500" />,
+      color: "bg-blue-50 dark:bg-blue-900/20",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            To connect a Facebook Page, you must first register a custom application on the Meta Developer Portal. This creates a secure bridge for API queries.
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] uppercase font-black tracking-widest text-[#1877F2]">Step-by-step instructions</span>
+            <ul className="list-decimal pl-5 text-sm text-slate-600 dark:text-slate-400 space-y-2 font-medium">
+              <li>Go to <a href="https://developers.facebook.com/" target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">developers.facebook.com</a> and log in with your primary Facebook account.</li>
+              <li>Click <strong className="text-slate-800 dark:text-slate-200">My Apps</strong> and select <strong className="text-slate-800 dark:text-slate-200">Create App</strong>.</li>
+              <li>Select <strong className="text-slate-800 dark:text-slate-200">Other</strong>, then click <strong className="text-slate-800 dark:text-slate-200">Next</strong>.</li>
+              <li>Choose <strong className="text-slate-800 dark:text-slate-200">Business</strong> as your app type (Required to access Facebook Page publishing APIs). Click <strong className="text-slate-800 dark:text-slate-200">Next</strong>.</li>
+              <li>Provide an App Display Name (e.g. <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs text-rose-500">Marketing Operations Hub</code>) and App Contact Email.</li>
+              <li>Click <strong className="text-slate-800 dark:text-slate-200">Create App</strong> and complete security verification.</li>
+            </ul>
+          </div>
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-start gap-3">
+            <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800 dark:text-amber-400 font-medium leading-relaxed">
+              <strong>Keep in Mind:</strong> Your Meta App will run in "Development Mode" initially. This is perfect for initial testing and allows you as an administrator to post freely. To go public, you will subsequently undergo Meta App Review.
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Configure App Permissions",
+      sub: "Request scopes and authorize access via Graph API Explorer",
+      icon: <Lock className="w-5 h-5 text-purple-500" />,
+      color: "bg-purple-50 dark:bg-purple-900/20",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            Permissions ensure that our application has secure access to publish, schedule, or delete on your specific accounts without risking other access rights.
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] uppercase font-black tracking-widest text-purple-500">Permissions configuration</span>
+            <ul className="list-decimal pl-5 text-sm text-slate-600 dark:text-slate-400 space-y-2 font-medium">
+              <li>In your App Dashboard left sidebar, find <strong className="text-slate-800 dark:text-slate-200">Tools</strong> and open <strong className="text-slate-800 dark:text-slate-200">Graph API Explorer</strong>.</li>
+              <li>Ensure your newly registered App is chosen in the <strong className="text-slate-800 dark:text-slate-200">Meta App</strong> dropdown.</li>
+              <li>Change the "User or Page" dropdown to <strong className="text-slate-800 dark:text-slate-200">Get User Access Token</strong>.</li>
+              <li>In the "Permissions" search box, add these exact permissions:
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'instagram_basic', 'instagram_content_publish'].map(sc => (
+                    <code key={sc} className="font-mono bg-slate-200 dark:bg-slate-800 text-[10px] text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded font-bold">
+                      {sc}
+                    </code>
+                  ))}
+                </div>
+              </li>
+              <li className="mt-2.5">Click the blue <strong className="text-slate-800 dark:text-slate-200">Generate Access Token</strong> button.</li>
+              <li>Follow the Facebook login prompts—be sure to select **Opt-in to all current and future business assets** so you register all relevant Facebook Pages and linked Instagram accounts.</li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Generate Long-Lived Token",
+      sub: "Extend standard login session to 60 days via the developer tool",
+      icon: <Key className="w-5 h-5 text-amber-500" />,
+      color: "bg-amber-50 dark:bg-amber-900/20",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            Standard Graph Explorer tokens expire in 1-2 hours. We will extend this to 60 days so we can subsequently fetch permanent credentials.
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] uppercase font-black tracking-widest text-amber-500">Token extension workflow</span>
+            <ul className="list-decimal pl-5 text-sm text-slate-600 dark:text-slate-400 space-y-2 font-medium">
+              <li>In the Graph API Explorer, click the small info (<strong className="text-indigo-500 font-extrabold">i</strong>) button next to your generated token.</li>
+              <li>Click the blue <strong className="text-slate-800 dark:text-slate-200">Open in Access Token Tool</strong> button at the bottom of the popup.</li>
+              <li>Locate the white button labeled <strong className="text-indigo-600 dark:text-indigo-400">Extend Access Token</strong> and click it.</li>
+              <li>Meta will produce a new, extremely long token that is valid for 60 days. <strong className="text-indigo-600 dark:text-indigo-400 font-bold">Copy this newly generated 60-day token.</strong></li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Convert to Permanent Page Token",
+      sub: "Retrieve an unlimited, never-expiring access token for the backend",
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
+      color: "bg-emerald-50 dark:bg-emerald-900/20",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            To prevent your scheduled campaigns from disconnecting every 2 months, we convert the user session into a permanent, never-expiring Page Access Token.
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] uppercase font-black tracking-widest text-emerald-500">Permanent extraction API call</span>
+            <ul className="list-decimal pl-5 text-sm text-slate-600 dark:text-slate-400 space-y-2 font-medium">
+              <li>Return to the <strong className="text-slate-800 dark:text-slate-200">Graph API Explorer</strong> tab.</li>
+              <li>Paste your copied 60-day user token into the main <strong className="text-slate-800 dark:text-slate-200">Access Token</strong> field.</li>
+              <li>Locate the query path input box (defaults to <code className="font-mono text-xs">me?fields=id,name</code>) and replace it entirely with:
+                <code className="block mt-1 p-2 bg-slate-100 dark:bg-slate-900 rounded font-mono text-xs text-rose-500 border border-slate-200 dark:border-slate-800 text-center font-bold">
+                  me/accounts
+                </code>
+              </li>
+              <li>Click the blue <strong className="text-slate-850 dark:text-slate-200">Submit</strong> button.</li>
+              <li>Analyze the JSON response. Scroll down through your pages and copy:
+                <ul className="list-disc pl-5 mt-1 text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                  <li><strong className="text-slate-700 dark:text-slate-300">`id`</strong>: The Facebook Page ID.</li>
+                  <li><strong className="text-slate-700 dark:text-slate-300">`access_token`</strong>: The Never-Expiring Page Access token.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Set Up the App Environment",
+      sub: "Map credentials to environment variables to activate full-stack automation",
+      icon: <RefreshCw className="w-5 h-5 text-indigo-500" />,
+      color: "bg-indigo-50/50 dark:bg-indigo-900/10",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            To authorize secure background queries and posts, add these keys directly into our portal host system:
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
+            <span className="text-[10px] uppercase font-black tracking-widest text-indigo-500">Required environment configuration</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5">
+                <span className="font-mono text-xs text-slate-600 dark:text-slate-300 font-bold">FACEBOOK_PAGE_ID</span>
+                <span className="text-xs text-slate-400 italic">e.g. 10243292419401</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-slate-600 dark:text-slate-300 font-bold">FACEBOOK_PAGE_ACCESS_TOKEN</span>
+                <span className="text-xs text-slate-400 italic">EAA... (Never-expiring token string)</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium pt-2">
+              Add these variables in your hosting settings (e.g. AI Studio environment or local <code className="font-mono text-[10px]">.env</code>), then restart the application. Finally, open the <strong className="text-indigo-500 font-bold">Admin</strong> tab of this portal and click the **Sync/Refresh** icon to verify the connection status!
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Instagram Connection",
+      sub: "Bridge photo & video campaigns to your professional Instagram presence",
+      icon: <Sparkles className="w-5 h-5 text-pink-500" />,
+      color: "bg-pink-50 dark:bg-pink-900/20",
+      content: (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-semibold">
+            To post directly to Instagram, the app uses Meta's automatic discovery protocol which maps connected Instagram accounts directly via your Facebook Page Access Token.
+          </p>
+          <div className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2">
+            <span className="text-[10px] uppercase font-black tracking-widest text-pink-500">Prerequisites Check</span>
+            <ol className="list-decimal pl-5 text-xs text-slate-500 dark:text-slate-400 space-y-2 font-medium">
+              <li>Convert your Instagram account to a <strong className="text-slate-700 dark:text-slate-200">Professional/Business Account</strong> (available in Instagram App Settings &gt; Account Type).</li>
+              <li>Go to your Facebook Page Settings &gt; Connected Accounts &gt; Instagram.</li>
+              <li>Click <strong className="text-slate-800 dark:text-slate-200">Connect</strong> and input credentials to complete the handshake link.</li>
+              <li>Once linked, our system discovers Instagram automatically on every Facebook posting event!</li>
+            </ol>
+          </div>
+        </div>
+      )
+    }
+  ];
+
   const [selectedGuide, setSelectedGuide] = useState<typeof guideSections[0] | null>(null);
   const [selectedTopicIndex, setSelectedTopicIndex] = useState(0);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+    if (initialGuideTitle) {
+      const g = guideSections.find(sec => sec.title.toLowerCase() === initialGuideTitle.toLowerCase());
+      if (g) {
+        setSelectedGuide(g);
+        if (initialTopicIndex !== undefined) {
+          setSelectedTopicIndex(initialTopicIndex);
+        } else {
+          setSelectedTopicIndex(0);
+        }
+      }
+    } else if (initialTab) {
+      setSelectedGuide(null);
+    }
+  }, [initialTab, initialGuideTitle, initialTopicIndex]);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">
@@ -428,7 +647,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                       }}
                       className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all"
                     >
-                      Ask a Supervisor
+                      Contact Support
                     </button>
                   </div>
                 </div>
@@ -473,7 +692,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                   <HelpCircle className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
                   Support Center
                 </h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Resources and direct lines to your marketing supervisors.</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Resources and direct lines to get support and assistance.</p>
               </div>
 
               <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
@@ -489,6 +708,17 @@ After completing these steps, go back to the "Admin" tab in this application and
                   User Guide
                 </button>
                 <button 
+                  onClick={() => setActiveTab('setup')}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+                    activeTab === 'setup' 
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <Sliders className="w-4 h-4" />
+                  Platform Setup
+                </button>
+                <button 
                   onClick={() => setActiveTab('contact')}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
                     activeTab === 'contact' 
@@ -497,7 +727,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                   }`}
                 >
                   <MessageSquare className="w-4 h-4" />
-                  Contact Supervisor
+                  Contact Support
                 </button>
                 <button 
                   onClick={() => setActiveTab('history')}
@@ -564,6 +794,104 @@ After completing these steps, go back to the "Admin" tab in this application and
                     <HelpCircle className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                   </div>
                 </motion.div>
+              ) : activeTab === 'setup' ? (
+                <motion.div
+                  key="setup"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="max-w-4xl mx-auto space-y-6"
+                >
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-8 shadow-sm">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                      <Sliders className="w-6 h-6 text-indigo-500" />
+                      Platform API Connection Guide
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-6">
+                      Follow this interactive, multi-step accordion guide to register your Meta Developer App, generate a permanent Page Access Token, and activate direct Facebook and Instagram publishing.
+                    </p>
+
+                    <div className="space-y-4">
+                      {setupSteps.map((step, idx) => {
+                        const isOpen = openSetupStep === idx;
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`border rounded-2xl transition-all duration-300 overflow-hidden ${
+                              isOpen 
+                                ? 'border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/10 dark:bg-indigo-950/5 shadow-md' 
+                                : 'border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700/80'
+                            }`}
+                          >
+                            <button
+                              onClick={() => setOpenSetupStep(isOpen ? null : idx)}
+                              className="w-full text-left p-6 flex items-center justify-between gap-4 select-none"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${step.color}`}>
+                                  {step.icon}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-indigo-500 tracking-widest uppercase">
+                                      Step {idx + 1}
+                                    </span>
+                                    {isOpen && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    )}
+                                  </div>
+                                  <h4 className="text-slate-900 dark:text-white font-bold text-base">
+                                    {step.title}
+                                  </h4>
+                                  <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                                    {step.sub}
+                                  </p>
+                                </div>
+                              </div>
+                              <ChevronDown 
+                                className={`w-5 h-5 text-slate-400 transition-transform duration-300 shrink-0 ${
+                                  isOpen ? 'rotate-180 text-indigo-500' : ''
+                                }`} 
+                              />
+                            </button>
+
+                            <AnimatePresence initial={false}>
+                              {isOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                >
+                                  <div className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800/40">
+                                    {step.content}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-8 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-[32px] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg shadow-indigo-100 dark:shadow-none">
+                    <div className="space-y-2">
+                      <h4 className="text-xl font-bold">Have everything configured?</h4>
+                      <p className="text-sm text-indigo-100 font-medium max-w-xl">
+                        Go to the system admin configuration hub to enter your Page Access ID and permanent page credentials, then click Sync to test your API health.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        toast.success("Ready! Navigate to the Admin settings tab to apply your secret credentials.");
+                      }}
+                      className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold text-sm shadow-md hover:bg-indigo-50 transition-all shrink-0"
+                    >
+                      Configure Admin Tab
+                    </button>
+                  </div>
+                </motion.div>
               ) : activeTab === 'contact' ? (
                 <motion.div 
                   key="contact"
@@ -579,7 +907,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                       </div>
                       <div>
                         <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Direct Concern Box</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Your message will be sent directly to the Marketing Supervisors.</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Your message will be sent directly to our Support team.</p>
                       </div>
                     </div>
 
@@ -623,7 +951,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                         ) : (
                           <Send className="w-5 h-5" />
                         )}
-                        Send to Supervisors
+                        Send Message
                       </button>
                     </form>
                   </div>
@@ -705,7 +1033,7 @@ After completing these steps, go back to the "Admin" tab in this application and
                                       <div className="flex items-center gap-2 mb-1">
                                         {msg.role === 'supervisor' ? <Shield className="w-3 h-3 text-indigo-500" /> : <User className="w-3 h-3 text-slate-400" />}
                                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                          {msg.role === 'supervisor' ? 'Supervisor' : 'You'}
+                                          {msg.role === 'supervisor' ? 'Support' : 'You'}
                                         </span>
                                         <span className="text-[10px] opacity-40 ml-auto">
                                           {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}

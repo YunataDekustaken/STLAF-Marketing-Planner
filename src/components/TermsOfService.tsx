@@ -1,3 +1,10 @@
+//
+// File: TermsOfService.tsx
+// Author: Raphael Mendoza
+// Date: 2026-06-09
+// Purpose: Standard Terms of Service document for compliance.
+//
+
 import React from 'react';
 import { FileText, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
