@@ -136,7 +136,7 @@ To post images or captions directly to connected Facebook Pages and Instagram Bu
 
 ## 3. Transferring the Application
 
-When migrating this application to a separate server, client, or hosting project:
+When migrating this application to a separate server, client, or hosting project, follow these transfer pipelines:
 
 ### Moving to a New Repository
 1. Initialize a clean repository:
@@ -147,11 +147,67 @@ When migrating this application to a separate server, client, or hosting project
 2. Commit and push the existing source directory including all code files, avoiding transient folder tracking by preserving standard filters in `.gitignore`.
 3. Keep dependency version locks intact inside `package-lock.json` to avoid unexpected code breaks during automated continuous integration cycles.
 
-### Deploying to a Clean Cloud / Hosting Instance
-- **Backend Environment Setup:**
-  Provide server environments with matching parameters from your local `.env`. Ensure that secret API keys (e.g. `GEMINI_API_KEY` and `FACEBOOK_PAGE_ACCESS_TOKEN`) are configured server-side.
-- **Client Deployment:**
-  During production builds (`npm run build`), Vite compiles static assets in `/dist`. For Express-managed deployment pipelines, the server handles routing of these compiled objects dynamically.
+### API Setup & Creation Guide for Mapped Platform Integrations
+
+#### A. Firebase Console Configuration & Connection
+When setting up a separate Firebase project database, perform these steps:
+1. **Initialize Firebase Project:** Go to the [Firebase Console](https://console.firebase.google.com/), click **Add Project**, name your project, and click **Create**.
+2. **Setup Client Credentials:**
+   - Under Project Settings, click the **Web Icon (</>)** to register a new Web App (e.g., "Mailing & Social Hub").
+   - Firebase will generate a configuration block. Copy these parameters into your recipient environment file (`.env`):
+     ```env
+     VITE_FIREBASE_API_KEY=AIzaSy...
+     VITE_FIREBASE_AUTH_DOMAIN=project-id.firebaseapp.com
+     VITE_FIREBASE_PROJECT_ID=project-id
+     VITE_FIREBASE_STORAGE_BUCKET=project-id.appspot.com
+     VITE_FIREBASE_MESSAGING_SENDER_ID=...
+     VITE_FIREBASE_APP_ID=...
+     ```
+3. **Provision Database Store:** Navigate to **Firestore Database** and choose **Create Database**. Start in **Production Mode** for secure rules. Select a local cloud region matching your primary user footprint.
+4. **Configure Authentication:** Navigate to **Authentication > Sign-in Method**. Turn on **Email/Password** and click Save. Turn on **Google provider**, supply your support email, save progress, and verify client keys.
+5. **Database Security Rules:** Open `/firestore.rules` and sync the policy restrictions. Ensure that reading, editing, and deleting records require authenticated roles.
+
+#### B. Google Cloud Console API Integrations
+For Gemini and Google Sign-In components to operate properly, verify permissions inside Google Cloud Console:
+1. **Locate Associated Cloud Project:** Create or open the GCP project matching your Firebase ID under the [Google Cloud Console](https://console.cloud.google.com/).
+2. **Access Gemini API Credentials:**
+   - Get your generative language model API Key from [Google AI Studio](https://aistudio.google.com/) or by enabling the **Generative Language API** inside the GCP API Library.
+   - Inject the resulting token string into your server's hosting settings as `GEMINI_API_KEY`.
+3. **OAuth Consent Screen & Credentials:**
+   - Go to **APIs & Services > OAuth Consent Screen**.
+   - Pick External user type, fill out contact cards, and specify requested scopes (`openid`, `email`, `profile`).
+   - Navigate to **APIs & Services > Credentials**. Click **Create Credentials > OAuth Client ID**. Select Web Application, and add authorization endpoints in your hosting targets (e.g., Vercel / Cloud Run domains) into the **Authorized Redirect URIs**.
+   - Copy client credentials back into Firebase Authentication Google configuration settings if needed.
+
+#### C. Deploying to Vercel Hosting
+To transfer and host client resources and Express-backend routers on Vercel:
+1. **Prerequisites & Vercel.json Strategy:**
+   Configure `vercel.json` in the root of the project to proxy non-static API calls and handle frontend client routing flawlessly:
+   ```json
+   {
+     "version": 2,
+     "builds": [
+       { "src": "server.ts", "use": "@vercel/node" },
+       { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+     ],
+     "routes": [
+       { "src": "/api/(.*)", "dest": "server.ts" },
+       { "src": "/(.*)", "dest": "/index.html" }
+     ]
+   }
+   ```
+2. **Deploy via Vercel CLI / Git Integration:**
+   - Push code to standard cloud repositories (GitHub, GitLab, or Bitbucket) and connect the repository inside Vercel Dashboard directly.
+   - Alternatively, execute manual uploads over command tools:
+     ```bash
+     npm install -g vercel
+     vercel login
+     vercel
+     ```
+3. **Establish Dashboard Overrides:**
+   Add required environment parameters within Vercel project Settings under the **Environment Variables** panel. Ensure parameters starting with `VITE_` are correctly added for front-end exposure, while secret variables such as `GEMINI_API_KEY` are kept strictly private.
+4. **Express/Native Routing Support:**
+   Vercel serverless environments utilize separate execution bundles. When compiling custom production builds, ensure static bundle processes are matched cleanly so routing modules can redirect seamlessly.
 
 ---
 
